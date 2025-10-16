@@ -1,0 +1,178 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+coverage
+*.lcov
+
+# next.js
+.next/
+/out/
+
+# production
+build
+dist
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# ========================================
+# プロジェクト固有の設定
+# ========================================
+
+# Claude Code 設定（個人設定なので除外）
+.claude/
+
+# Serena（開発ツール）
+.serena/
+
+# ========================================
+# IDE / エディタ
+# ========================================
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Cursor
+.cursor/
+
+# ========================================
+# OS
+# ========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+
+# ========================================
+# 一時ファイル
+# ========================================
+
+# テストファイル
+*.test.local.*
+test-results/
+playwright-report/
+
+# バックアップファイル
+*.bak
+*.tmp
+*.swp
+*~
+
+# ログファイル
+logs/
+*.log
+
+# ========================================
+# AWS / インフラ（将来用）
+# ========================================
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+terraform.tfvars.json
+
+# AWS CLI
+.aws/credentials
+.aws/config
+
+# ========================================
+# ビルド成果物
+# ========================================
+
+# Next.js static export
+/frontend/out/
+
+# Storybook
+storybook-static/
+
+# ========================================
+# セキュリティ
+# ========================================
+
+# 秘密鍵
+*.key
+*.pem
+*.p12
+*.pfx
+
+# 証明書
+*.crt
+*.cer
+
+# SSH
+id_rsa
+id_rsa.pub
+
+# ========================================
+# その他
+# ========================================
+
+# キャッシュ
+.cache/
+.parcel-cache/
+.npm/
+
+# カバレッジレポート
+coverage/
+.nyc_output/
+
+# ドキュメント生成
+/docs/.vitepress/cache
+/docs/.vitepress/dist

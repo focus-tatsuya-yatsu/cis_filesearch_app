@@ -1,0 +1,462 @@
+<mxfile host="app.diagrams.net" modified="2025-01-16T00:00:00.000Z" agent="Claude" version="22.1.16" etag="optimized-architecture-vpc" type="device">
+  <diagram name="CIS File Search - Optimized Architecture (VPC完全版)" id="architecture-optimized-vpc">
+    <mxGraphModel dx="2800" dy="2000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- タイトル -->
+        <mxCell id="title" value="CIS File Search Application - 最適化版アーキテクチャ（VPC完全版）" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- サブタイトル -->
+        <mxCell id="subtitle" value="Multi-AZ VPC | パブリック・プライベートサブネット | セキュリティグループ | VPC Endpoints" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#5A6C7D;" vertex="1" parent="1">
+          <mxGeometry x="600" y="60" width="800" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== レイヤー1: ユーザー層 ==================== -->
+        <mxCell id="layer-user" value="ユーザー層" style="swimlane;startSize=30;fillColor=#E1F5FF;strokeColor=#0066CC;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="100" y="120" width="1600" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="users" value="👥 ユーザー&lt;br&gt;50名以上" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;" vertex="1" parent="layer-user">
+          <mxGeometry x="770" y="35" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== レイヤー2: DNS・ドメイン管理層 ==================== -->
+        <mxCell id="layer-dns" value="DNS・ドメイン管理層" style="swimlane;startSize=30;fillColor=#FFF4E6;strokeColor=#FF9900;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="100" y="240" width="1600" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="route53" value="Route 53&lt;br&gt;cis-filesearch.com" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;" vertex="1" parent="layer-dns">
+          <mxGeometry x="450" y="40" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="acm" value="ACM 証明書&lt;br&gt;*.cis-filesearch.com" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F54749;gradientDirection=north;fillColor=#C7131F;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.certificate_manager_3;" vertex="1" parent="layer-dns">
+          <mxGeometry x="1050" y="40" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== レイヤー3: CDN・エッジ層 ==================== -->
+        <mxCell id="layer-cdn" value="CDN・エッジ層" style="swimlane;startSize=30;fillColor=#FFE6E6;strokeColor=#DD3522;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="100" y="400" width="1600" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="waf" value="WAF&lt;br&gt;セキュリティ" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F54749;gradientDirection=north;fillColor=#C7131F;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.waf;" vertex="1" parent="layer-cdn">
+          <mxGeometry x="350" y="40" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cloudfront" value="CloudFront 統合&lt;br&gt;/* → S3 Web&lt;br&gt;/api/* → API Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="layer-cdn">
+          <mxGeometry x="761" y="40" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cloudfront-note" value="✨ 最適化: 2つ→1つ統合&lt;br&gt;コスト40%削減" style="text;html=1;strokeColor=#FF9900;fillColor=#FFF4E6;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="layer-cdn">
+          <mxGeometry x="900" y="55" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== VPC全体コンテナ ==================== -->
+        <mxCell id="vpc-container" value="VPC: 10.0.0.0/16 (cis-filesearch-vpc)&#xa;Multi-AZ高可用性構成" style="swimlane;startSize=50;fillColor=#F0F8FF;strokeColor=#0066CC;fontStyle=1;fontSize=16;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="100" y="600" width="1600" height="1200" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== Internet Gateway ==================== -->
+        <mxCell id="igw" value="Internet Gateway&lt;br&gt;(IGW)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.internet_gateway;" vertex="1" parent="vpc-container">
+          <mxGeometry x="761" y="60" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AZ-1a: パブリックサブネット ==================== -->
+        <mxCell id="subnet-public-1a" value="AZ: ap-northeast-1a&#xa;Public Subnet: 10.0.1.0/24" style="swimlane;startSize=40;fillColor=#E8F5E9;strokeColor=#569A31;fontStyle=1;fontSize=13;strokeWidth=2;" vertex="1" parent="vpc-container">
+          <mxGeometry x="80" y="170" width="300" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nat-1a" value="NAT Gateway 1a&lt;br&gt;EIP: 203.0.113.1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.nat_gateway;" vertex="1" parent="subnet-public-1a">
+          <mxGeometry x="111" y="60" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AZ-1c: パブリックサブネット ==================== -->
+        <mxCell id="subnet-public-1c" value="AZ: ap-northeast-1c&#xa;Public Subnet: 10.0.2.0/24" style="swimlane;startSize=40;fillColor=#E8F5E9;strokeColor=#569A31;fontStyle=1;fontSize=13;strokeWidth=2;" vertex="1" parent="vpc-container">
+          <mxGeometry x="1220" y="170" width="300" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nat-1c" value="NAT Gateway 1c&lt;br&gt;EIP: 203.0.113.2" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.nat_gateway;" vertex="1" parent="subnet-public-1c">
+          <mxGeometry x="111" y="60" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AZ-1a: プライベートサブネット (App層) ==================== -->
+        <mxCell id="subnet-private-app-1a" value="Private App Subnet 1a: 10.0.11.0/24" style="swimlane;startSize=30;fillColor=#FFF3E0;strokeColor=#FF9900;fontStyle=1;fontSize=12;strokeWidth=2;" vertex="1" parent="vpc-container">
+          <mxGeometry x="80" y="410" width="300" height="280" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambda-search-1a" value="Lambda 検索&lt;br&gt;ENI" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="subnet-private-app-1a">
+          <mxGeometry x="30" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambda-auth-1a" value="Lambda 認証&lt;br&gt;ENI" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="subnet-private-app-1a">
+          <mxGeometry x="30" y="150" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambda-file-1a" value="Lambda File&lt;br&gt;ENI" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="subnet-private-app-1a">
+          <mxGeometry x="170" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AZ-1c: プライベートサブネット (App層) ==================== -->
+        <mxCell id="subnet-private-app-1c" value="Private App Subnet 1c: 10.0.12.0/24" style="swimlane;startSize=30;fillColor=#FFF3E0;strokeColor=#FF9900;fontStyle=1;fontSize=12;strokeWidth=2;" vertex="1" parent="vpc-container">
+          <mxGeometry x="1220" y="410" width="300" height="280" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambda-search-1c" value="Lambda 検索&lt;br&gt;ENI" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="subnet-private-app-1c">
+          <mxGeometry x="30" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambda-index-1c" value="Lambda Index&lt;br&gt;ENI" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="subnet-private-app-1c">
+          <mxGeometry x="170" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AZ-1a: プライベートサブネット (Data層) ==================== -->
+        <mxCell id="subnet-private-data-1a" value="Private Data Subnet 1a: 10.0.21.0/24" style="swimlane;startSize=30;fillColor=#E3F2FD;strokeColor=#527FFF;fontStyle=1;fontSize=12;strokeWidth=2;" vertex="1" parent="vpc-container">
+          <mxGeometry x="80" y="730" width="300" height="400" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rds-1a" value="RDS Primary&lt;br&gt;PostgreSQL&lt;br&gt;Multi-AZ" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="subnet-private-data-1a">
+          <mxGeometry x="30" y="50" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="redis-1a" value="Redis Primary&lt;br&gt;cache.t3.medium" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;" vertex="1" parent="subnet-private-data-1a">
+          <mxGeometry x="30" y="170" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="opensearch-1a" value="OpenSearch&lt;br&gt;Node 1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4AB29A;gradientDirection=north;fillColor=#116D5B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.opensearch_service;" vertex="1" parent="subnet-private-data-1a">
+          <mxGeometry x="30" y="290" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AZ-1c: プライベートサブネット (Data層) ==================== -->
+        <mxCell id="subnet-private-data-1c" value="Private Data Subnet 1c: 10.0.22.0/24" style="swimlane;startSize=30;fillColor=#E3F2FD;strokeColor=#527FFF;fontStyle=1;fontSize=12;strokeWidth=2;" vertex="1" parent="vpc-container">
+          <mxGeometry x="1220" y="730" width="300" height="400" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rds-1c" value="RDS Standby&lt;br&gt;PostgreSQL&lt;br&gt;Multi-AZ" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="subnet-private-data-1c">
+          <mxGeometry x="30" y="50" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="redis-1c" value="Redis Replica&lt;br&gt;cache.t3.medium" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;" vertex="1" parent="subnet-private-data-1c">
+          <mxGeometry x="30" y="170" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="opensearch-1c" value="OpenSearch&lt;br&gt;Node 2-3" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4AB29A;gradientDirection=north;fillColor=#116D5B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.opensearch_service;" vertex="1" parent="subnet-private-data-1c">
+          <mxGeometry x="30" y="290" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== VPC Endpoints ==================== -->
+        <mxCell id="vpce-section" value="VPC Endpoints" style="swimlane;startSize=30;fillColor=#F5F0FF;strokeColor=#9C27B0;fontStyle=1;fontSize=12;" vertex="1" parent="vpc-container">
+          <mxGeometry x="450" y="410" width="700" height="280" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vpce-s3" value="S3 Gateway Endpoint&lt;br&gt;無料&lt;br&gt;NAT不要" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#60A337;gradientDirection=north;fillColor=#277116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="vpce-section">
+          <mxGeometry x="100" y="80" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vpce-s3-note" value="✨ コスト削減90%&lt;br&gt;レイテンシ削減90%" style="text;html=1;strokeColor=#569A31;fillColor=#E8F5E9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="vpce-section">
+          <mxGeometry x="75" y="165" width="120" height="35" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vpce-dynamodb" value="DynamoDB Gateway&lt;br&gt;Endpoint&lt;br&gt;無料" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="vpce-section">
+          <mxGeometry x="315" y="80" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vpce-logs" value="CloudWatch Logs&lt;br&gt;Interface Endpoint&lt;br&gt;$7/月" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F54749;gradientDirection=north;fillColor=#C7131F;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch_2;" vertex="1" parent="vpce-section">
+          <mxGeometry x="530" y="80" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== VPC外のサービス (S3 Web, API Gateway, etc.) ==================== -->
+        <mxCell id="s3-web-outside" value="S3 Web Bucket&lt;br&gt;Next.js 静的ファイル&lt;br&gt;CloudFront OAI経由" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#60A337;gradientDirection=north;fillColor=#277116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
+          <mxGeometry x="250" y="1850" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="api-gateway-outside" value="API Gateway&lt;br&gt;REST API&lt;br&gt;/api/v1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#FF4F8B;gradientDirection=north;fillColor=#BC1356;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="1">
+          <mxGeometry x="500" y="1850" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3-cache-outside" value="S3 Cache Bucket&lt;br&gt;サムネイル・ファイル&lt;br&gt;30日TTL" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#60A337;gradientDirection=north;fillColor=#277116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
+          <mxGeometry x="750" y="1850" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3-cache-note-outside" value="✨ キャッシュファースト&lt;br&gt;90%ヒット率" style="text;html=1;strokeColor=#569A31;fillColor=#E8F5E9;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="729" y="1940" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dynamodb-outside" value="DynamoDB&lt;br&gt;4テーブル&lt;br&gt;BatchGetItem" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="1850" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cognito-outside" value="Cognito&lt;br&gt;JWT認証&lt;br&gt;User Pool" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F54749;gradientDirection=north;fillColor=#C7131F;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="1850" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nas-outside" value="💾 NAS 4台&lt;br&gt;10TB&lt;br&gt;VPN接続" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#4D27AA;gradientDirection=north;fillColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.storage_gateway;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="1850" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== 接続線 (簡略化) ==================== -->
+
+        <!-- ユーザー → Route 53 -->
+        <mxCell id="conn-user-r53" value="DNS解決" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066CC;strokeWidth=2;fontSize=11;fontColor=#232F3E;" edge="1" parent="1" source="users" target="route53">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Route 53 → CloudFront -->
+        <mxCell id="conn-r53-cf" value="ALIAS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066CC;strokeWidth=2;fontSize=11;fontColor=#232F3E;" edge="1" parent="1" source="route53" target="cloudfront">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- CloudFront → IGW -->
+        <mxCell id="conn-cf-igw" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066CC;strokeWidth=2;" edge="1" parent="1" source="cloudfront" target="igw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- IGW → NAT Gateways -->
+        <mxCell id="conn-igw-nat1a" value="Route" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#569A31;strokeWidth=2;fontSize=10;fontColor=#232F3E;" edge="1" parent="1" source="igw" target="nat-1a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="conn-igw-nat1c" value="Route" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#569A31;strokeWidth=2;fontSize=10;fontColor=#232F3E;" edge="1" parent="1" source="igw" target="nat-1c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- NAT → Lambda (簡略) -->
+        <mxCell id="conn-nat1a-lambda" value="0.0.0.0/0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9900;strokeWidth=2;fontSize=9;fontColor=#232F3E;dashed=1;" edge="1" parent="1" source="nat-1a" target="lambda-search-1a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Lambda → RDS/Redis/OpenSearch (代表例) -->
+        <mxCell id="conn-lambda-rds" value="5432" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#527FFF;strokeWidth=2;fontSize=9;fontColor=#232F3E;" edge="1" parent="1" source="lambda-search-1a" target="rds-1a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="conn-lambda-redis" value="6379" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D82C20;strokeWidth=2;fontSize=9;fontColor=#232F3E;" edge="1" parent="1" source="lambda-search-1a" target="redis-1a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="conn-lambda-os" value="443" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#005EB8;strokeWidth=2;fontSize=9;fontColor=#232F3E;" edge="1" parent="1" source="lambda-search-1a" target="opensearch-1a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Lambda → VPC Endpoints (代表例) -->
+        <mxCell id="conn-lambda-vpce-s3" value="VPC Endpoint" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#569A31;strokeWidth=2;fontSize=9;fontColor=#232F3E;dashed=1;" edge="1" parent="1" source="lambda-search-1a" target="vpce-s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RDS Multi-AZ Replication -->
+        <mxCell id="conn-rds-repl" value="同期レプリケーション" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3334B9;strokeWidth=2;fontSize=9;fontColor=#232F3E;dashed=1;dashPattern=5 5;" edge="1" parent="1" source="rds-1a" target="rds-1c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Redis Replication -->
+        <mxCell id="conn-redis-repl" value="非同期レプリケーション" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D82C20;strokeWidth=2;fontSize=9;fontColor=#232F3E;dashed=1;dashPattern=5 5;" edge="1" parent="1" source="redis-1a" target="redis-1c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- OpenSearch Cluster -->
+        <mxCell id="conn-os-cluster" value="クラスタ" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#005EB8;strokeWidth=2;fontSize=9;fontColor=#232F3E;dashed=1;dashPattern=5 5;" edge="1" parent="1" source="opensearch-1a" target="opensearch-1c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== 最適化ハイライト ==================== -->
+        <mxCell id="highlight-box" value="🎯 VPC・ネットワーク最適化の成果" style="swimlane;startSize=40;fillColor=#FFFACD;strokeColor=#FFD700;fontStyle=1;fontSize=15;fontColor=#8B4513;" vertex="1" parent="1">
+          <mxGeometry x="100" y="2000" width="450" height="300" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-1" value="✅ Multi-AZ構成: 99.99%可用性" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="50" width="420" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-2" value="✅ NAT Gateway冗長化: 完全HA" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="85" width="420" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-3" value="✅ VPC Gateway Endpoint: コスト90%削減" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="120" width="420" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-4" value="✅ Hyperplane ENI: Lambda起動1秒以下" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="155" width="420" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-5" value="✅ セキュリティグループ: 最小権限の原則" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="190" width="420" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-6" value="✅ Site-to-Site VPN: Direct Connectより87%削減" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="225" width="420" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="highlight-vpc-cost" value="💰 VPCコスト: $121-126/月 (VPN含む)" style="text;html=1;strokeColor=#FFD700;fillColor=#FFFACD;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=13;fontColor=#8B4513;fontStyle=1;" vertex="1" parent="highlight-box">
+          <mxGeometry x="15" y="260" width="420" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== 凡例 ==================== -->
+        <mxCell id="legend-box" value="凡例" style="swimlane;startSize=30;fillColor=#F5F5F5;strokeColor=#999999;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="600" y="2000" width="400" height="300" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-title" value="VPCネットワーク構成" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="legend-box">
+          <mxGeometry x="15" y="40" width="370" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-1" value="🟢 Public Subnet: Internet Gateway経由" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#569A31;" vertex="1" parent="legend-box">
+          <mxGeometry x="25" y="70" width="360" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-2" value="🟠 Private App Subnet: Lambda ENI配置" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#FF9900;" vertex="1" parent="legend-box">
+          <mxGeometry x="25" y="100" width="360" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-3" value="🔵 Private Data Subnet: RDS/Redis/OpenSearch" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#527FFF;" vertex="1" parent="legend-box">
+          <mxGeometry x="25" y="130" width="360" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-4" value="🟣 VPC Endpoints: S3/DynamoDB (Gateway)無料" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#9C27B0;" vertex="1" parent="legend-box">
+          <mxGeometry x="25" y="160" width="360" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-5" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#527FFF;strokeWidth=2;" edge="1" parent="legend-box">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="25" y="200" as="sourcePoint" />
+            <mxPoint x="75" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="legend-vpc-5-text" value="VPC内通信（プライベートIP）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend-box">
+          <mxGeometry x="85" y="190" width="300" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-6" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#999999;strokeWidth=1;dashed=1;dashPattern=5 5;" edge="1" parent="legend-box">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="25" y="235" as="sourcePoint" />
+            <mxPoint x="75" y="235" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="legend-vpc-6-text" value="レプリケーション（非同期）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend-box">
+          <mxGeometry x="85" y="225" width="300" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-vpc-note" value="📄 詳細: architecture-optimized.md セクション4.3" style="text;html=1;strokeColor=#999999;fillColor=#F5F5F5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=#666666;fontStyle=2;" vertex="1" parent="legend-box">
+          <mxGeometry x="15" y="260" width="370" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== ネットワーク情報ボックス ==================== -->
+        <mxCell id="network-info" value="ネットワーク構成情報" style="swimlane;startSize=30;fillColor=#E8F5E9;strokeColor=#569A31;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="2000" width="550" height="300" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-1" value="CIDR: 10.0.0.0/16 (65,536 IPs)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#232F3E;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="40" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-2" value="AZ: ap-northeast-1a, ap-northeast-1c" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#232F3E;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="65" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-3" value="Public Subnets: 10.0.1.0/24, 10.0.2.0/24" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#569A31;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="90" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-4" value="Private App Subnets: 10.0.11.0/24, 10.0.12.0/24" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#FF9900;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="115" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-5" value="Private Data Subnets: 10.0.21.0/24, 10.0.22.0/24" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#527FFF;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="140" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-6" value="NAT Gateways: 2 (AZ-1a, AZ-1c)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#232F3E;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="170" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-7" value="VPC Gateway Endpoints: S3, DynamoDB (無料)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#9C27B0;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="195" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-8" value="VPC Interface Endpoints: CloudWatch Logs ($7/月, オプション)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#9C27B0;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="220" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-9" value="Security Groups: Lambda, RDS, Redis, OpenSearch, VPC Endpoint" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#DD344C;fontFamily=Courier New;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="250" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="network-info-10" value="VPN Connection: Site-to-Site IPsec (2 Tunnels, 99.95%可用性)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#FF6B6B;fontFamily=Courier New;fontStyle=1;" vertex="1" parent="network-info">
+          <mxGeometry x="15" y="275" width="520" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== オンプレミスNAS接続エリア ==================== -->
+        <mxCell id="onprem-area" value="オンプレミス環境 (10.1.0.0/16)" style="swimlane;startSize=40;fillColor=#FFE6E6;strokeColor=#FF6B6B;fontStyle=1;fontSize=14;strokeWidth=3;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+          <mxGeometry x="100" y="2350" width="450" height="300" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nas-onprem" value="💾 NAS 4台&lt;br&gt;10TB&lt;br&gt;10.1.0.10-13&lt;br&gt;SMB/CIFS (Port 445)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#4D27AA;gradientDirection=north;fillColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.storage_gateway;" vertex="1" parent="onprem-area">
+          <mxGeometry x="60" y="120" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cgw" value="Customer Gateway&lt;br&gt;(CGW)&lt;br&gt;VPNルーター&lt;br&gt;203.0.113.10" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.customer_gateway;" vertex="1" parent="onprem-area">
+          <mxGeometry x="270" y="120" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="conn-nas-cgw" value="LAN" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B6B;strokeWidth=3;fontSize=10;fontColor=#232F3E;" edge="1" parent="onprem-area" source="nas-onprem" target="cgw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Virtual Private Gateway (VPC内に追加) -->
+        <mxCell id="vgw" value="Virtual Private&lt;br&gt;Gateway (VGW)&lt;br&gt;IPsec終端" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#945DF2;gradientDirection=north;fillColor=#5A30B5;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.vpn_gateway;" vertex="1" parent="1">
+          <mxGeometry x="190" y="1300" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- VPN Connection (2本のトンネル) -->
+        <mxCell id="vpn-tunnel-1" value="VPN Tunnel 1&lt;br&gt;IPsec AES-256&lt;br&gt;169.254.10.0/30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B6B;strokeWidth=4;fontSize=9;fontColor=#232F3E;dashed=1;dashPattern=8 4;" edge="1" parent="1" source="cgw" target="vgw">
+          <mxGeometry x="0.2" y="15" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="vpn-tunnel-2" value="VPN Tunnel 2 (冗長)&lt;br&gt;169.254.10.4/30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF9900;strokeWidth=3;fontSize=9;fontColor=#232F3E;dashed=1;dashPattern=8 4;" edge="1" parent="1" source="cgw" target="vgw">
+          <mxGeometry x="-0.2" y="-15" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Lambda → VGW → NAS 接続 -->
+        <mxCell id="conn-lambda-vgw" value="10.1.0.0/16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9C27B0;strokeWidth=2;fontSize=9;fontColor=#232F3E;dashed=1;" edge="1" parent="1" source="lambda-file-1a" target="vgw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="conn-lambda-nas-note" value="📁 月次同期: メタデータ&lt;br&gt;📸 オンデマンド: サムネイル&lt;br&gt;Port: 445 (SMB)" style="text;html=1;strokeColor=#FF6B6B;fillColor=#FFE6E6;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=#232F3E;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="2710" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- セキュリティグループフローを凡例に追加 -->
+        <mxCell id="sg-flow-title" value="セキュリティグループフロー:" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#DD344C;fontStyle=1;" vertex="1" parent="legend-box">
+          <mxGeometry x="15" y="265" width="370" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sg-flow-1" value="   Lambda SG → RDS SG (5432), Redis SG (6379), OpenSearch SG (443)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#232F3E;fontFamily=Courier New;" vertex="1" parent="legend-box">
+          <mxGeometry x="15" y="285" width="370" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sg-flow-2" value="   Lambda SG → S3/DynamoDB (Gateway EP), Internet (NAT), NAS (VPN 445)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#232F3E;fontFamily=Courier New;" vertex="1" parent="legend-box">
+          <mxGeometry x="15" y="325" width="370" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ハイライトボックスのサイズ調整 -->
+        <mxCell id="highlight-box-resize" value="" style="swimlane;startSize=0;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="100" y="2000" width="450" height="330" as="geometry" />
+        </mxCell>
+
+        <!-- 凡例ボックスのサイズ調整 -->
+        <mxCell id="legend-box-resize" value="" style="swimlane;startSize=0;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="600" y="2000" width="400" height="380" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
