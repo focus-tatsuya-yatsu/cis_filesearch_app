@@ -1,6 +1,8 @@
+import { FC, ReactNode } from 'react'
+
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { FC, ReactNode } from 'react'
+
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import '@/styles/globals.css'
 
@@ -15,13 +17,12 @@ interface RootLayoutProps {
   children: ReactNode
 }
 
-const RootLayout: FC<RootLayoutProps> = ({ children }) => {
-  return (
-    <html lang="ja" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+const RootLayout: FC<RootLayoutProps> = ({ children }) => (
+  <html lang="ja" suppressHydrationWarning>
+    <body className={inter.className} suppressHydrationWarning>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
               (function() {
                 try {
                   const theme = localStorage.getItem('theme');
@@ -32,12 +33,11 @@ const RootLayout: FC<RootLayoutProps> = ({ children }) => {
                 } catch (e) {}
               })();
             `,
-          }}
-        />
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
-    </html>
-  )
-}
+        }}
+      />
+      <ThemeProvider>{children}</ThemeProvider>
+    </body>
+  </html>
+)
 
 export default RootLayout

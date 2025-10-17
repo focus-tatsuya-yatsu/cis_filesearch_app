@@ -1,8 +1,12 @@
 'use client'
 
 import { FC, useState } from 'react'
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+
 import { GripVertical } from 'lucide-react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+
+import type { SearchResult } from '@/types'
+
 import { FolderTree } from './FolderTree'
 import { SearchResultCard } from './SearchResultCard'
 
@@ -128,22 +132,17 @@ const dummyFolderData = [
 ]
 
 interface ExplorerViewProps {
-  searchResults: any[]
+  searchResults: SearchResult[]
   onPreview?: (id: string) => void
   onDownload?: (id: string) => void
 }
 
-export const ExplorerView: FC<ExplorerViewProps> = ({
-  searchResults,
-  onPreview,
-  onDownload
-}) => {
+export const ExplorerView: FC<ExplorerViewProps> = ({ searchResults, onPreview, onDownload }) => {
   const [selectedFolder, setSelectedFolder] = useState<string>('')
 
   const handleFolderSelect = (path: string) => {
     setSelectedFolder(path)
-    console.log('Selected folder:', path)
-    // ここで実際のフォルダ内容の取得処理を行う
+    // TODO: 実際のフォルダ内容の取得処理を実装
   }
 
   return (
@@ -202,8 +201,7 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
                   <p className="text-[#6E6E73] dark:text-[#8E8E93]">
                     {selectedFolder
                       ? `${selectedFolder} に検索結果がありません`
-                      : 'フォルダを選択するか、検索を実行してください'
-                    }
+                      : 'フォルダを選択するか、検索を実行してください'}
                   </p>
                 </div>
               )}

@@ -1,29 +1,31 @@
 import { SelectHTMLAttributes, FC, forwardRef } from 'react'
+
 import { ChevronDown } from 'lucide-react'
 
 interface SelectOption {
-  value: string
-  label: string
+  readonly value: string
+  readonly label: string
 }
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
-  options: SelectOption[]
+  options: readonly SelectOption[]
   error?: string
   placeholder?: string
 }
 
 export const Select: FC<SelectProps> = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, options, error, placeholder, className = '', ...props }, ref) => {
-    return (
-      <div className="w-full">
-        {label && (
-          <label className="block text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">{label}</label>
-        )}
-        <div className="relative">
-          <select
-            ref={ref}
-            className={`
+  ({ label, options, error, placeholder, className = '', ...props }, ref) => (
+    <div className="w-full">
+      {label && (
+        <label className="block text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <select
+          ref={ref}
+          className={`
               appearance-none
               block w-full rounded-lg
               border border-[#D1D1D6]/30 dark:border-[#38383A]/30
@@ -39,27 +41,26 @@ export const Select: FC<SelectProps> = forwardRef<HTMLSelectElement, SelectProps
               ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
               ${className}
             `}
-            {...props}
-          >
-            {placeholder && (
-              <option value="" disabled>
-                {placeholder}
-              </option>
-            )}
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <ChevronDown className="h-5 w-5 text-[#6E6E73] dark:text-[#8E8E93]" />
-          </div>
+          {...props}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+          <ChevronDown className="h-5 w-5 text-[#6E6E73] dark:text-[#8E8E93]" />
         </div>
-        {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
-    )
-  }
+      {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  )
 )
 
 Select.displayName = 'Select'

@@ -1,7 +1,8 @@
 import { FC, useState, FormEvent } from 'react'
+
 import { Search, X } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { Input, Button } from '@/components/ui'
+
+import { Button } from '@/components/ui'
 
 interface SearchBarProps {
   onSearch: (query: string) => void
@@ -30,11 +31,11 @@ export const SearchBar: FC<SearchBarProps> = ({
   }
 
   return (
-    <motion.form
+    <form
       onSubmit={handleSubmit}
-      className="w-full"
-      animate={{ scale: isFocused ? 1.01 : 1 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      className={`w-full transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        isFocused ? 'scale-[1.01]' : 'scale-100'
+      }`}
     >
       <div className="relative flex items-center gap-3">
         <div className="relative flex-1">
@@ -68,26 +69,23 @@ export const SearchBar: FC<SearchBarProps> = ({
               MozAppearance: 'none',
             }}
           />
-          {/* クリアボタン - iOS スタイル */}
+          {/* クリアボタン - iOS スタイル with CSS animation */}
           {query && (
-            <motion.button
+            <button
               type="button"
               onClick={handleClear}
               aria-label="検索をクリア"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
               className="
                 absolute right-4 top-1/2 -translate-y-1/2
                 w-5 h-5 flex items-center justify-center
                 bg-[#C7C7CC] dark:bg-[#48484A]
                 hover:bg-[#AEAEB2] dark:hover:bg-[#636366]
                 rounded-full transition-all duration-200
+                animate-fade-in-scale
               "
             >
               <X className="h-3 w-3 text-white dark:text-[#F5F5F7]" strokeWidth={3} />
-            </motion.button>
+            </button>
           )}
         </div>
         {/* 検索ボタン - iOS System Blue */}
@@ -108,6 +106,6 @@ export const SearchBar: FC<SearchBarProps> = ({
           検索
         </Button>
       </div>
-    </motion.form>
+    </form>
   )
 }

@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Header } from '@/components/layout/Header'
-import { SearchBar } from '@/components/features/SearchBar'
-import { FilterPanel } from '@/components/features/FilterPanel'
-import { SearchResultCard } from '@/components/features/SearchResultCard'
-import { ExplorerView } from '@/components/features/ExplorerView'
-import { Spinner, Button } from '@/components/ui'
+import { useState, useCallback } from 'react'
+
 import { LayoutGrid, FolderTree } from 'lucide-react'
 
+import { ExplorerView } from '@/components/features/ExplorerView'
+import { FilterPanel } from '@/components/features/FilterPanel'
+import { SearchBar } from '@/components/features/SearchBar'
+import { SearchResultCard } from '@/components/features/SearchResultCard'
+import { Header } from '@/components/layout/Header'
+import { Spinner, Button } from '@/components/ui'
+import type { SearchResult, FilterOptions } from '@/types'
+
 // ダミーデータ
-const dummyResults = [
+const dummyResults: SearchResult[] = [
   {
     id: '1',
     fileName: '2024年度事業計画書.pdf',
@@ -19,7 +21,8 @@ const dummyResults = [
     fileType: 'pdf',
     fileSize: 2457600,
     modifiedDate: '2024-01-15T10:30:00',
-    snippet: '2024年度の事業計画について、前年度の実績を踏まえ、新たな成長戦略を策定しました。特に重点を置くのは...',
+    snippet:
+      '2024年度の事業計画について、前年度の実績を踏まえ、新たな成長戦略を策定しました。特に重点を置くのは...',
     relevanceScore: 0.95,
   },
   {
@@ -47,7 +50,7 @@ const dummyResults = [
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<typeof dummyResults>([])
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'explorer'>('explorer')
 
@@ -63,20 +66,69 @@ const HomePage = () => {
     }, 1500)
   }
 
-  const handleFilterChange = (filters: any) => {
-    console.log('Filters changed:', filters)
-    // フィルター処理の実装
-  }
+  /**
+   * Performance Optimization: useCallback applied
+   *
+   * handleFilterChange - Stable function reference for filter functionality
+   * - Prevents FilterPanel re-renders when parent re-renders
+   * - Dependencies: [] (currently no external dependencies)
+   * - Future: Will likely depend on searchResults, filtering logic, etc.
+   *
+   * Expected behavior when implemented:
+   * - May need to add dependencies: [searchResults, searchQuery, etc.]
+   * - Should filter searchResults based on FilterOptions
+   * - May involve API calls to refetch filtered results
+   */
+  const handleFilterChange = useCallback((_filters: FilterOptions) => {
+    // TODO: フィルター処理の実装
+    // 将来の実装例:
+    // - setAppliedFilters(_filters)
+    // - const filtered = applyFilters(searchResults, _filters)
+    // - setSearchResults(filtered)
+    // - または API 経由で再検索: await refetchResults({ query: searchQuery, filters: _filters })
+  }, []) // 現在は依存関係なし。実装時に searchResults, searchQuery などを追加
 
-  const handlePreview = (id: string) => {
-    console.log('Preview file:', id)
-    // プレビュー機能の実装
-  }
+  /**
+   * Performance Optimization: useCallback applied
+   *
+   * handlePreview - Stable function reference for preview functionality
+   * - Prevents SearchResultCard re-renders when parent re-renders
+   * - Dependencies: [] (currently no external dependencies)
+   * - Future: Will likely depend on modal state, API calls, or navigation
+   *
+   * Expected behavior when implemented:
+   * - May need to add dependencies: [modalState, navigate, etc.]
+   * - Should trigger file preview modal or new window
+   * - May involve API calls to fetch preview data
+   */
+  const handlePreview = useCallback((_id: string) => {
+    // TODO: プレビュー機能の実装
+    // 将来の実装例:
+    // - setPreviewModal({ isOpen: true, fileId: id })
+    // - await fetchPreviewData(id)
+    // - navigate(`/preview/${id}`)
+  }, []) // 現在は依存関係なし。実装時に必要に応じて追加
 
-  const handleDownload = (id: string) => {
-    console.log('Download file:', id)
-    // ダウンロード機能の実装
-  }
+  /**
+   * Performance Optimization: useCallback applied
+   *
+   * handleDownload - Stable function reference for download functionality
+   * - Prevents SearchResultCard re-renders when parent re-renders
+   * - Dependencies: [] (currently no external dependencies)
+   * - Future: Will likely depend on download service, auth context, etc.
+   *
+   * Expected behavior when implemented:
+   * - May need to add dependencies: [downloadService, authToken, etc.]
+   * - Should trigger file download from NAS or S3
+   * - May involve progress tracking and error handling
+   */
+  const handleDownload = useCallback((_id: string) => {
+    // TODO: ダウンロード機能の実装
+    // 将来の実装例:
+    // - const url = await getDownloadUrl(id, authToken)
+    // - window.open(url, '_blank')
+    // - trackDownload(id, userId)
+  }, []) // 現在は依存関係なし。実装時に必要に応じて追加
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-black">
@@ -88,7 +140,8 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-[#FBFBFD] via-[#F8FAFF] to-[#F5F5F7] dark:from-black dark:via-[#0C0C0E] dark:to-[#000000]" />
 
         {/* 微細なノイズテクスチャ（高級感の演出） */}
-        <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02]"
+        <div
+          className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02]"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C9C9C' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
@@ -96,12 +149,7 @@ const HomePage = () => {
 
         <div className="relative py-20 sm:py-24 lg:py-28">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="text-center mb-10"
-            >
+            <div className="text-center mb-10 animate-fade-in">
               {/* メインタイトル - SF Pro Display風のウェイト */}
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 leading-[1.1]">
                 必要なファイルを瞬時に検索
@@ -110,15 +158,10 @@ const HomePage = () => {
               <p className="text-lg sm:text-xl lg:text-2xl text-[#424245] dark:text-[#C7C7CC] max-w-2xl mx-auto leading-[1.4]">
                 社内のNASに保存された全てのファイルから、AIが最適な結果を見つけます
               </p>
-            </motion.div>
+            </div>
 
             {/* 検索バー - フローティング効果 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-3xl mx-auto"
-            >
+            <div className="max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '150ms' }}>
               <div className="relative">
                 {/* 影のレイヤリング（Appleスタイル） */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-[#D1D1D6]/20 to-[#C7C7CC]/20 dark:from-[#38383A]/20 dark:to-[#48484A]/20 rounded-2xl blur-xl" />
@@ -126,14 +169,12 @@ const HomePage = () => {
                   <SearchBar onSearch={handleSearch} />
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* 検索統計 - Glass Morphism */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-12 mt-12"
+            <div
+              className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-12 mt-12 animate-fade-in"
+              style={{ animationDelay: '300ms' }}
             >
               {/* 統計カード */}
               <div className="relative group">
@@ -179,7 +220,7 @@ const HomePage = () => {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -189,14 +230,9 @@ const HomePage = () => {
         <section className="py-8">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* フィルターパネル */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mb-6"
-            >
+            <div className="mb-6 animate-fade-in-fast">
               <FilterPanel onFilterChange={handleFilterChange} />
-            </motion.div>
+            </div>
 
             {/* ビュー切り替えと検索結果ヘッダー */}
             <div className="mb-4 flex items-center justify-between">
@@ -242,18 +278,17 @@ const HomePage = () => {
             ) : searchResults.length > 0 ? (
               <div className="space-y-4">
                 {searchResults.map((result, index) => (
-                  <motion.div
+                  <div
                     key={result.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    className="animate-fade-in-fast"
+                    style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <SearchResultCard
                       result={result}
                       onPreview={handlePreview}
                       onDownload={handleDownload}
                     />
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             ) : (

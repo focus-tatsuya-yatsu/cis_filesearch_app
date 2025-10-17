@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
-import { runContrastTests } from '@/utils/contrast-checker'
-import { Header } from '@/components/layout/Header'
-import { SearchBar } from '@/components/features/SearchBar'
+
 import { FilterPanel } from '@/components/features/FilterPanel'
+import { SearchBar } from '@/components/features/SearchBar'
 import { SearchResultCard } from '@/components/features/SearchResultCard'
+import { Header } from '@/components/layout/Header'
+import { runContrastTests } from '@/utils/contrast-checker'
 
 // Test data
 const testResult = {
@@ -15,7 +16,8 @@ const testResult = {
   fileType: 'pdf',
   fileSize: 2457600,
   modifiedDate: '2024-01-15T10:30:00',
-  snippet: 'これはダークモードのテスト用スニペットテキストです。WCAG AAA基準を満たしているか確認します。',
+  snippet:
+    'これはダークモードのテスト用スニペットテキストです。WCAG AAA基準を満たしているか確認します。',
   relevanceScore: 0.95,
 }
 
@@ -76,7 +78,9 @@ export default function TestDarkMode() {
               <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">#F5F5F7 / #1C1C1E</p>
             </div>
             <div className="bg-white dark:bg-[#2C2C2E] border border-[#D1D1D6]/30 dark:border-[#38383A]/30 rounded-xl p-4">
-              <p className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Quaternary BG</p>
+              <p className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
+                Quaternary BG
+              </p>
               <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">white / #2C2C2E</p>
             </div>
           </div>

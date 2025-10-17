@@ -89,33 +89,93 @@ export const colorPalette = {
 // Test combinations
 export const contrastTests = {
   lightMode: [
-    { name: 'Primary Text on White', text: colorPalette.light.primaryText, bg: colorPalette.light.primaryBg },
-    { name: 'Primary Text on Secondary Bg', text: colorPalette.light.primaryText, bg: colorPalette.light.secondaryBg },
-    { name: 'Primary Text on Tertiary Bg', text: colorPalette.light.primaryText, bg: colorPalette.light.tertiaryBg },
-    { name: 'Secondary Text on White', text: colorPalette.light.secondaryText, bg: colorPalette.light.primaryBg },
-    { name: 'Muted Text on White', text: colorPalette.light.mutedText, bg: colorPalette.light.primaryBg },
-    { name: 'System Blue on White', text: colorPalette.light.systemBlue, bg: colorPalette.light.primaryBg },
-    { name: 'White on System Blue', text: colorPalette.light.primaryBg, bg: colorPalette.light.systemBlue },
+    {
+      name: 'Primary Text on White',
+      text: colorPalette.light.primaryText,
+      bg: colorPalette.light.primaryBg,
+    },
+    {
+      name: 'Primary Text on Secondary Bg',
+      text: colorPalette.light.primaryText,
+      bg: colorPalette.light.secondaryBg,
+    },
+    {
+      name: 'Primary Text on Tertiary Bg',
+      text: colorPalette.light.primaryText,
+      bg: colorPalette.light.tertiaryBg,
+    },
+    {
+      name: 'Secondary Text on White',
+      text: colorPalette.light.secondaryText,
+      bg: colorPalette.light.primaryBg,
+    },
+    {
+      name: 'Muted Text on White',
+      text: colorPalette.light.mutedText,
+      bg: colorPalette.light.primaryBg,
+    },
+    {
+      name: 'System Blue on White',
+      text: colorPalette.light.systemBlue,
+      bg: colorPalette.light.primaryBg,
+    },
+    {
+      name: 'White on System Blue',
+      text: colorPalette.light.primaryBg,
+      bg: colorPalette.light.systemBlue,
+    },
   ],
   darkMode: [
-    { name: 'Primary Text on Black', text: colorPalette.dark.primaryText, bg: colorPalette.dark.primaryBg },
-    { name: 'Primary Text on Secondary Bg', text: colorPalette.dark.primaryText, bg: colorPalette.dark.secondaryBg },
-    { name: 'Primary Text on Tertiary Bg', text: colorPalette.dark.primaryText, bg: colorPalette.dark.tertiaryBg },
-    { name: 'Primary Text on Quaternary Bg', text: colorPalette.dark.primaryText, bg: colorPalette.dark.quaternaryBg },
-    { name: 'Secondary Text on Black', text: colorPalette.dark.secondaryText, bg: colorPalette.dark.primaryBg },
-    { name: 'Muted Text on Black', text: colorPalette.dark.mutedText, bg: colorPalette.dark.primaryBg },
-    { name: 'System Blue on Black', text: colorPalette.dark.systemBlue, bg: colorPalette.dark.primaryBg },
-    { name: 'White on System Blue', text: colorPalette.dark.primaryText, bg: colorPalette.dark.systemBlue },
+    {
+      name: 'Primary Text on Black',
+      text: colorPalette.dark.primaryText,
+      bg: colorPalette.dark.primaryBg,
+    },
+    {
+      name: 'Primary Text on Secondary Bg',
+      text: colorPalette.dark.primaryText,
+      bg: colorPalette.dark.secondaryBg,
+    },
+    {
+      name: 'Primary Text on Tertiary Bg',
+      text: colorPalette.dark.primaryText,
+      bg: colorPalette.dark.tertiaryBg,
+    },
+    {
+      name: 'Primary Text on Quaternary Bg',
+      text: colorPalette.dark.primaryText,
+      bg: colorPalette.dark.quaternaryBg,
+    },
+    {
+      name: 'Secondary Text on Black',
+      text: colorPalette.dark.secondaryText,
+      bg: colorPalette.dark.primaryBg,
+    },
+    {
+      name: 'Muted Text on Black',
+      text: colorPalette.dark.mutedText,
+      bg: colorPalette.dark.primaryBg,
+    },
+    {
+      name: 'System Blue on Black',
+      text: colorPalette.dark.systemBlue,
+      bg: colorPalette.dark.primaryBg,
+    },
+    {
+      name: 'White on System Blue',
+      text: colorPalette.dark.primaryText,
+      bg: colorPalette.dark.systemBlue,
+    },
   ],
 }
 
 // Run contrast tests
 export const runContrastTests = () => {
   console.log('🎨 WCAG AAA Contrast Ratio Tests (Target: 7.0+)\n')
-  console.log('=' .repeat(60))
+  console.log('='.repeat(60))
 
   console.log('\n📱 LIGHT MODE\n')
-  contrastTests.lightMode.forEach(test => {
+  contrastTests.lightMode.forEach((test) => {
     const ratio = getContrastRatio(test.text, test.bg)
     const status = ratio >= 7.0 ? '✅' : ratio >= 4.5 ? '⚠️  (AA only)' : '❌'
     console.log(`${status} ${test.name}: ${ratio.toFixed(2)}:1`)
@@ -123,14 +183,14 @@ export const runContrastTests = () => {
   })
 
   console.log('\n🌙 DARK MODE\n')
-  contrastTests.darkMode.forEach(test => {
+  contrastTests.darkMode.forEach((test) => {
     const ratio = getContrastRatio(test.text, test.bg)
     const status = ratio >= 7.0 ? '✅' : ratio >= 4.5 ? '⚠️  (AA only)' : '❌'
     console.log(`${status} ${test.name}: ${ratio.toFixed(2)}:1`)
     console.log(`   Text: ${test.text} | Background: ${test.bg}`)
   })
 
-  console.log('\n' + '=' .repeat(60))
+  console.log('\n' + '='.repeat(60))
   console.log('✅ = WCAG AAA (7:1+) | ⚠️  = WCAG AA (4.5:1+) | ❌ = Fail')
 }
 

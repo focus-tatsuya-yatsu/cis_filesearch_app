@@ -33,14 +33,7 @@
     "plugin:import/typescript",
     "prettier"
   ],
-  "plugins": [
-    "@typescript-eslint",
-    "react",
-    "react-hooks",
-    "jsx-a11y",
-    "import",
-    "prettier"
-  ],
+  "plugins": ["@typescript-eslint", "react", "react-hooks", "jsx-a11y", "import", "prettier"],
   "rules": {
     "prettier/prettier": "error",
     "react/react-in-jsx-scope": "off",
@@ -56,14 +49,7 @@
     "import/order": [
       "error",
       {
-        "groups": [
-          "builtin",
-          "external",
-          "internal",
-          "parent",
-          "sibling",
-          "index"
-        ],
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
         "pathGroups": [
           {
             "pattern": "react",

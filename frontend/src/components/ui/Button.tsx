@@ -1,10 +1,6 @@
 import { ButtonHTMLAttributes, FC, ReactNode } from 'react'
-import { motion, HTMLMotionProps } from 'framer-motion'
 
-// ButtonHTMLAttributesから競合するプロパティを除外
-type ButtonPropsBase = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragEnd' | 'onDragStart' | 'style'>
-
-interface ButtonProps extends ButtonPropsBase {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
@@ -25,13 +21,17 @@ export const Button: FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    'inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2'
+    'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2'
+
+  // CSS Transitions for hover and active states (Apple Design Philosophy)
+  const interactionClasses = disabled || loading
+    ? ''
+    : 'hover:scale-[1.02] active:scale-[0.98] transform'
 
   const variantClasses = {
     primary:
       'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 disabled:bg-primary-300',
-    secondary:
-      'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:bg-gray-300',
+    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:bg-gray-300',
     outline:
       'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500 disabled:border-gray-300 disabled:text-gray-300',
     ghost: 'text-gray-600 hover:bg-gray-100 focus:ring-gray-500 disabled:text-gray-300',
@@ -44,13 +44,12 @@ export const Button: FC<ButtonProps> = ({
   }
 
   return (
-    <motion.button
-      whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
-      whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+    <button
+      className={`${baseClasses} ${interactionClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       disabled={disabled || loading}
       type={type}
       onClick={onClick}
+      {...props}
     >
       {loading ? (
         <svg
@@ -77,6 +76,6 @@ export const Button: FC<ButtonProps> = ({
         icon
       )}
       {children}
-    </motion.button>
+    </button>
   )
 }

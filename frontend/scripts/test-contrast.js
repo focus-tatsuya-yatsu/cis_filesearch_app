@@ -62,9 +62,9 @@ const tests = {
 }
 
 console.log('\n🎨 CIS File Search - WCAG AAA Contrast Ratio Verification')
-console.log('=' .repeat(70))
+console.log('='.repeat(70))
 console.log('Target: 7.0:1 for WCAG AAA compliance')
-console.log('=' .repeat(70))
+console.log('='.repeat(70))
 
 Object.entries(tests).forEach(([mode, modeTests]) => {
   console.log(`\n📱 ${mode.toUpperCase()}`)
@@ -74,7 +74,7 @@ Object.entries(tests).forEach(([mode, modeTests]) => {
   let warningCount = 0
   let failCount = 0
 
-  modeTests.forEach(test => {
+  modeTests.forEach((test) => {
     const ratio = getContrastRatio(test.text, test.bg)
     let status, color
 
@@ -101,6 +101,6 @@ Object.entries(tests).forEach(([mode, modeTests]) => {
   console.log(`   ❌ Failed: ${failCount}/${modeTests.length}`)
 })
 
-console.log('\n' + '=' .repeat(70))
+console.log('\n' + '='.repeat(70))
 console.log('✅ = WCAG AAA (7:1+) | ⚠️  = WCAG AA only (4.5:1+) | ❌ = Fail (<4.5:1)')
-console.log('=' .repeat(70) + '\n')
+console.log('='.repeat(70) + '\n')
