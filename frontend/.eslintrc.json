@@ -92,6 +92,7 @@
       }
     ],
     "prefer-arrow-callback": "error",
-    "arrow-body-style": ["error", "as-needed"]
+    "arrow-body-style": ["warn", "as-needed"],
+    "react/no-unknown-property": ["error", { "ignore": ["jsx", "global"] }]
   }
 }

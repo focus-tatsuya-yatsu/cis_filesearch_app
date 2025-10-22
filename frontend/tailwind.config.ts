@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 
 const config: Config = {
   content: [
@@ -41,6 +42,16 @@ const config: Config = {
       },
     },
   },
+  plugins: [
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        '.writing-mode-vertical': {
+          'writing-mode': 'vertical-rl',
+          'text-orientation': 'mixed',
+        },
+      })
+    }),
+  ],
 }
 
 export default config

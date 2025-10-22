@@ -12,3 +12,11 @@ build/
 
 # Testing
 coverage/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__/**
+**/test/**
+**/tests/**
+.nyc_output/

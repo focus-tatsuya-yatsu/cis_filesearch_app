@@ -25,9 +25,14 @@ const nextConfig = {
         : false,
   },
 
-  // ✅ 本番環境ではESLintチェックを有効化推奨
+  // ✅ ESLint設定
+  // テストファイルは.eslintignoreで除外
+  // 本番コードのみをチェック
   eslint: {
-    ignoreDuringBuilds: process.env.SKIP_ESLINT === 'true',
+    // Only run ESLint on production code directories
+    dirs: ['src/app', 'src/components', 'src/hooks', 'src/lib', 'src/contexts', 'src/utils'],
+    // Keep strict checking enabled (test files excluded via .eslintignore)
+    ignoreDuringBuilds: false,
   },
 
   // ✅ Turbopack設定

@@ -100,14 +100,6 @@ export const Sidebar: FC<SidebarProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Vertical text styling for collapsed state */}
-      <style jsx>{`
-        .writing-mode-vertical {
-          writing-mode: vertical-rl;
-          text-orientation: mixed;
-        }
-      `}</style>
     </motion.div>
   )
 }
