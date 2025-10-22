@@ -24,9 +24,8 @@ export const Button: FC<ButtonProps> = ({
     'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2'
 
   // CSS Transitions for hover and active states (Apple Design Philosophy)
-  const interactionClasses = disabled || loading
-    ? ''
-    : 'hover:scale-[1.02] active:scale-[0.98] transform'
+  const interactionClasses =
+    disabled || loading ? '' : 'hover:scale-[1.02] active:scale-[0.98] transform'
 
   const variantClasses = {
     primary:

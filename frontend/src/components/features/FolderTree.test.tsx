@@ -177,14 +177,18 @@ describe('FolderTree', () => {
 
   describe('選択状態の管理', () => {
     it('選択されたパスがハイライトされる', () => {
-      render(<FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Documents" />)
+      render(
+        <FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Documents" />
+      )
 
       const documentsButton = screen.getByRole('button', { name: /Documents/ })
       expect(documentsButton).toHaveClass('bg-[#007AFF]/10')
     })
 
     it('選択されていないアイテムにはハイライトがない', () => {
-      render(<FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Documents" />)
+      render(
+        <FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Documents" />
+      )
 
       const projectsButton = screen.getByRole('button', { name: /Projects/ })
       expect(projectsButton).not.toHaveClass('bg-[#007AFF]/10')
@@ -192,13 +196,15 @@ describe('FolderTree', () => {
 
     it('selectedPathが変更されると、ハイライトも更新される', () => {
       const { rerender } = render(
-        <FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Documents" />,
+        <FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Documents" />
       )
 
       let documentsButton = screen.getByRole('button', { name: /Documents/ })
       expect(documentsButton).toHaveClass('bg-[#007AFF]/10')
 
-      rerender(<FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Projects" />)
+      rerender(
+        <FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath="/Projects" />
+      )
 
       documentsButton = screen.getByRole('button', { name: /Documents/ })
       const projectsButton = screen.getByRole('button', { name: /Projects/ })
@@ -363,7 +369,7 @@ describe('FolderTree', () => {
       ]
 
       expect(() =>
-        render(<FolderTree data={dataWithoutChildren} onSelectFolder={onSelectFolder} />),
+        render(<FolderTree data={dataWithoutChildren} onSelectFolder={onSelectFolder} />)
       ).not.toThrow()
     })
 
@@ -379,7 +385,9 @@ describe('FolderTree', () => {
 
     it('selectedPathが未定義でもエラーにならない', () => {
       expect(() =>
-        render(<FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath={undefined} />),
+        render(
+          <FolderTree data={mockData} onSelectFolder={onSelectFolder} selectedPath={undefined} />
+        )
       ).not.toThrow()
     })
 
@@ -397,8 +405,8 @@ describe('FolderTree', () => {
 
       expect(
         screen.getByText(
-          'これは非常に長いファイル名でスペースとアンダースコアが含まれています_test_file_2024.pdf',
-        ),
+          'これは非常に長いファイル名でスペースとアンダースコアが含まれています_test_file_2024.pdf'
+        )
       ).toBeInTheDocument()
     })
   })

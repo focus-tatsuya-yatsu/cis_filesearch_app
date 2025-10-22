@@ -1,0 +1,165 @@
+name: Deploy to S3 + CloudFront (Production)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+  S3_BUCKET: cis-filesearch-frontend
+  CLOUDFRONT_DISTRIBUTION_ID: E1234567890ABC # 実際のDistribution IDに変更
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ========================================
+      # 1. Checkout
+      # ========================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ========================================
+      # 2. Node.js Setup
+      # ========================================
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      # ========================================
+      # 3. Install dependencies
+      # ========================================
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install --frozen-lockfile
+
+      # ========================================
+      # 4. Run Linter
+      # ========================================
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: yarn lint
+        continue-on-error: false
+
+      # ========================================
+      # 5. Run Tests
+      # ========================================
+      - name: Run tests with coverage
+        working-directory: ./frontend
+        run: yarn test:ci
+
+      # ========================================
+      # 6. Upload Coverage to Codecov (Optional)
+      # ========================================
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          fail_ci_if_error: false
+
+      # ========================================
+      # 7. Build Next.js (Static Export)
+      # ========================================
+      - name: Build Next.js application
+        working-directory: ./frontend
+        run: yarn build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_API_GATEWAY_URL: ${{ secrets.API_GATEWAY_URL }}
+          NEXT_PUBLIC_COGNITO_REGION: ap-northeast-1
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_COGNITO_APP_CLIENT_ID: ${{ secrets.COGNITO_APP_CLIENT_ID }}
+          NEXT_PUBLIC_COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
+
+      # ========================================
+      # 8. Configure AWS Credentials
+      # ========================================
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ========================================
+      # 9. Upload to S3 (Assets with long cache)
+      # ========================================
+      - name: Sync assets to S3 (1 year cache)
+        working-directory: ./frontend
+        run: |
+          aws s3 sync out/ s3://${{ env.S3_BUCKET }} \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html" \
+            --exclude "*.json"
+
+      # ========================================
+      # 10. Upload to S3 (HTML with no-cache)
+      # ========================================
+      - name: Sync HTML files to S3 (no-cache)
+        working-directory: ./frontend
+        run: |
+          aws s3 sync out/ s3://${{ env.S3_BUCKET }} \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      # ========================================
+      # 11. CloudFront Invalidation
+      # ========================================
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      # ========================================
+      # 12. Notify Slack on Success (Optional)
+      # ========================================
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "✅ デプロイ成功",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*デプロイ成功* :white_check_mark:\n\n*ブランチ:* `${{ github.ref_name }}`\n*コミット:* `${{ github.sha }}`\n*実行者:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+      # ========================================
+      # 13. Notify Slack on Failure (Optional)
+      # ========================================
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ デプロイ失敗",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*デプロイ失敗* :x:\n\n*ブランチ:* `${{ github.ref_name }}`\n*コミット:* `${{ github.sha }}`\n*実行者:* ${{ github.actor }}\n\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|ログを確認>"
+                  }
+                }
+              ]
+            }

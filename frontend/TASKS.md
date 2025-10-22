@@ -10,15 +10,15 @@
 
 ### プロジェクト健全性メトリクス
 
-| メトリクス | 目標 | 現在の値 | ステータス |
-|---------|------|---------|-----------|
-| **ESLintエラー** | 0 | 0 | ✅ 達成 |
-| **テストカバレッジ** | ≥80% | 84.93% | ✅ 達成 |
-| **テスト合格率** | 100% | 100% (386/386) | ✅ 達成 |
-| **バンドルサイズ** | <150KB | ~130KB | ✅ 達成 |
-| **TypeScript型安全性** | 厳格モード | 100% | ✅ 達成 |
-| **アクセシビリティ** | WCAG準拠 | 準拠 | ✅ 達成 |
-| **本番環境デプロイ** | 稼働中 | 未実施 | ⏸️ 次のフェーズ |
+| メトリクス             | 目標       | 現在の値       | ステータス      |
+| ---------------------- | ---------- | -------------- | --------------- |
+| **ESLintエラー**       | 0          | 0              | ✅ 達成         |
+| **テストカバレッジ**   | ≥80%       | 84.93%         | ✅ 達成         |
+| **テスト合格率**       | 100%       | 100% (386/386) | ✅ 達成         |
+| **バンドルサイズ**     | <150KB     | ~130KB         | ✅ 達成         |
+| **TypeScript型安全性** | 厳格モード | 100%           | ✅ 達成         |
+| **アクセシビリティ**   | WCAG準拠   | 準拠           | ✅ 達成         |
+| **本番環境デプロイ**   | 稼働中     | 未実施         | ⏸️ 次のフェーズ |
 
 ### フェーズ別完了率
 
@@ -39,6 +39,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 1: Code Quality Improvement (100% 完了)
 
 #### 1.1 ESLint Configuration & Error Resolution ✅
+
 - **完了日**: 2025-10-15
 - **担当**: FE1
 - **成果**:
@@ -49,6 +50,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - デバッグ用`console.log` 10箇所を削除
 
 #### 1.2 React Hooks & TypeScript Compliance ✅
+
 - **完了日**: 2025-10-15
 - **担当**: FE1
 - **成果**:
@@ -57,6 +59,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - 未使用インポート4件を削除
 
 #### 1.3 Accessibility Improvements ✅
+
 - **完了日**: 2025-10-15
 - **担当**: FE1
 - **成果**:
@@ -66,6 +69,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - WCAG 2.1基準準拠
 
 #### 1.4 Vercel Build Configuration ✅
+
 - **完了日**: 2025-10-16
 - **担当**: DevOps
 - **成果**:
@@ -78,6 +82,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 2: Test Infrastructure Setup (100% 完了)
 
 #### 2.1 Test Framework Installation ✅
+
 - **完了日**: 2025-10-16
 - **担当**: FE2
 - **成果**:
@@ -86,6 +91,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - Next.js 15互換のSWC設定
 
 #### 2.2 Test Configuration ✅
+
 - **完了日**: 2025-10-16
 - **担当**: FE2
 - **成果**:
@@ -95,6 +101,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - `package.json`にテストスクリプト追加
 
 #### 2.3 Comprehensive Test Suite Implementation ✅
+
 - **完了日**: 2025-10-16
 - **担当**: FE1, FE2
 - **成果**:
@@ -108,6 +115,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
     - Lines: 85.25%
 
 **テスト対象コンポーネント**:
+
 - `Button.test.tsx` - UIコンポーネント基本機能
 - `Card.test.tsx` - カードコンポーネント
 - `Input.test.tsx` - フォーム入力
@@ -128,6 +136,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 3: Performance Optimization (100% 完了)
 
 #### 3.1 Framer Motion Dependency Reduction ✅
+
 - **完了日**: 2025-10-17
 - **担当**: FE1
 - **成果**:
@@ -142,6 +151,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - 保持: `FolderTree.tsx`（複雑な高さアニメーションのため）
 
 #### 3.2 CSS Transitions Implementation ✅
+
 - **完了日**: 2025-10-17
 - **担当**: FE1
 - **成果**:
@@ -154,6 +164,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
     - `smooth-slower`: 300ms
 
 #### 3.3 Animation Quality Preservation ✅
+
 - **完了日**: 2025-10-17
 - **担当**: FE1
 - **成果**:
@@ -163,6 +174,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - ユーザー体験の質を損なわない最適化
 
 #### 3.4 Performance Testing ✅
+
 - **完了日**: 2025-10-17
 - **担当**: FE2
 - **成果**:
@@ -171,6 +183,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - ビルド時間の短縮確認
 
 #### 3.5 Bundle Size Analysis ✅
+
 - **完了日**: 2025-10-17
 - **担当**: DevOps
 - **成果**:
@@ -184,6 +197,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 4: Type Safety Enhancement (100% 完了)
 
 #### 4.1 Central Type Definitions ✅
+
 - **完了日**: 2025-10-17
 - **担当**: FE1
 - **成果**:
@@ -194,6 +208,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
     - `TreeNode` - フォルダツリーノードの型定義
 
 #### 4.2 TypeScript Strict Mode Compliance ✅
+
 - **完了日**: 2025-10-17
 - **担当**: FE1
 - **成果**:
@@ -209,6 +224,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 5: Production Deployment & Monitoring
 
 #### 5.1 Vercel Production Deployment
+
 - **優先度**: P0（最優先）
 - **見積もり**: Medium（2-3日）
 - **担当**: DevOps
@@ -221,6 +237,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] デプロイメントURL取得
 
 #### 5.2 Performance Monitoring Setup
+
 - **優先度**: P0
 - **見積もり**: Small（1日）
 - **担当**: DevOps
@@ -232,6 +249,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] パフォーマンスダッシュボード構築
 
 #### 5.3 Error Tracking Integration
+
 - **優先度**: P0
 - **見積もり**: Small（1日）
 - **担当**: DevOps
@@ -243,6 +261,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] ユーザーセッション記録
 
 #### 5.4 Lighthouse Performance Audit
+
 - **優先度**: P1
 - **見積もり**: Small（半日）
 - **担当**: FE1
@@ -255,6 +274,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] SEOスコア≥90
 
 #### 5.5 Production Smoke Testing
+
 - **優先度**: P0
 - **見積もり**: Small（半日）
 - **担当**: QA
@@ -272,6 +292,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 6: Backend Integration & E2E Testing
 
 #### 6.1 E2E Testing Framework Setup
+
 - **優先度**: P1
 - **見積もり**: Medium（2日）
 - **担当**: QA, FE2
@@ -283,6 +304,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] ビジュアルリグレッションテスト設定
 
 #### 6.2 Critical User Flows E2E Tests
+
 - **優先度**: P1
 - **見積もり**: Large（4-5日）
 - **担当**: QA, FE2
@@ -296,6 +318,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] エラーハンドリング E2Eテスト
 
 #### 6.3 Backend API Development (Express + AWS)
+
 - **優先度**: P0
 - **見積もり**: Large（3週間）
 - **担当**: BE1, BE2
@@ -310,6 +333,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] API仕様書作成（OpenAPI/Swagger）
 
 #### 6.4 Frontend-Backend Integration
+
 - **優先度**: P0
 - **見積もり**: Medium（1週間）
 - **担当**: FE1, BE1
@@ -323,6 +347,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] 統合テスト実施
 
 #### 6.5 Search API Implementation
+
 - **優先度**: P0
 - **見積もり**: Large（2週間）
 - **担当**: BE1, BE2
@@ -336,6 +361,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] API負荷テスト（50+同時ユーザー）
 
 #### 6.6 File Preview Service
+
 - **優先度**: P1
 - **見積もり**: Large（2週間）
 - **担当**: BE2
@@ -348,6 +374,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] レスポンシブ画像配信
 
 #### 6.7 NAS Synchronization Service
+
 - **優先度**: P1
 - **見積もり**: Large（2週間）
 - **担当**: BE2, DevOps
@@ -360,6 +387,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] 進捗状況可視化
 
 #### 6.8 AWS Infrastructure as Code (Terraform)
+
 - **優先度**: P0
 - **見積もり**: Large（1週間）
 - **担当**: DevOps
@@ -380,12 +408,13 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Phase 7: Advanced Features & Enhancements
 
 #### 7.1 Advanced Search Features
+
 - **優先度**: P2
 - **見積もり**: Large（2週間）
 - **担当**: BE1, FE1
 - **依存関係**: 6.5
 - **成功基準**:
-  - [ ] ワイルドカード検索（*, ?）
+  - [ ] ワイルドカード検索（\*, ?）
   - [ ] 正規表現検索
   - [ ] 複数条件AND/OR検索
   - [ ] 検索履歴機能
@@ -393,6 +422,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] オートコンプリート/サジェスト
 
 #### 7.2 Search Logging & Analytics
+
 - **優先度**: P2
 - **見積もり**: Medium（1週間）
 - **担当**: BE2, FE2
@@ -405,6 +435,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] CSV/JSONエクスポート機能
 
 #### 7.3 AI-Powered Image Similarity Search
+
 - **優先度**: P2
 - **見積もり**: Large（3週間）
 - **担当**: BE1, BE2
@@ -418,6 +449,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] フロントエンドUI実装
 
 #### 7.4 Full-Text Search for Special Formats
+
 - **優先度**: P2
 - **見積もり**: Large（2週間）
 - **担当**: BE2
@@ -430,6 +462,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] OCR統合（スキャン文書用、オプション）
 
 #### 7.5 User Preferences & Customization
+
 - **優先度**: P3
 - **見積もり**: Medium（1週間）
 - **担当**: FE1, BE1
@@ -442,6 +475,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] ローカライゼーション（日本語/英語）
 
 #### 7.6 Recommendation Engine
+
 - **優先度**: P3
 - **見積もり**: Large（2週間）
 - **担当**: BE1
@@ -453,6 +487,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] 検索パターン分析
 
 #### 7.7 Mobile Responsive Enhancements
+
 - **優先度**: P2
 - **見積もり**: Medium（1週間）
 - **担当**: FE1
@@ -464,6 +499,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] モバイルパフォーマンス最適化
 
 #### 7.8 Accessibility Audit & WCAG AAA
+
 - **優先度**: P2
 - **見積もり**: Medium（3-4日）
 - **担当**: FE2
@@ -475,6 +511,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] カラーコントラスト比検証（強化）
 
 #### 7.9 Internationalization (i18n)
+
 - **優先度**: P3
 - **見積もり**: Medium（1週間）
 - **担当**: FE1
@@ -487,6 +524,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] 日付/時刻フォーマットローカライズ
 
 #### 7.10 Advanced Documentation
+
 - **優先度**: P2
 - **見積もり**: Medium（3-4日）
 - **担当**: FE2, BE2
@@ -499,6 +537,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] ユーザーマニュアル作成
 
 #### 7.11 Code Coverage Enhancement
+
 - **優先度**: P2
 - **見積もり**: Medium（2-3日）
 - **担当**: FE2
@@ -510,6 +549,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
   - [ ] ブランチカバレッジ95%以上達成
 
 #### 7.12 CI/CD Pipeline Enhancement
+
 - **優先度**: P2
 - **見積もり**: Medium（2日）
 - **担当**: DevOps
@@ -534,6 +574,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ### Sprint 5 (2025-10-14 - 2025-10-21)
 
 #### Sprint Goals
+
 - [x] フロントエンドコード品質の確立
 - [x] テストインフラの完全構築
 - [x] パフォーマンス最適化完了
@@ -543,6 +584,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 #### In Progress
 
 ##### Vercel本番デプロイメント準備
+
 - **Owner**: DevOps
 - **Priority**: P0
 - **Status**: 90% complete
@@ -551,6 +593,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 - **Dependencies**: なし
 
 ##### E2Eテストフレームワーク調査
+
 - **Owner**: QA
 - **Priority**: P1
 - **Status**: 20% complete
@@ -559,6 +602,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 - **Dependencies**: Vercelデプロイ完了
 
 #### Completed This Sprint
+
 - [x] ESLint完全エラー解消（FE1, 2025-10-15）
 - [x] Jestテストフレームワーク構築（FE2, 2025-10-16）
 - [x] 386テストケース実装（FE1, FE2, 2025-10-16）
@@ -570,6 +614,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ## 📅 Backlog
 
 ### Next Sprint Candidates (Sprint 6: 2025-10-21 - 2025-10-28)
+
 - [ ] Vercel本番デプロイ完了（P0, Small）
 - [ ] パフォーマンスモニタリング設定（P0, Small）
 - [ ] Lighthouse監査実施（P1, Small）
@@ -577,6 +622,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 - [ ] AWS Terraformインフラ構築開始（P0, Large）
 
 ### Future Sprints (Q4 2025)
+
 - [ ] バックエンドAPI開発（P0, Large, Sprint 7-9）
 - [ ] フロントエンド-バックエンド統合（P0, Medium, Sprint 10）
 - [ ] 全文検索機能実装（P0, Large, Sprint 11-12）
@@ -587,11 +633,13 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ## ⚠️ Blockers & Risks
 
 ### Active Blockers
+
 **現在のアクティブブロッカー: 0件**
 
 ### Identified Risks
 
 #### 1. Backend Development Delay Risk
+
 - **Impact**: 🟡 Medium - フロントエンド-バックエンド統合の遅延可能性
 - **Probability**: 30%
 - **Owner**: PM
@@ -602,6 +650,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 - **ETA for Resolution**: N/A（予防的対策）
 
 #### 2. AWS Infrastructure Complexity
+
 - **Impact**: 🟡 Medium - インフラ構築に予想以上の時間がかかる可能性
 - **Probability**: 40%
 - **Owner**: DevOps
@@ -612,6 +661,7 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 - **ETA for Resolution**: N/A（予防的対策）
 
 #### 3. Special File Format Support (SFC, Docuworks)
+
 - **Impact**: 🟡 Medium - 特殊ファイル形式対応の技術的難易度
 - **Probability**: 50%
 - **Owner**: BE2
@@ -626,27 +676,31 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ## 📊 Metrics & KPIs
 
 ### Code Quality Metrics
-| メトリクス | 現在値 | 目標 | トレンド |
-|----------|--------|------|---------|
-| ESLintエラー | 0 | 0 | ✅ 維持 |
-| TypeScript Strictness | 100% | 100% | ✅ 維持 |
-| コードレビュー率 | 100% | 100% | ✅ 維持 |
+
+| メトリクス            | 現在値 | 目標 | トレンド |
+| --------------------- | ------ | ---- | -------- |
+| ESLintエラー          | 0      | 0    | ✅ 維持  |
+| TypeScript Strictness | 100%   | 100% | ✅ 維持  |
+| コードレビュー率      | 100%   | 100% | ✅ 維持  |
 
 ### Test Metrics
-| メトリクス | 現在値 | 目標 | トレンド |
-|----------|--------|------|---------|
-| ユニットテストカバレッジ | 84.93% | ≥80% | ✅ 達成 |
-| テスト合格率 | 100% | 100% | ✅ 維持 |
-| E2Eテストカバレッジ | 0% | ≥80% | 🔄 未着手 |
+
+| メトリクス               | 現在値 | 目標 | トレンド  |
+| ------------------------ | ------ | ---- | --------- |
+| ユニットテストカバレッジ | 84.93% | ≥80% | ✅ 達成   |
+| テスト合格率             | 100%   | 100% | ✅ 維持   |
+| E2Eテストカバレッジ      | 0%     | ≥80% | 🔄 未着手 |
 
 ### Performance Metrics
-| メトリクス | 現在値 | 目標 | トレンド |
-|----------|--------|------|---------|
-| バンドルサイズ | ~130KB | <150KB | ✅ 達成 |
-| Lighthouseスコア | 未測定 | ≥90 | ⏸️ 次フェーズ |
-| Core Web Vitals | 未測定 | Good | ⏸️ 次フェーズ |
+
+| メトリクス       | 現在値 | 目標   | トレンド      |
+| ---------------- | ------ | ------ | ------------- |
+| バンドルサイズ   | ~130KB | <150KB | ✅ 達成       |
+| Lighthouseスコア | 未測定 | ≥90    | ⏸️ 次フェーズ |
+| Core Web Vitals  | 未測定 | Good   | ⏸️ 次フェーズ |
 
 ### Sprint Velocity
+
 - **Sprint 5 Velocity**: 14 story points (completed 14 tasks)
 - **Average Velocity**: 14 story points
 - **Planned Capacity (Sprint 6)**: 12-15 story points
@@ -657,20 +711,21 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 
 ## 👥 Team Capacity
 
-| メンバー | 役割 | 稼働率 | 現在のタスク | 次のタスク |
-|---------|------|--------|------------|-----------|
-| FE1 | Frontend Lead | 90% | 型定義整備完了 | Vercelデプロイ支援 |
-| FE2 | Frontend Engineer | 85% | テスト完了 | E2Eテスト構築 |
-| BE1 | Backend Lead | 80% | API設計 | Express実装開始 |
-| BE2 | Backend Engineer | 75% | インフラ調査 | Terraform実装 |
-| DevOps | DevOps Engineer | 95% | Vercelデプロイ準備 | AWSインフラ構築 |
-| QA | QA Engineer | 70% | テスト計画 | E2E自動化 |
+| メンバー | 役割              | 稼働率 | 現在のタスク       | 次のタスク         |
+| -------- | ----------------- | ------ | ------------------ | ------------------ |
+| FE1      | Frontend Lead     | 90%    | 型定義整備完了     | Vercelデプロイ支援 |
+| FE2      | Frontend Engineer | 85%    | テスト完了         | E2Eテスト構築      |
+| BE1      | Backend Lead      | 80%    | API設計            | Express実装開始    |
+| BE2      | Backend Engineer  | 75%    | インフラ調査       | Terraform実装      |
+| DevOps   | DevOps Engineer   | 95%    | Vercelデプロイ準備 | AWSインフラ構築    |
+| QA       | QA Engineer       | 70%    | テスト計画         | E2E自動化          |
 
 ---
 
 ## 🎯 Success Criteria - プロジェクト成功基準
 
 ### Phase 1-4 (完了)
+
 - ✅ ESLintエラー0件維持
 - ✅ テストカバレッジ80%以上
 - ✅ 全テスト合格
@@ -678,18 +733,21 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 - ✅ TypeScript厳格モード準拠
 
 ### Phase 5 (進行中)
+
 - [ ] Vercel本番環境稼働
 - [ ] Lighthouse全スコア90以上
 - [ ] エラートラッキング稼働
 - [ ] パフォーマンスモニタリング稼働
 
 ### Phase 6 (未着手)
+
 - [ ] E2Eテスト80%カバレッジ
 - [ ] バックエンドAPI稼働
 - [ ] フロントエンド-バックエンド完全統合
 - [ ] 50+同時ユーザー負荷テスト合格
 
 ### Phase 7 (未着手)
+
 - [ ] 全文検索機能稼働
 - [ ] 画像類似検索機能稼働
 - [ ] ユーザー満足度4.0/5.0以上
@@ -699,17 +757,20 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 ## 🎓 Lessons Learned
 
 ### What Went Well
+
 1. **段階的アプローチ**: フェーズを分けて品質向上→テスト→最適化→型安全性という流れが効果的
 2. **TDD実践**: テストファースト開発により、リファクタリング時の安心感が増大
 3. **明確な目標設定**: カバレッジ80%、エラー0件など、具体的なKPIが開発を促進
 4. **Apple Design Philosophy採用**: Framer Motion削減後もプレミアムな UX を維持
 
 ### What Could Be Improved
+
 1. **早期インフラ構築**: AWSインフラをもっと早い段階で構築すべきだった
 2. **E2Eテスト遅延**: ユニットテストと並行してE2Eも構築すべきだった
 3. **バックエンド並行開発**: フロントエンドとバックエンドをより並行して進めるべき
 
 ### Action Items for Next Sprints
+
 1. バックエンド開発の優先順位を上げる
 2. E2Eテストを早急に着手
 3. 週次でのリスク評価ミーティング実施
@@ -730,23 +791,23 @@ Phase 7: Advanced Features           ░░░░░░░░░░░░░░�
 
 ## 📞 Contacts & Escalation
 
-| 役割 | 担当者 | 連絡先 | エスカレーション対象 |
-|------|--------|--------|---------------------|
-| Product Manager | PM | pm@example.com | プロジェクト全体の意思決定 |
-| Tech Lead (FE) | FE1 | fe1@example.com | フロントエンド技術課題 |
-| Tech Lead (BE) | BE1 | be1@example.com | バックエンド技術課題 |
-| DevOps Lead | DevOps | devops@example.com | インフラ・デプロイ課題 |
-| QA Lead | QA | qa@example.com | テスト・品質課題 |
+| 役割            | 担当者 | 連絡先             | エスカレーション対象       |
+| --------------- | ------ | ------------------ | -------------------------- |
+| Product Manager | PM     | pm@example.com     | プロジェクト全体の意思決定 |
+| Tech Lead (FE)  | FE1    | fe1@example.com    | フロントエンド技術課題     |
+| Tech Lead (BE)  | BE1    | be1@example.com    | バックエンド技術課題       |
+| DevOps Lead     | DevOps | devops@example.com | インフラ・デプロイ課題     |
+| QA Lead         | QA     | qa@example.com     | テスト・品質課題           |
 
 ---
 
 ## 🔄 Change Log
 
-| 日付 | 変更内容 | 更新者 |
-|------|---------|--------|
-| 2025-10-17 | 初版作成、Phase 1-4完了状況反映 | PM |
-| 2025-10-17 | Phase 5-7タスク詳細化、優先度設定 | PM |
-| 2025-10-17 | メトリクス・KPI追加、リスク評価追加 | PM |
+| 日付       | 変更内容                            | 更新者 |
+| ---------- | ----------------------------------- | ------ |
+| 2025-10-17 | 初版作成、Phase 1-4完了状況反映     | PM     |
+| 2025-10-17 | Phase 5-7タスク詳細化、優先度設定   | PM     |
+| 2025-10-17 | メトリクス・KPI追加、リスク評価追加 | PM     |
 
 ---
 

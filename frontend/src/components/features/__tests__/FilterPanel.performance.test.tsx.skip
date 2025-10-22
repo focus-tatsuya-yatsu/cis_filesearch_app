@@ -77,7 +77,11 @@ const useRenderCounter = (componentName: string) => {
  * - FilterPanel receives stable callback via useCallback
  * - Unrelated state changes trigger parent re-renders
  */
-const TestWrapper = ({ onRenderCountChange }: { onRenderCountChange?: (count: number) => void }) => {
+const TestWrapper = ({
+  onRenderCountChange,
+}: {
+  onRenderCountChange?: (count: number) => void
+}) => {
   const [searchResults, setSearchResults] = useState<string[]>([])
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({})
 

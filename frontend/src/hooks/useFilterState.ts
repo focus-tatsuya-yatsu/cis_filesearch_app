@@ -76,13 +76,14 @@ export const useFilterState = ({
    * - Memoized to prevent unnecessary recalculations
    * - Only recalculates when filters change
    */
-  const filterOptions = useMemo<FilterOptions>(() => {
-    return {
+  const filterOptions = useMemo<FilterOptions>(
+    () => ({
       fileType: filters.fileType ? [filters.fileType] : undefined,
       sortBy: filters.sortBy as 'name' | 'date' | 'size' | 'relevance',
       sortOrder: filters.sortOrder,
-    }
-  }, [filters])
+    }),
+    [filters]
+  )
 
   /**
    * handleFilterChange - Memoized filter update handler

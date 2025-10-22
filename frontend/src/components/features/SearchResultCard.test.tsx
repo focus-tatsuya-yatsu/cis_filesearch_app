@@ -63,7 +63,7 @@ describe('SearchResultCard', () => {
     it('スニペットが表示される', () => {
       render(<SearchResultCard result={mockResult} />)
       expect(
-        screen.getByText('これはテスト用のスニペットテキストです。検索キーワードが含まれています。'),
+        screen.getByText('これはテスト用のスニペットテキストです。検索キーワードが含まれています。')
       ).toBeInTheDocument()
     })
 
@@ -229,10 +229,9 @@ describe('SearchResultCard', () => {
         () => {
           expect(screen.queryByText('コピーしました！')).not.toBeInTheDocument()
         },
-        { timeout: 2500 },
+        { timeout: 2500 }
       )
     })
-
   })
 
   describe('プレビューボタン', () => {
@@ -296,7 +295,7 @@ describe('SearchResultCard', () => {
     it('スニペットがある場合に表示される', () => {
       render(<SearchResultCard result={mockResult} />)
       expect(
-        screen.getByText('これはテスト用のスニペットテキストです。検索キーワードが含まれています。'),
+        screen.getByText('これはテスト用のスニペットテキストです。検索キーワードが含まれています。')
       ).toBeInTheDocument()
     })
 
@@ -381,13 +380,14 @@ describe('SearchResultCard', () => {
     it('ファイル名が非常に長い場合も正しく表示される', () => {
       const longNameResult = {
         ...mockResult,
-        fileName: 'これは非常に長いファイル名でスペースとアンダースコアと記号が含まれています_test_file_2024_final_version.pdf',
+        fileName:
+          'これは非常に長いファイル名でスペースとアンダースコアと記号が含まれています_test_file_2024_final_version.pdf',
       }
       render(<SearchResultCard result={longNameResult} />)
       expect(
         screen.getByText(
-          'これは非常に長いファイル名でスペースとアンダースコアと記号が含まれています_test_file_2024_final_version.pdf',
-        ),
+          'これは非常に長いファイル名でスペースとアンダースコアと記号が含まれています_test_file_2024_final_version.pdf'
+        )
       ).toBeInTheDocument()
     })
 
@@ -400,8 +400,8 @@ describe('SearchResultCard', () => {
       render(<SearchResultCard result={longPathResult} />)
       expect(
         screen.getByText(
-          '/Documents/Projects/2024/Q4/Reports/Sales/Regional/Tokyo/Branch1/Department/Team/SubTeam/test.pdf',
-        ),
+          '/Documents/Projects/2024/Q4/Reports/Sales/Regional/Tokyo/Branch1/Department/Team/SubTeam/test.pdf'
+        )
       ).toBeInTheDocument()
     })
 

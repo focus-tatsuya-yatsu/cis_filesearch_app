@@ -15,7 +15,7 @@ describe('Card', () => {
         <Card>
           <h1>タイトル</h1>
           <p>本文</p>
-        </Card>,
+        </Card>
       )
       expect(screen.getByText('タイトル')).toBeInTheDocument()
       expect(screen.getByText('本文')).toBeInTheDocument()
@@ -123,7 +123,7 @@ describe('Card', () => {
       const { container } = render(
         <Card className="custom" hover={true} onClick={onClick}>
           コンテンツ
-        </Card>,
+        </Card>
       )
 
       const card = container.firstChild as HTMLElement
@@ -143,7 +143,7 @@ describe('Card', () => {
       const { container } = render(
         <Card hover={true} onClick={onClick}>
           インタラクティブなカード
-        </Card>,
+        </Card>
       )
 
       const card = container.firstChild as HTMLElement

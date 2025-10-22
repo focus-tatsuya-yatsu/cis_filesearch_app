@@ -21,7 +21,7 @@ describe('ThemeToggle', () => {
     return render(
       <ThemeProvider>
         <ThemeToggle />
-      </ThemeProvider>,
+      </ThemeProvider>
     )
   }
 

@@ -22,6 +22,9 @@ export const Card: FC<CardProps> = ({ children, className = '', hover = false, o
         ${className}
       `}
       onClick={onClick}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {children}
     </div>

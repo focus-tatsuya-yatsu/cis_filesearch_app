@@ -2,14 +2,15 @@
 
 import { useState, useCallback } from 'react'
 
-import { LayoutGrid, FolderTree } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
 
-import { ExplorerView } from '@/components/features/ExplorerView'
-import { FilterPanel } from '@/components/features/FilterPanel'
-import { SearchBar } from '@/components/features/SearchBar'
-import { SearchResultCard } from '@/components/features/SearchResultCard'
 import { Header } from '@/components/layout/Header'
-import { Spinner, Button } from '@/components/ui'
+import { ExplorerView } from '@/components/search/ExplorerView'
+import { FilterPanel } from '@/components/search/FilterPanel'
+import { SearchBar } from '@/components/search/SearchBar'
+import { SearchHistory } from '@/components/search/SearchHistory'
+import { Spinner } from '@/components/ui'
+import { useSearchHistory } from '@/hooks'
 import type { SearchResult, FilterOptions } from '@/types'
 
 // ダミーデータ
@@ -47,261 +48,185 @@ const dummyResults: SearchResult[] = [
   },
 ]
 
+/**
+ * Home Page (v2 - Refactored)
+ *
+ * Main search page with all new features:
+ * 1. ✅ Hero section removed
+ * 2. ✅ SearchBar moved directly below Header
+ * 3. ✅ SearchHistory displayed when no results
+ * 4. ✅ FilterPanel with staged filters (ソート button)
+ * 5. ✅ ExplorerView with collapsible sidebar
+ *
+ * State Management:
+ * - searchQuery: Current search query
+ * - searchResults: Search results array
+ * - isSearching: Loading state
+ * - hasSearched: Whether user has executed a search
+ * - searchHistory: Recent searches (managed by useSearchHistory hook)
+ * - showHistory: Conditional display (visible when no search results)
+ *
+ * Features:
+ * - Search history with localStorage persistence
+ * - Staged filters (apply on button click)
+ * - Collapsible sidebar with localStorage persistence
+ * - Smooth animations with Framer Motion
+ */
 const HomePage = () => {
+  // Search state
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [hasSearched, setHasSearched] = useState(false)
-  const [viewMode, setViewMode] = useState<'grid' | 'explorer'>('explorer')
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query)
-    setIsSearching(true)
-    setHasSearched(true)
-
-    // 検索処理のシミュレーション
-    setTimeout(() => {
-      setSearchResults(dummyResults)
-      setIsSearching(false)
-    }, 1500)
-  }
+  // Search history hook
+  const { history, addToHistory, clearHistory, removeHistoryItem } = useSearchHistory()
 
   /**
-   * Performance Optimization: useCallback applied
+   * Execute search
    *
-   * handleFilterChange - Stable function reference for filter functionality
-   * - Prevents FilterPanel re-renders when parent re-renders
-   * - Dependencies: [] (currently no external dependencies)
-   * - Future: Will likely depend on searchResults, filtering logic, etc.
-   *
-   * Expected behavior when implemented:
-   * - May need to add dependencies: [searchResults, searchQuery, etc.]
-   * - Should filter searchResults based on FilterOptions
-   * - May involve API calls to refetch filtered results
+   * - Updates search query state
+   * - Shows loading state
+   * - Simulates API call
+   * - Updates results
+   * - Adds to search history
    */
-  const handleFilterChange = useCallback((_filters: FilterOptions) => {
-    // TODO: フィルター処理の実装
-    // 将来の実装例:
-    // - setAppliedFilters(_filters)
-    // - const filtered = applyFilters(searchResults, _filters)
-    // - setSearchResults(filtered)
-    // - または API 経由で再検索: await refetchResults({ query: searchQuery, filters: _filters })
-  }, []) // 現在は依存関係なし。実装時に searchResults, searchQuery などを追加
+  const handleSearch = useCallback(
+    async (query: string) => {
+      setSearchQuery(query)
+      setIsSearching(true)
+      setHasSearched(true)
+
+      // Simulate search API call
+      setTimeout(() => {
+        setSearchResults(dummyResults)
+        setIsSearching(false)
+
+        // Add to history with result count
+        addToHistory(query, dummyResults.length)
+      }, 1500)
+    },
+    [addToHistory]
+  )
 
   /**
-   * Performance Optimization: useCallback applied
+   * Handle search history item click
    *
-   * handlePreview - Stable function reference for preview functionality
-   * - Prevents SearchResultCard re-renders when parent re-renders
-   * - Dependencies: [] (currently no external dependencies)
-   * - Future: Will likely depend on modal state, API calls, or navigation
+   * Re-executes search with selected query
+   */
+  const handleSelectHistory = useCallback(
+    (query: string) => {
+      handleSearch(query)
+    },
+    [handleSearch]
+  )
+
+  /**
+   * Apply filters
    *
-   * Expected behavior when implemented:
-   * - May need to add dependencies: [modalState, navigate, etc.]
-   * - Should trigger file preview modal or new window
-   * - May involve API calls to fetch preview data
+   * Triggered when "ソート" button clicked in FilterPanel
+   */
+  const handleApplyFilters = useCallback((_filters: FilterOptions) => {
+    // TODO: Implement filter application logic
+    // - Filter searchResults based on _filters
+    // - Or re-fetch from API with filters
+    console.log('Applying filters:', _filters)
+  }, [])
+
+  /**
+   * Handle file preview
    */
   const handlePreview = useCallback((_id: string) => {
-    // TODO: プレビュー機能の実装
-    // 将来の実装例:
-    // - setPreviewModal({ isOpen: true, fileId: id })
-    // - await fetchPreviewData(id)
-    // - navigate(`/preview/${id}`)
-  }, []) // 現在は依存関係なし。実装時に必要に応じて追加
+    // TODO: Implement preview functionality
+    console.log('Preview file:', _id)
+  }, [])
 
   /**
-   * Performance Optimization: useCallback applied
-   *
-   * handleDownload - Stable function reference for download functionality
-   * - Prevents SearchResultCard re-renders when parent re-renders
-   * - Dependencies: [] (currently no external dependencies)
-   * - Future: Will likely depend on download service, auth context, etc.
-   *
-   * Expected behavior when implemented:
-   * - May need to add dependencies: [downloadService, authToken, etc.]
-   * - Should trigger file download from NAS or S3
-   * - May involve progress tracking and error handling
+   * Handle file download
    */
   const handleDownload = useCallback((_id: string) => {
-    // TODO: ダウンロード機能の実装
-    // 将来の実装例:
-    // - const url = await getDownloadUrl(id, authToken)
-    // - window.open(url, '_blank')
-    // - trackDownload(id, userId)
-  }, []) // 現在は依存関係なし。実装時に必要に応じて追加
+    // TODO: Implement download functionality
+    console.log('Download file:', _id)
+  }, [])
+
+  /**
+   * Determine if search history should be shown
+   *
+   * Show history when:
+   * - User hasn't searched yet, OR
+   * - User has searched but no results found
+   */
+  const showHistory = !hasSearched || (hasSearched && !isSearching && searchResults.length === 0)
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-black">
       <Header />
 
-      {/* ヒーローセクション - Apple Design Philosophy */}
-      <section className="relative overflow-hidden">
-        {/* 背景グラデーション - 極めて微細な階調 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#FBFBFD] via-[#F8FAFF] to-[#F5F5F7] dark:from-black dark:via-[#0C0C0E] dark:to-[#000000]" />
-
-        {/* 微細なノイズテクスチャ（高級感の演出） */}
-        <div
-          className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C9C9C' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-
-        <div className="relative py-20 sm:py-24 lg:py-28">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10 animate-fade-in">
-              {/* メインタイトル - SF Pro Display風のウェイト */}
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 leading-[1.1]">
-                必要なファイルを瞬時に検索
-              </h2>
-              {/* サブタイトル - 控えめな階層感 */}
-              <p className="text-lg sm:text-xl lg:text-2xl text-[#424245] dark:text-[#C7C7CC] max-w-2xl mx-auto leading-[1.4]">
-                社内のNASに保存された全てのファイルから、AIが最適な結果を見つけます
-              </p>
-            </div>
-
-            {/* 検索バー - フローティング効果 */}
-            <div className="max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '150ms' }}>
-              <div className="relative">
-                {/* 影のレイヤリング（Appleスタイル） */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-[#D1D1D6]/20 to-[#C7C7CC]/20 dark:from-[#38383A]/20 dark:to-[#48484A]/20 rounded-2xl blur-xl" />
-                <div className="relative">
-                  <SearchBar onSearch={handleSearch} />
-                </div>
-              </div>
-            </div>
-
-            {/* 検索統計 - Glass Morphism */}
-            <div
-              className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-12 mt-12 animate-fade-in"
-              style={{ animationDelay: '300ms' }}
-            >
-              {/* 統計カード */}
-              <div className="relative group">
-                {/* 背景ブラー効果 */}
-                <div className="absolute inset-0 bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl rounded-2xl" />
-                <div className="relative px-6 py-4 text-center">
-                  {/* 数値 - iOS System Blue アクセント */}
-                  <p className="text-3xl sm:text-4xl font-semibold bg-gradient-to-br from-[#007AFF] to-[#0051D5] dark:from-[#0A84FF] dark:to-[#0066FF] bg-clip-text text-transparent">
-                    1.2M+
-                  </p>
-                  {/* ラベル */}
-                  <p className="text-xs sm:text-sm mt-1 text-[#6E6E73] dark:text-[#8E8E93] font-medium">
-                    インデックス済みファイル
-                  </p>
-                </div>
-              </div>
-
-              {/* 区切り線 - 極細で上品 */}
-              <div className="w-px h-12 bg-[#D1D1D6]/50 dark:bg-[#38383A]/50" />
-
-              <div className="relative group">
-                <div className="absolute inset-0 bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl rounded-2xl" />
-                <div className="relative px-6 py-4 text-center">
-                  <p className="text-3xl sm:text-4xl font-semibold bg-gradient-to-br from-[#34C759] to-[#30D158] dark:from-[#32D74B] dark:to-[#2FE55B] bg-clip-text text-transparent">
-                    {'< 0.5s'}
-                  </p>
-                  <p className="text-xs sm:text-sm mt-1 text-[#6E6E73] dark:text-[#8E8E93] font-medium">
-                    平均検索時間
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-px h-12 bg-[#D1D1D6]/50 dark:bg-[#38383A]/50" />
-
-              <div className="relative group">
-                <div className="absolute inset-0 bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl rounded-2xl" />
-                <div className="relative px-6 py-4 text-center">
-                  <p className="text-3xl sm:text-4xl font-semibold bg-gradient-to-br from-[#5856D6] to-[#7C7AFF] dark:from-[#5E5CE6] dark:to-[#8E8CF4] bg-clip-text text-transparent">
-                    99.9%
-                  </p>
-                  <p className="text-xs sm:text-sm mt-1 text-[#6E6E73] dark:text-[#8E8E93] font-medium">
-                    検索精度
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 検索結果セクション */}
-      {hasSearched && (
-        <section className="py-8">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            {/* フィルターパネル */}
-            <div className="mb-6 animate-fade-in-fast">
-              <FilterPanel onFilterChange={handleFilterChange} />
-            </div>
-
-            {/* ビュー切り替えと検索結果ヘッダー */}
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                {searchQuery && `"${searchQuery}" の検索結果`}
-                {!isSearching && searchResults.length > 0 && (
-                  <span className="ml-2 text-sm font-normal text-[#6E6E73] dark:text-[#8E8E93]">
-                    ({searchResults.length}件)
-                  </span>
-                )}
-              </h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === 'explorer' ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('explorer')}
-                  icon={<FolderTree className="h-4 w-4" />}
-                >
-                  エクスプローラー
-                </Button>
-                <Button
-                  variant={viewMode === 'grid' ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  icon={<LayoutGrid className="h-4 w-4" />}
-                >
-                  グリッド
-                </Button>
-              </div>
-            </div>
-
-            {isSearching ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Spinner size="lg" />
-                <p className="mt-4 text-[#6E6E73] dark:text-[#8E8E93]">検索中...</p>
-              </div>
-            ) : viewMode === 'explorer' ? (
-              <ExplorerView
-                searchResults={searchResults}
-                onPreview={handlePreview}
-                onDownload={handleDownload}
-              />
-            ) : searchResults.length > 0 ? (
-              <div className="space-y-4">
-                {searchResults.map((result, index) => (
-                  <div
-                    key={result.id}
-                    className="animate-fade-in-fast"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <SearchResultCard
-                      result={result}
-                      onPreview={handlePreview}
-                      onDownload={handleDownload}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20">
-                <p className="text-[#6E6E73] dark:text-[#8E8E93]">検索結果が見つかりませんでした</p>
-                <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93] mt-2">
-                  別のキーワードで検索してください
-                </p>
-              </div>
-            )}
+      {/* Main Content */}
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search Bar Section */}
+        <section className="mb-8">
+          <div className="max-w-4xl mx-auto">
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="ファイル名・内容・タグを入力して下さい"
+              isLoading={isSearching}
+            />
           </div>
         </section>
-      )}
+
+        {/* Search History or Results */}
+        <AnimatePresence mode="wait">
+          {showHistory ? (
+            /* Search History */
+            <section key="history" className="mb-8">
+              <div className="max-w-4xl mx-auto">
+                <SearchHistory
+                  history={history}
+                  onSelectHistory={handleSelectHistory}
+                  onClearItem={removeHistoryItem}
+                  onClearAll={clearHistory}
+                />
+              </div>
+            </section>
+          ) : (
+            /* Search Results Section */
+            <section key="results">
+              {/* Filter Panel */}
+              <div className="mb-6 animate-fade-in-fast">
+                <FilterPanel onFilterApply={handleApplyFilters} />
+              </div>
+
+              {/* Results Header */}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  {searchQuery && `"${searchQuery}" の検索結果`}
+                  {!isSearching && searchResults.length > 0 && (
+                    <span className="ml-2 text-sm font-normal text-[#6E6E73] dark:text-[#8E8E93]">
+                      ({searchResults.length}件)
+                    </span>
+                  )}
+                </h3>
+              </div>
+
+              {/* Loading State */}
+              {isSearching ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Spinner size="lg" />
+                  <p className="mt-4 text-[#6E6E73] dark:text-[#8E8E93]">検索中...</p>
+                </div>
+              ) : (
+                /* Explorer View */
+                <ExplorerView
+                  searchResults={searchResults}
+                  onPreview={handlePreview}
+                  onDownload={handleDownload}
+                />
+              )}
+            </section>
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   )
 }

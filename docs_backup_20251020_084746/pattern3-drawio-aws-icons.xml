@@ -1,0 +1,316 @@
+<mxfile host="app.diagrams.net" modified="2025-01-18T00:00:00.000Z" agent="Claude Code - AWS Icons" version="24.7.17">
+  <diagram name="Pattern3-AWS-Icons" id="pattern3-aws-icons">
+    <mxGraphModel dx="2000" dy="1600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="CIS File Search - Pattern 3 Architecture&#xa;月次バッチ同期アーキテクチャ (NAS-AWS ハイブリッド)&#xa;月額コスト: $47.24/月 (削減率 96%)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="1200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- On-Premise Environment -->
+        <mxCell id="onprem" value="オンプレミス環境" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;strokeWidth=3;verticalAlign=top;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="120" width="400" height="900" as="geometry"/>
+        </mxCell>
+
+        <!-- AWS Cloud -->
+        <mxCell id="aws" value="AWS Cloud (ap-northeast-1)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF7E6;strokeColor=#FF9900;strokeWidth=3;verticalAlign=top;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="500" y="120" width="1850" height="1600" as="geometry"/>
+        </mxCell>
+
+        <!-- VPC Container -->
+        <mxCell id="vpc" value="VPC: 10.0.0.0/16" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F4F8;strokeColor=#0277BD;strokeWidth=3;verticalAlign=top;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="540" y="180" width="1300" height="900" as="geometry"/>
+        </mxCell>
+
+        <!-- Internet Gateway (AWS Icon Shape) -->
+        <mxCell id="igw" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.internet_gateway;" vertex="1" parent="1">
+          <mxGeometry x="640" y="220" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="igw-label" value="Internet Gateway&#xa;インターネット接続" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="604" y="300" width="150" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Virtual Private Gateway (AWS Icon Shape) -->
+        <mxCell id="vpg" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.vpn_gateway;" vertex="1" parent="1">
+          <mxGeometry x="640" y="370" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpg-label" value="Virtual Private Gateway&#xa;Site-to-Site VPN&#xa;月4時間のみ接続&#xa;2:00-6:00 (月1日)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="584" y="450" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Public Subnet -->
+        <mxCell id="publicSubnet" value="Public Subnet: 10.0.0.0/24 (AZ-a)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1976D2;strokeWidth=2;verticalAlign=top;fontSize=13;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="820" y="220" width="350" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- NAT Gateway (AWS Icon Shape) in Public Subnet -->
+        <mxCell id="nat" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" vertex="1" parent="1">
+          <mxGeometry x="960" y="260" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="nat-label" value="NAT Gateway&#xa;Elastic IP&#xa;インターネット経由&#xa;アクセス制御" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="919" y="340" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Private Subnet 1 -->
+        <mxCell id="privateSubnet1" value="Private Subnet 1: 10.0.1.0/24 (AZ-a)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#C2185B;strokeWidth=2;verticalAlign=top;fontSize=13;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="820" y="450" width="550" height="600" as="geometry"/>
+        </mxCell>
+
+        <!-- Lambda Function Icons in Private Subnet 1 -->
+        <mxCell id="vpnMgr" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="860" y="500" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpnMgr-label" value="VPNManager&#xa;Python 3.11&#xa;512MB ARM64&#xa;- VPN接続制御&#xa;- 接続監視" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="819" y="580" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="fileScanner" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="500" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="fileScanner-label" value="FileScanner&#xa;Node.js 20&#xa;1024MB ARM64&#xa;- S3全スキャン&#xa;- メタデータ収集" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1059" y="580" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="textExt" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="860" y="710" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="textExt-label" value="TextExtractor&#xa;Python 3.11&#xa;2048MB ARM64&#xa;- PDF解析&#xa;月5,000実行" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="819" y="790" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="imgExt" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="710" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="imgExt-label" value="ImageFeatureExtractor&#xa;Python 3.11&#xa;2048MB ARM64&#xa;- ResNet-50&#xa;月2,000実行" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1059" y="790" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="bulkIdx" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="860" y="920" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="bulkIdx-label" value="BulkIndexer&#xa;Node.js 20&#xa;1024MB ARM64&#xa;- Bulk API&#xa;- DynamoDB更新" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="819" y="1000" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- OpenSearch (AWS Icon Shape) in Private Subnet 1 -->
+        <mxCell id="opensearch" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#4AB29A;gradientDirection=north;fillColor=#116D5B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.opensearch_service;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="920" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="opensearch-label" value="OpenSearch Service&#xa;t3.small.search&#xa;vCPU: 2, RAM: 2GB&#xa;50GB gp3&#xa;- kuromoji (日本語)&#xa;- k-NN (画像類似)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1059" y="1000" width="160" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Private Subnet 2 -->
+        <mxCell id="privateSubnet2" value="Private Subnet 2: 10.0.2.0/24 (AZ-b)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;strokeWidth=2;verticalAlign=top;fontSize=13;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1400" y="450" width="400" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- SearchAPI (AWS Icon Shape) in Private Subnet 2 -->
+        <mxCell id="searchAPI" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="520" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="searchAPI-label" value="SearchAPI&#xa;Node.js 20&#xa;512MB ARM64&#xa;POST /api/search&#xa;月10,000実行&#xa;&#xa;Multi-AZ冗長性" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="1489" y="600" width="220" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- User Layer -->
+        <mxCell id="userLayer" value="ユーザー層" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=2;verticalAlign=top;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="1100" width="400" height="420" as="geometry"/>
+        </mxCell>
+
+        <!-- On-Premise Components -->
+        <!-- NAS Server (Traditional Server Icon) -->
+        <mxCell id="nas" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.traditional_server;" vertex="1" parent="1">
+          <mxGeometry x="211" y="180" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="nas-label" value="NAS Server&#xa;SMB/NFS&#xa;500GB&#xa;1,000,000 files" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="170" y="260" width="160" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- DataSync Agent (Generic Server Icon) -->
+        <mxCell id="dsAgent" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.traditional_server;" vertex="1" parent="1">
+          <mxGeometry x="211" y="370" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="dsAgent-label" value="DataSync Agent&#xa;増分検出エージェント&#xa;version: 1.0.52" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="170" y="450" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- VPN Router (Customer Gateway Icon) -->
+        <mxCell id="vpnRouter" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.customer_gateway;" vertex="1" parent="1">
+          <mxGeometry x="211" y="560" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpnRouter-label" value="VPN Router&#xa;Customer Gateway&#xa;Cisco ASA 5506" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="170" y="640" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- AWS Managed Services (Outside VPC) -->
+        <mxCell id="managedLayer" value="マネージドサービス層（VPC外）" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;strokeWidth=2;verticalAlign=top;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="540" y="1120" width="800" height="380" as="geometry"/>
+        </mxCell>
+
+        <!-- AWS DataSync (AWS Icon Shape) -->
+        <mxCell id="dataSync" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#60A337;gradientDirection=north;fillColor=#277116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.datasync;" vertex="1" parent="1">
+          <mxGeometry x="691" y="1170" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="dataSync-label" value="AWS DataSync&#xa;増分同期: 20GB/月&#xa;転送レート: 100Mbps&#xa;転送時間: 約3時間" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="615" y="1250" width="230" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- S3 Bucket (AWS Icon Shape) -->
+        <mxCell id="s3" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#60A337;gradientDirection=north;fillColor=#277116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
+          <mxGeometry x="691" y="1350" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3-label" value="S3 Bucket&#xa;Intelligent-Tiering&#xa;100GB&#xa;- 抽出テキスト: 40GB&#xa;- 画像特徴量: 10GB&#xa;- サムネイル: 30GB&#xa;- ログ: 20GB" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="615" y="1430" width="230" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- DynamoDB (AWS Icon Shape) -->
+        <mxCell id="dynamodb" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="1">
+          <mxGeometry x="991" y="1170" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="dynamodb-label" value="DynamoDB&#xa;On-Demand&#xa;- file_metadata: 5GB&#xa;- sync_jobs: 100MB" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="935" y="1250" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Orchestration Layer -->
+        <mxCell id="orchestrationLayer" value="オーケストレーション層" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8EAF6;strokeColor=#3F51B5;strokeWidth=2;verticalAlign=top;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1370" y="1120" width="450" height="380" as="geometry"/>
+        </mxCell>
+
+        <!-- Step Functions (AWS Icon Shape) -->
+        <mxCell id="stepFunc" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#FF4F8B;gradientDirection=north;fillColor=#BC1356;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;" vertex="1" parent="1">
+          <mxGeometry x="1551" y="1170" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="stepFunc-label" value="Step Functions&#xa;MonthlyBatchSyncWorkflow&#xa;実行頻度: 月1回&#xa;実行時間: 5-6時間" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="1465" y="1250" width="250" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- EventBridge (AWS Icon Shape) -->
+        <mxCell id="eventBridge" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#FF4F8B;gradientDirection=north;fillColor=#BC1356;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;" vertex="1" parent="1">
+          <mxGeometry x="1431" y="1350" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="eventBridge-label" value="EventBridge&#xa;cron(0 2 1 * ? *)&#xa;毎月1日 深夜2時" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="1385" y="1430" width="170" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- SNS (AWS Icon Shape) -->
+        <mxCell id="sns" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#FF4F8B;gradientDirection=north;fillColor=#BC1356;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;" vertex="1" parent="1">
+          <mxGeometry x="1671" y="1350" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="sns-label" value="SNS&#xa;BatchNotifications&#xa;管理者メール × 5" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="1625" y="1430" width="170" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- CloudWatch (AWS Icon Shape) -->
+        <mxCell id="cloudwatch" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F34482;gradientDirection=north;fillColor=#BC1356;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;" vertex="1" parent="1">
+          <mxGeometry x="991" y="1350" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="cloudwatch-label" value="CloudWatch&#xa;Logs: 2GB/月&#xa;Metrics: 10個&#xa;Alarms: 5個" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="935" y="1430" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- User Components -->
+        <!-- User (Generic Icon) -->
+        <mxCell id="user" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;" vertex="1" parent="1">
+          <mxGeometry x="211" y="1150" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="user-label" value="ユーザー&#xa;社内50名&#xa;Azure AD SSO" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="170" y="1230" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Next.js Frontend (ECS Fargate Icon) -->
+        <mxCell id="nextjs" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
+          <mxGeometry x="211" y="1350" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="nextjs-label" value="Next.js Frontend&#xa;ECS Fargate&#xa;vCPU: 0.25, RAM: 0.5GB&#xa;TypeScript + Tailwind" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="170" y="1430" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Connections -->
+        <!-- VPN Connection (Dashed) -->
+        <mxCell id="vpnConn" value="VPN接続&#xa;月4時間のみ&#xa;暗号化通信" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#0066CC;dashed=1;dashPattern=8 8;" edge="1" parent="1" source="vpnRouter" target="vpg">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="300" y="600" as="sourcePoint"/>
+            <mxPoint x="630" y="410" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- IGW to NAT Connection -->
+        <mxCell id="igwNat" value="ルーティング" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#388E3C;" edge="1" parent="1" source="igw" target="nat">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="730" y="260" as="sourcePoint"/>
+            <mxPoint x="950" y="300" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Data Transfer Flow -->
+        <mxCell id="transfer1" value="増分データ転送&#xa;20GB/月, 3時間" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#FF9900;" edge="1" parent="1" source="vpg" target="dataSync">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="679" y="460" as="sourcePoint"/>
+            <mxPoint x="730" y="1160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="transfer2" value="" style="endArrow=classic;html=1;strokeWidth=4;strokeColor=#FF9900;" edge="1" parent="1" source="dataSync" target="s3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="730" y="1260" as="sourcePoint"/>
+            <mxPoint x="730" y="1340" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Search Flow -->
+        <mxCell id="search1" value="HTTPS&#xa;Azure AD認証" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;strokeColor=#00AA00;" edge="1" parent="1" source="user" target="nextjs">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="250" y="1240" as="sourcePoint"/>
+            <mxPoint x="250" y="1340" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Lambda to OpenSearch -->
+        <mxCell id="lambdaOS" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#00AA00;" edge="1" parent="1" source="bulkIdx" target="opensearch">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="950" y="960" as="sourcePoint"/>
+            <mxPoint x="1090" y="960" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Batch Trigger -->
+        <mxCell id="batch1" value="① 月1回トリガー" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#0066CC;" edge="1" parent="1" source="eventBridge" target="stepFunc">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1470" y="1340" as="sourcePoint"/>
+            <mxPoint x="1590" y="1260" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="凡例&#xa;━━━ バッチ同期フロー (月1回) [青]&#xa;━━━ データ転送 (増分20GB) [オレンジ]&#xa;━━━ 検索フロー (リアルタイム) [緑]&#xa;- - - VPN接続 (月4時間のみ) [青破線]&#xa;· · · インターネットアクセス [黄点線]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;strokeWidth=1;verticalAlign=top;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="1870" y="200" width="400" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Subnet Info -->
+        <mxCell id="subnetInfo" value="サブネット構成&#xa;━━━━━━━━━━━━━━━━━━&#xa;Public Subnet (10.0.0.0/24)&#xa;  ・NAT Gateway (Elastic IP)&#xa;  ・Internet Gateway経由&#xa;&#xa;Private Subnet 1 (10.0.1.0/24, AZ-a)&#xa;  ・Lambda Functions (バッチ処理)&#xa;  ・OpenSearch Service&#xa;  ・NAT Gateway経由でインターネット&#xa;&#xa;Private Subnet 2 (10.0.2.0/24, AZ-b)&#xa;  ・SearchAPI Lambda (Multi-AZ)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F4F8;strokeColor=#0277BD;strokeWidth=2;verticalAlign=top;fontSize=11;align=left;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1870" y="380" width="400" height="280" as="geometry"/>
+        </mxCell>
+
+        <!-- Cost Breakdown -->
+        <mxCell id="cost" value="コスト構成 ($47.74/月)&#xa;━━━━━━━━━━━━━━━━━━&#xa;* OpenSearch: $31.46 (65.9%)&#xa;* DataSync: $5.00 (10.5%)&#xa;* CloudWatch: $4.00 (8.4%)&#xa;* S3: $2.18 (4.6%)&#xa;* Lambda: $1.35 (2.8%)&#xa;* Route53: $0.50 (1.0%)&#xa;* ACM: $0.00 (無料)&#xa;* その他: $3.25 (6.8%)&#xa;&#xa;削減率: 96% (Pattern 2比)&#xa;HTTPS対応: ACM証明書 (無料)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=2;verticalAlign=top;fontSize=11;align=left;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1870" y="690" width="400" height="260" as="geometry"/>
+        </mxCell>
+
+        <!-- Key Features -->
+        <mxCell id="features" value="主要な特徴&#xa;━━━━━━━━━━━━━━━━━━&#xa;・月1回の増分同期 (VPN接続: 月4時間のみ)&#xa;・ファイル実体はNASに保持&#xa;・メタデータ+テキストのみAWSで管理&#xa;・全文検索 (kuromoji) + 画像類似検索 (k-NN)&#xa;・100万ファイル対応&#xa;・ARM64 (Graviton2) 最適化&#xa;・AWS公式アイコン適用版" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF9800;strokeWidth=2;verticalAlign=top;fontSize=11;align=left;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1870" y="940" width="400" height="220" as="geometry"/>
+        </mxCell>
+
+        <!-- AWS Icons Note -->
+        <mxCell id="awsIconsNote" value="AWS公式アイコンについて&#xa;━━━━━━━━━━━━━━━━━━&#xa;このファイルはAWS Architecture Icons&#xa;(2023年版)を使用しています。&#xa;&#xa;draw.ioで開くと、すべてのAWS&#xa;サービスが公式アイコンで表示されます。&#xa;&#xa;アイコンの色:&#xa;- オレンジ: Lambda, Fargate&#xa;- 緑: S3, DataSync, OpenSearch&#xa;- 青: DynamoDB&#xa;- ピンク: Step Functions, EventBridge, SNS&#xa;- 紫: VPN, NAT, IGW&#xa;- グレー: Traditional Server, User" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#2196F3;strokeWidth=2;verticalAlign=top;fontSize=10;align=left;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1870" y="1190" width="400" height="320" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

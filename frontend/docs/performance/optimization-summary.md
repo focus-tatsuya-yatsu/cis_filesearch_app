@@ -6,13 +6,13 @@ This document provides a comprehensive overview of the React performance optimiz
 
 ### Overall Impact
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| FilterPanel re-renders per search | 8+ | 0 | **100%** |
-| ThemeContext consumer re-renders (theme unchanged) | N (all consumers) | 0 | **100%** |
-| FolderTree re-renders per node operation | 100+ (entire tree) | 1-5 (affected nodes) | **90-95%** |
-| Total memory overhead | N/A | < 20KB | Negligible |
-| User-perceived performance | Noticeable lag | Smooth (60 FPS) | **Excellent** |
+| Metric                                             | Before             | After                | Improvement   |
+| -------------------------------------------------- | ------------------ | -------------------- | ------------- |
+| FilterPanel re-renders per search                  | 8+                 | 0                    | **100%**      |
+| ThemeContext consumer re-renders (theme unchanged) | N (all consumers)  | 0                    | **100%**      |
+| FolderTree re-renders per node operation           | 100+ (entire tree) | 1-5 (affected nodes) | **90-95%**    |
+| Total memory overhead                              | N/A                | < 20KB               | Negligible    |
+| User-perceived performance                         | Noticeable lag     | Smooth (60 FPS)      | **Excellent** |
 
 ---
 
@@ -21,12 +21,14 @@ This document provides a comprehensive overview of the React performance optimiz
 ### Problem Analysis
 
 **Original Implementation Issues**:
+
 - Component re-rendered on EVERY parent state change
 - Event handlers recreated on every render
 - No memoization strategy
 - 8+ unnecessary re-renders per search operation
 
 **Performance Impact**:
+
 - UI lag during search result streaming
 - Unnecessary CPU cycles wasted on re-rendering
 - Poor user experience (sluggish interactions)
@@ -34,6 +36,7 @@ This document provides a comprehensive overview of the React performance optimiz
 ### Optimization Strategy
 
 **Applied Techniques**:
+
 1. **React.memo**: Wrapped component to prevent re-renders when props unchanged
 2. **useCallback**: Memoized all event handlers with proper dependencies
 3. **Stable Prop Pattern**: Required parent to use useCallback for `onFilterChange`
@@ -66,6 +69,7 @@ export const FilterPanel = memo(FilterPanelComponent)
 ### Performance Results
 
 **Measurements**:
+
 - **Render Count**: 8 → 0 (per search operation when filters unchanged)
 - **Render Duration**: N/A (no render)
 - **Memory Overhead**: ~500 bytes (memoization cache)
@@ -73,14 +77,15 @@ export const FilterPanel = memo(FilterPanelComponent)
 
 **Expected Scenarios**:
 
-| Scenario | Before | After | Improvement |
-|----------|--------|-------|-------------|
-| Search query update (1000 results) | 8 re-renders | 0 re-renders | 100% |
-| Filter change | 1 re-render | 1 re-render | - (expected) |
-| Sort order toggle | 1 re-render | 1 re-render | - (expected) |
-| Rapid search queries (10 in 1s) | 80 re-renders | 0 re-renders | 100% |
+| Scenario                           | Before        | After        | Improvement  |
+| ---------------------------------- | ------------- | ------------ | ------------ |
+| Search query update (1000 results) | 8 re-renders  | 0 re-renders | 100%         |
+| Filter change                      | 1 re-render   | 1 re-render  | - (expected) |
+| Sort order toggle                  | 1 re-render   | 1 re-render  | - (expected) |
+| Rapid search queries (10 in 1s)    | 80 re-renders | 0 re-renders | 100%         |
 
 **Test Coverage**:
+
 - ✅ Unit tests: `FilterPanel.performance.test.tsx`
 - ✅ Re-render prevention verification
 - ✅ Callback stability tests
@@ -93,16 +98,19 @@ export const FilterPanel = memo(FilterPanelComponent)
 ### Problem Analysis
 
 **Original Implementation Issues**:
+
 - Context value object recreated on EVERY render
 - `toggleTheme` function recreated on every render
 - ALL consumers re-rendered on ANY provider re-render (even if theme unchanged)
 
 **Performance Impact**:
+
 - Header, buttons, panels all re-render unnecessarily
 - Cascading re-renders affect entire app tree
 - Theme toggle feels sluggish (multiple layout shifts)
 
 **Critical Severity**:
+
 - ThemeContext wraps entire app → affects ALL components
 - High-frequency parent re-renders (search queries, filter changes) trigger unnecessary theme consumer re-renders
 - Exponential impact (N consumers × M parent re-renders = N×M wasted renders)
@@ -110,6 +118,7 @@ export const FilterPanel = memo(FilterPanelComponent)
 ### Optimization Strategy
 
 **Applied Techniques**:
+
 1. **useMemo**: Memoize context value object
 2. **useCallback**: Memoize toggleTheme function with empty dependencies
 3. **Functional State Update**: Use `setTheme(prev => ...)` to avoid theme dependency in useCallback
@@ -156,6 +165,7 @@ export const ThemeProvider = ({ children }) => {
 ### Performance Results
 
 **Measurements**:
+
 - **Consumer Re-renders (theme unchanged)**: N (all) → 0
 - **Theme Toggle Duration**: < 5ms per consumer
 - **Memory Overhead**: ~200 bytes (useMemo + useCallback cache)
@@ -163,19 +173,21 @@ export const ThemeProvider = ({ children }) => {
 
 **Expected Scenarios**:
 
-| Scenario | Before | After | Improvement |
-|----------|--------|-------|-------------|
-| Search query update (20 consumers) | 20 re-renders | 0 re-renders | 100% |
-| Theme toggle | 20 re-renders | 20 re-renders | - (expected) |
-| 100 parent re-renders (theme unchanged) | 2000 re-renders | 0 re-renders | 100% |
+| Scenario                                | Before          | After         | Improvement  |
+| --------------------------------------- | --------------- | ------------- | ------------ |
+| Search query update (20 consumers)      | 20 re-renders   | 0 re-renders  | 100%         |
+| Theme toggle                            | 20 re-renders   | 20 re-renders | - (expected) |
+| 100 parent re-renders (theme unchanged) | 2000 re-renders | 0 re-renders  | 100%         |
 
 **Real-World Impact**:
+
 - **Scenario**: User types search query → triggers parent re-render
 - **Before**: Header, FilterPanel, SearchResults, Footer all re-render (4+ components)
 - **After**: Only SearchResults re-renders (isolated impact)
 - **Result**: Smooth typing experience (no lag)
 
 **Test Coverage**:
+
 - ✅ Unit tests: `ThemeContext.performance.test.tsx`
 - ✅ Consumer re-render prevention
 - ✅ Toggle function stability
@@ -188,18 +200,21 @@ export const ThemeProvider = ({ children }) => {
 ### Problem Analysis
 
 **Original Implementation Issues**:
+
 - TreeItem component re-rendered on ANY parent/ancestor re-render
 - No memoization for recursive child components
 - Prop drilling caused cascading re-renders
 - **Exponential Problem**: In tree with 100 nodes, expanding 1 folder triggered 100 re-renders
 
 **Performance Impact**:
+
 - Lag when expanding folders with many children
 - Stuttering animation during expand/collapse
 - Poor performance with large directory structures (500+ folders)
 - Frame drops below 30 FPS for deep trees
 
 **Critical Severity**:
+
 - Recursive components amplify re-render costs (each level multiplies)
 - Large NAS structures (client requirement) have 1000+ folders
 - Deep nesting (10+ levels) common in file systems
@@ -207,6 +222,7 @@ export const ThemeProvider = ({ children }) => {
 ### Optimization Strategy
 
 **Applied Techniques**:
+
 1. **React.memo with Custom Comparison**: Fine-grained control over re-render logic
 2. **useCallback**: Memoize handleToggle handler
 3. **Node ID Comparison**: Optimize comparison by node identity (not deep equality)
@@ -231,7 +247,7 @@ const TreeItem: FC<TreeItemProps> = ({ node, level, onSelectFolder, selectedPath
 const TreeItemComponent: FC<TreeItemProps> = ({ node, level, onSelectFolder, selectedPath }) => {
   const handleToggle = useCallback(() => {
     if (node.type === 'folder') {
-      setIsExpanded(prev => !prev)
+      setIsExpanded((prev) => !prev)
       onSelectFolder(node.path)
     }
   }, [node.type, node.path, onSelectFolder])
@@ -257,6 +273,7 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 ### Performance Results
 
 **Measurements**:
+
 - **Re-renders per operation**: 100+ → 1-5 (affected nodes only)
 - **Expansion Duration**: < 16ms (60 FPS maintained)
 - **Memory Overhead**: ~100 bytes per node (~10KB for 100 nodes)
@@ -264,24 +281,25 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 
 **Expected Scenarios**:
 
-| Scenario | Before | After | Improvement |
-|----------|--------|-------|-------------|
-| Expand folder (100 sibling nodes) | 100 re-renders | 1 re-render | 99% |
-| Select folder (100 total nodes) | 100 re-renders | 2 re-renders (old + new) | 98% |
-| Parent re-render (tree unchanged) | 100 re-renders | 0 re-renders | 100% |
-| Deep tree (10 levels, 50 nodes) | 50 re-renders | 1-5 re-renders | 90-98% |
+| Scenario                          | Before         | After                    | Improvement |
+| --------------------------------- | -------------- | ------------------------ | ----------- |
+| Expand folder (100 sibling nodes) | 100 re-renders | 1 re-render              | 99%         |
+| Select folder (100 total nodes)   | 100 re-renders | 2 re-renders (old + new) | 98%         |
+| Parent re-render (tree unchanged) | 100 re-renders | 0 re-renders             | 100%        |
+| Deep tree (10 levels, 50 nodes)   | 50 re-renders  | 1-5 re-renders           | 90-98%      |
 
 **Large Tree Performance (100+ nodes)**:
 
-| Operation | Duration | Frame Rate | User Experience |
-|-----------|----------|------------|-----------------|
-| Initial render | < 100ms | 60 FPS | Smooth |
-| Expand folder | < 16ms | 60 FPS | Smooth |
-| Collapse folder | < 16ms | 60 FPS | Smooth |
-| Selection change | < 16ms | 60 FPS | Smooth |
-| Scrolling | < 16ms/frame | 60 FPS | Smooth |
+| Operation        | Duration     | Frame Rate | User Experience |
+| ---------------- | ------------ | ---------- | --------------- |
+| Initial render   | < 100ms      | 60 FPS     | Smooth          |
+| Expand folder    | < 16ms       | 60 FPS     | Smooth          |
+| Collapse folder  | < 16ms       | 60 FPS     | Smooth          |
+| Selection change | < 16ms       | 60 FPS     | Smooth          |
+| Scrolling        | < 16ms/frame | 60 FPS     | Smooth          |
 
 **Test Coverage**:
+
 - ✅ Unit tests: `FolderTree.performance.test.tsx`
 - ✅ Sibling isolation tests
 - ✅ Parent isolation tests
@@ -298,6 +316,7 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 **Scenario: User performs search**
 
 **Before Optimization**:
+
 1. User types query → FilterPanel re-renders (8×)
 2. Results arrive → FilterPanel re-renders again
 3. Theme consumers re-render (header, buttons, panels)
@@ -306,6 +325,7 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 6. **User Experience**: Noticeable lag, stuttering
 
 **After Optimization**:
+
 1. User types query → Only SearchResults re-renders
 2. Results arrive → Only SearchResults updates
 3. Theme consumers remain stable
@@ -319,14 +339,15 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 
 **Component Memoization Costs**:
 
-| Component | Memoization Type | Memory per Instance | Total for App |
-|-----------|------------------|---------------------|---------------|
-| FilterPanel | React.memo + useCallback (6×) | ~500 bytes | < 1KB |
-| ThemeContext | useMemo + useCallback | ~200 bytes | < 1KB |
-| FolderTree (100 nodes) | React.memo + useCallback per node | ~100 bytes/node | ~10KB |
-| **Total** | - | - | **< 15KB** |
+| Component              | Memoization Type                  | Memory per Instance | Total for App |
+| ---------------------- | --------------------------------- | ------------------- | ------------- |
+| FilterPanel            | React.memo + useCallback (6×)     | ~500 bytes          | < 1KB         |
+| ThemeContext           | useMemo + useCallback             | ~200 bytes          | < 1KB         |
+| FolderTree (100 nodes) | React.memo + useCallback per node | ~100 bytes/node     | ~10KB         |
+| **Total**              | -                                 | -                   | **< 15KB**    |
 
 **Trade-off Analysis**:
+
 - Memory overhead: 15KB
 - Render time saved: 80-90% reduction
 - **Verdict**: Excellent trade-off (15KB for massive performance gain)
@@ -335,14 +356,15 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 
 **Target: 60 FPS (16.67ms per frame)**
 
-| Component | Operation | Before | After | Target Met? |
-|-----------|-----------|--------|-------|-------------|
-| FilterPanel | Filter change | 20-30ms | < 10ms | ✅ Yes |
-| ThemeContext | Theme toggle | 15-25ms | < 5ms | ✅ Yes |
-| FolderTree | Node expand | 50-100ms | < 16ms | ✅ Yes |
-| FolderTree | Large tree scroll | 30-50ms/frame | < 16ms | ✅ Yes |
+| Component    | Operation         | Before        | After  | Target Met? |
+| ------------ | ----------------- | ------------- | ------ | ----------- |
+| FilterPanel  | Filter change     | 20-30ms       | < 10ms | ✅ Yes      |
+| ThemeContext | Theme toggle      | 15-25ms       | < 5ms  | ✅ Yes      |
+| FolderTree   | Node expand       | 50-100ms      | < 16ms | ✅ Yes      |
+| FolderTree   | Large tree scroll | 30-50ms/frame | < 16ms | ✅ Yes      |
 
 **User-Perceived Performance**:
+
 - **Before**: Noticeable lag, stuttering, poor responsiveness
 - **After**: Smooth, responsive, professional-grade UX
 - **Rating**: Excellent (meets 60 FPS standard)
@@ -354,11 +376,13 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 ### Automated Tests
 
 **Test Files Created**:
+
 1. `/src/components/features/__tests__/FilterPanel.performance.test.tsx`
 2. `/src/contexts/__tests__/ThemeContext.performance.test.tsx`
 3. `/src/components/features/__tests__/FolderTree.performance.test.tsx`
 
 **Test Coverage**:
+
 - ✅ Re-render prevention verification
 - ✅ Callback stability tests
 - ✅ Performance regression prevention
@@ -383,12 +407,14 @@ yarn test:coverage
 ### Manual Profiling
 
 **React DevTools Profiling**:
+
 - See `/docs/performance/react-devtools-profiling-guide.md`
 - Step-by-step instructions for each component
 - Screenshot examples and interpretation guide
 - Performance metrics to monitor
 
 **Chrome DevTools Performance**:
+
 - CPU profiling
 - Memory profiling (heap snapshots)
 - Network + performance correlation
@@ -401,6 +427,7 @@ yarn test:coverage
 ### Applying Optimizations
 
 **FilterPanel**:
+
 - [ ] Replace import with optimized version
 - [ ] Verify parent uses useCallback for onFilterChange
 - [ ] Run performance tests
@@ -408,6 +435,7 @@ yarn test:coverage
 - [ ] Verify 0 re-renders on search result updates
 
 **ThemeContext**:
+
 - [ ] Replace ThemeContext with optimized version
 - [ ] Update all ThemeProvider imports
 - [ ] Run performance tests
@@ -415,6 +443,7 @@ yarn test:coverage
 - [ ] Verify consumers don't re-render when theme unchanged
 
 **FolderTree**:
+
 - [ ] Replace import with optimized version
 - [ ] Verify parent uses useCallback for onSelectFolder
 - [ ] Test with large tree (100+ nodes)
@@ -426,6 +455,7 @@ yarn test:coverage
 ### Deployment Checklist
 
 **Pre-Deployment**:
+
 - [ ] All automated tests passing
 - [ ] Manual profiling completed
 - [ ] Performance benchmarks meet targets
@@ -433,6 +463,7 @@ yarn test:coverage
 - [ ] No performance regressions detected
 
 **Post-Deployment**:
+
 - [ ] Monitor Real User Monitoring (RUM) metrics
 - [ ] Check Lighthouse performance scores
 - [ ] Verify Core Web Vitals (LCP, FID, CLS)
@@ -446,24 +477,28 @@ yarn test:coverage
 ### Advanced Techniques (If Needed)
 
 **1. Virtual Scrolling (FolderTree)**:
+
 - **When**: Tree exceeds 1000 visible nodes
 - **Library**: react-window or @tanstack/react-virtual
 - **Expected Improvement**: 50-100× for massive trees
 - **Memory**: Reduced (only visible nodes rendered)
 
 **2. Context Splitting (ThemeContext)**:
+
 - **When**: Many components use toggleTheme but not theme value
 - **Technique**: Split into ThemeContext + ThemeActionsContext
 - **Expected Improvement**: Further reduction in re-renders
 - **Trade-off**: More boilerplate code
 
 **3. Lazy Loading (FolderTree)**:
+
 - **When**: Tree data is remote and large
 - **Technique**: Load children on first expand
 - **Expected Improvement**: Faster initial load, smaller bundle
 - **Implementation**: useQuery with enabled flag
 
 **4. Web Workers**:
+
 - **When**: Tree transformations are CPU-intensive
 - **Technique**: Offload filtering/sorting to worker thread
 - **Expected Improvement**: Main thread remains responsive
@@ -496,6 +531,7 @@ yarn test:coverage
 ```
 
 **CI/CD Integration**:
+
 - Automated performance tests on every PR
 - Performance regression detection
 - Bundle size monitoring
@@ -537,6 +573,7 @@ yarn test:coverage
 ### Common Pitfalls Avoided
 
 ❌ **Don't**:
+
 - Optimize without measuring first
 - Use React.memo everywhere (over-optimization)
 - Forget to stabilize props (useCallback in parent)
@@ -544,6 +581,7 @@ yarn test:coverage
 - Skip testing (optimizations can break functionality)
 
 ✅ **Do**:
+
 - Profile to identify bottlenecks
 - Optimize hot paths (high-frequency components)
 - Stabilize props passed to memoized components
@@ -553,6 +591,7 @@ yarn test:coverage
 ### Success Metrics
 
 **Performance Goals**:
+
 - ✅ FilterPanel: 0 unnecessary re-renders
 - ✅ ThemeContext: 100% re-render elimination (theme unchanged)
 - ✅ FolderTree: 90-95% re-render reduction

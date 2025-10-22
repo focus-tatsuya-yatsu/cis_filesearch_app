@@ -10,6 +10,14 @@ export interface SearchResult {
   relevanceScore: number
 }
 
+// 検索履歴アイテムの型定義
+export interface SearchHistoryItem {
+  id: string
+  query: string
+  timestamp: number
+  resultCount?: number
+}
+
 // フィルターオプションの型定義
 export interface FilterOptions {
   fileType?: string[]

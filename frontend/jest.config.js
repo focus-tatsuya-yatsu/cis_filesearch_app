@@ -50,19 +50,22 @@ const customJestConfig = {
 
   // Transform files
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['@swc/jest', {
-      jsc: {
-        parser: {
-          syntax: 'typescript',
-          tsx: true,
-        },
-        transform: {
-          react: {
-            runtime: 'automatic',
+    '^.+\\.(js|jsx|ts|tsx)$': [
+      '@swc/jest',
+      {
+        jsc: {
+          parser: {
+            syntax: 'typescript',
+            tsx: true,
+          },
+          transform: {
+            react: {
+              runtime: 'automatic',
+            },
           },
         },
       },
-    }],
+    ],
   },
 
   // Module file extensions
@@ -72,9 +75,7 @@ const customJestConfig = {
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
 
   // Transform ignore patterns
-  transformIgnorePatterns: [
-    'node_modules/(?!(framer-motion|lucide-react)/)',
-  ],
+  transformIgnorePatterns: ['node_modules/(?!(framer-motion|lucide-react)/)'],
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

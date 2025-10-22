@@ -1,0 +1,320 @@
+@startuml CIS File Search Pattern 3 Architecture
+
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v18.0/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/AWSSimplified.puml
+
+' Compute
+!include AWSPuml/Compute/Lambda.puml
+
+' Storage
+!include AWSPuml/Storage/SimpleStorageService.puml
+
+' Database
+!include AWSPuml/Database/DynamoDB.puml
+
+' Analytics
+!include AWSPuml/Analytics/OpenSearchService.puml
+
+' Application Integration
+!include AWSPuml/ApplicationIntegration/StepFunctions.puml
+!include AWSPuml/ApplicationIntegration/EventBridge.puml
+!include AWSPuml/ApplicationIntegration/SimpleNotificationService.puml
+
+' Management & Governance
+!include AWSPuml/ManagementGovernance/CloudWatch.puml
+
+' Migration & Transfer
+!include AWSPuml/MigrationTransfer/DataSync.puml
+
+' Networking & Content Delivery
+!include AWSPuml/NetworkingContentDelivery/VPNConnection.puml
+!include AWSPuml/NetworkingContentDelivery/VPC.puml
+!include AWSPuml/NetworkingContentDelivery/Route53.puml
+!include AWSPuml/NetworkingContentDelivery/APIGateway.puml
+
+' Security, Identity & Compliance
+!include AWSPuml/SecurityIdentityCompliance/CertificateManager.puml
+
+' General
+!include AWSPuml/General/Users.puml
+!include AWSPuml/General/TraditionalServer.puml
+!include AWSPuml/General/Client.puml
+
+' Containers
+!include AWSPuml/Containers/ElasticContainerService.puml
+
+' Define custom colors
+!define BATCH_COLOR #0066CC
+!define SEARCH_COLOR #00AA00
+!define MONITOR_COLOR #00BCD4
+!define TRANSFER_COLOR #FF9900
+
+' Define groups
+skinparam rectangle {
+    BackgroundColor<<OnPremise>> #F5F5F5
+    BorderColor<<OnPremise>> #CCCCCC
+    BackgroundColor<<AWS>> #FFF7E6
+    BorderColor<<AWS>> #FF9800
+    BackgroundColor<<VPC>> #E8F4F8
+    BorderColor<<VPC>> #0277BD
+    BackgroundColor<<PublicSubnet>> #BBDEFB
+    BorderColor<<PublicSubnet>> #1976D2
+    BackgroundColor<<PrivateSubnet>> #FCE4EC
+    BorderColor<<PrivateSubnet>> #C2185B
+    BackgroundColor<<Lambda>> #FFFDE7
+    BorderColor<<Lambda>> #FBC02D
+    BackgroundColor<<Managed>> #FFF9C4
+    BorderColor<<Managed>> #F57F17
+}
+
+title CIS File Search - Pattern 3 Architecture\n月次バッチ同期アーキテクチャ (NAS-AWS ハイブリッド)\n月額コスト: $47.74/月 (削減率 96%) | Route53 + ACM追加
+
+' ================================
+' On-Premise Infrastructure
+' ================================
+rectangle "オンプレミス環境" <<OnPremise>> {
+    TraditionalServer(nas, "NAS Server", "SMB/NFS\n500GB\n1,000,000 files")
+
+    rectangle "DataSync Agent" as dsAgent {
+        note right: 増分検出エージェント\nversion: 1.0.52
+    }
+
+    rectangle "VPN Router" as vpnRouter {
+        note right: Customer Gateway\nCisco ASA 5506
+    }
+
+    nas --> dsAgent
+    dsAgent --> vpnRouter
+}
+
+' ================================
+' AWS Cloud Infrastructure
+' ================================
+rectangle "AWS Cloud (ap-northeast-1)" <<AWS>> {
+    ' VPC Container
+    rectangle "VPC: 10.0.0.0/16" <<VPC>> {
+        ' Internet Gateway (VPC-level)
+        rectangle "Internet Gateway" as igw {
+            note right: インターネット接続
+        }
+
+        ' Virtual Private Gateway (VPC-level)
+        VPNConnection(vpg, "Virtual Private Gateway", "Site-to-Site VPN\n⏰ 月4時間のみ接続\n2:00-6:00 (月1日)")
+
+        ' Public Subnet
+        rectangle "Public Subnet: 10.0.0.0/24 (AZ-a)" <<PublicSubnet>> {
+            rectangle "NAT Gateway" as natGW {
+                note right: Elastic IP\nインターネット経由\nアクセス制御
+            }
+        }
+
+        ' Private Subnet 1
+        rectangle "Private Subnet 1: 10.0.1.0/24 (AZ-a)" <<PrivateSubnet>> {
+            ' Batch Processing Layer
+            Lambda(vpnMgr, "VPNManager", "Python 3.11\n512MB ARM64\n- VPN接続制御\n- 接続監視")
+
+            Lambda(fileScanner, "FileScanner", "Node.js 20\n1024MB ARM64\n- S3全スキャン\n- メタデータ収集")
+
+            Lambda(textExt, "TextExtractor", "Python 3.11\n2048MB ARM64\n- PDF解析\n月5,000実行")
+
+            Lambda(imgExt, "ImageFeatureExtractor", "Python 3.11\n2048MB ARM64\n- ResNet-50\n月2,000実行")
+
+            Lambda(bulkIdx, "BulkIndexer", "Node.js 20\n1024MB ARM64\n- Bulk API\n- DynamoDB更新")
+
+            ' Search Engine in Private Subnet
+            OpenSearchService(opensearch, "OpenSearch Service", "t3.small.search\nvCPU: 2, RAM: 2GB\n50GB gp3\n- kuromoji (日本語)\n- k-NN (画像類似)")
+        }
+
+        ' Private Subnet 2
+        rectangle "Private Subnet 2: 10.0.2.0/24 (AZ-b)" <<PrivateSubnet>> {
+            ' API Layer in Private Subnet 2
+            Lambda(searchAPI, "SearchAPI", "Node.js 20\n512MB ARM64\nPOST /api/search\n月10,000実行\nMulti-AZ冗長性")
+        }
+    }
+
+    ' Managed Services (Outside VPC)
+    rectangle "マネージドサービス層（VPC外）" <<Managed>> {
+        ' Data Transfer Layer
+        DataSync(dataSync, "AWS DataSync", "増分同期: 20GB/月\n転送レート: 100Mbps\n転送時間: 約3時間")
+
+        ' Storage Layer
+        SimpleStorageService(s3, "S3 Bucket", "Intelligent-Tiering\n100GB\n- 抽出テキスト: 40GB\n- 画像特徴量: 10GB\n- サムネイル: 30GB\n- ログ: 20GB")
+
+        ' Database Layer
+        DynamoDB(dynamodb, "DynamoDB", "On-Demand\n- file_metadata: 5GB\n- sync_jobs: 100MB")
+    }
+
+    ' Orchestration Layer (Outside VPC)
+    rectangle "オーケストレーション層" <<Managed>> {
+        StepFunctions(stepFunc, "Step Functions", "MonthlyBatchSyncWorkflow\n実行頻度: 月1回\n実行時間: 5-6時間")
+
+        EventBridge(eventBridge, "EventBridge", "cron(0 2 1 * ? *)\n毎月1日 深夜2時")
+
+        SimpleNotificationService(sns, "SNS", "BatchNotifications\n管理者メール × 5")
+    }
+
+    ' Monitoring Layer (Outside VPC)
+    CloudWatch(cloudwatch, "CloudWatch", "Logs: 2GB/月\nMetrics: 10個\nAlarms: 5個")
+}
+
+' ================================
+' User Layer
+' ================================
+Users(user, "ユーザー", "社内50名\nAzure AD SSO")
+ElasticContainerService(nextjs, "Next.js Frontend", "ECS Fargate\nvCPU: 0.25, RAM: 0.5GB\nTypeScript + Tailwind")
+
+' ================================
+' DNS & API Layer
+' ================================
+Route53(route53, "Route53", "filesearch.company.com\nHosted Zone\n$0.50/月")
+APIGateway(apiGateway, "API Gateway", "Custom Domain\nACM証明書 (無料)\nHTTPS (TLS 1.3)\nIPアドレス制限\nスロットリング: 100req/秒")
+CertificateManager(acm, "ACM Certificate", "*.company.com\nDNS検証\n自動更新\n無料")
+
+' ================================
+' VPN Connection (Dashed - 月4時間のみ)
+' ================================
+vpnRouter .up.> vpg : <color:#0066CC>VPN接続\n<color:#0066CC>月4時間のみ\n<color:#0066CC>暗号化通信
+
+' ================================
+' Batch Synchronization Flow (Blue)
+' ================================
+eventBridge -[#0066CC,thickness=3]-> stepFunc : <color:#0066CC>① 月1回トリガー
+
+stepFunc -[#0066CC,thickness=3]-> vpnMgr : <color:#0066CC>② VPN接続開始
+
+vpnMgr .[#0066CC,thickness=2].> vpg : <color:#0066CC>③ VPN接続確立
+
+vpnMgr -[#0066CC,thickness=3]-> dataSync : <color:#0066CC>④ DataSync起動
+
+' Data Transfer Flow (Orange)
+nas -[#FF9900,thickness=4]-> dsAgent
+dsAgent -[#FF9900,thickness=4]-> vpnRouter
+vpnRouter -[#FF9900,thickness=4]-> vpg
+vpg -[#FF9900,thickness=4]-> dataSync : <color:#FF9900>⑤ 増分データ転送\n<color:#FF9900>20GB/月, 3時間
+dataSync -[#FF9900,thickness=4]-> s3
+
+stepFunc -[#0066CC,thickness=3]-> vpnMgr : <color:#0066CC>⑥ VPN切断\n<color:#0066CC>同期完了後
+
+stepFunc -[#0066CC,thickness=3]-> fileScanner : <color:#0066CC>⑦ S3スキャン開始\n<color:#0066CC>VPN切断後
+
+fileScanner <-[#00AA00,thickness=2]-> s3 : <color:#00AA00>⑧ メタデータ取得
+
+fileScanner -[#0066CC,thickness=3]-> textExt : <color:#0066CC>⑨ テキスト抽出\n<color:#0066CC>5,000 PDFs\n<color:#0066CC>最大100並列
+
+fileScanner -[#0066CC,thickness=3]-> imgExt : <color:#0066CC>⑨ 画像特徴抽出\n<color:#0066CC>2,000 Images\n<color:#0066CC>最大50並列
+
+textExt <-[#00AA00,thickness=2]-> s3 : <color:#00AA00>⑩ 抽出テキスト保存
+
+imgExt <-[#00AA00,thickness=2]-> s3 : <color:#00AA00>⑩ 特徴ベクトル保存\n<color:#00AA00>512次元
+
+textExt -[#0066CC,thickness=3]-> bulkIdx : <color:#0066CC>⑪ 処理完了通知
+imgExt -[#0066CC,thickness=3]-> bulkIdx
+
+bulkIdx -[#00AA00,thickness=2]-> s3 : <color:#00AA00>⑫ 全データ取得
+
+bulkIdx -[#0066CC,thickness=3]-> opensearch : <color:#0066CC>⑬ Bulk API\n<color:#0066CC>kuromoji + k-NN\n<color:#0066CC>バッチサイズ: 1,000
+
+bulkIdx -[#0066CC,thickness=3]-> dynamodb : <color:#0066CC>⑭ メタデータ更新\n<color:#0066CC>BatchWriteItem
+
+bulkIdx -[#0066CC,thickness=3]-> sns : <color:#0066CC>⑮ 完了通知\n<color:#0066CC>成功/失敗ステータス
+
+' ================================
+' User Search Flow (Green)
+' ================================
+user <-[#00AA00,thickness=2]-> nextjs : <color:#00AA00>HTTPS\n<color:#00AA00>Azure AD認証
+
+nextjs -[#00AA00,thickness=2]-> route53 : <color:#00AA00>HTTPS\n<color:#00AA00>filesearch.company.com
+
+route53 -[#00AA00,thickness=2]-> apiGateway : <color:#00AA00>DNS解決
+
+apiGateway -[#00AA00,thickness=2]-> acm : <color:#00AA00>TLS 1.3証明書検証
+
+apiGateway -[#00AA00,thickness=2]-> searchAPI : <color:#00AA00>POST /api/search\n<color:#00AA00>{query: '提案書'}\n<color:#00AA00>IPアドレス制限チェック
+
+searchAPI <-[#00AA00,thickness=2]-> opensearch : <color:#00AA00>全文検索\n<color:#00AA00>kuromoji tokenizer
+
+searchAPI <-[#00AA00,thickness=2]-> dynamodb : <color:#00AA00>GetItem\n<color:#00AA00>file_metadata
+
+searchAPI <-[#00AA00,thickness=2]-> s3 : <color:#00AA00>GetObject\n<color:#00AA00>ハイライト用
+
+' ================================
+' Monitoring Flow (Cyan Dotted)
+' ================================
+vpnMgr .[#00BCD4,thickness=1].> cloudwatch : <color:#00BCD4>Logs/Metrics
+fileScanner .[#00BCD4,thickness=1].> cloudwatch : <color:#00BCD4>Logs/Metrics
+textExt .[#00BCD4,thickness=1].> cloudwatch : <color:#00BCD4>Logs/Metrics
+imgExt .[#00BCD4,thickness=1].> cloudwatch : <color:#00BCD4>Logs/Metrics
+bulkIdx .[#00BCD4,thickness=1].> cloudwatch : <color:#00BCD4>Logs/Metrics
+searchAPI .[#00BCD4,thickness=1].> cloudwatch : <color:#00BCD4>Logs/Metrics
+
+' ================================
+' Notes and Legends
+' ================================
+legend right
+    |<color:#0066CC>━━━━━| <color:#0066CC>バッチ同期フロー (月1回)
+    |<color:#FF9900>━━━━━| <color:#FF9900>データ転送 (増分20GB)
+    |<color:#00AA00>━━━━━| <color:#00AA00>検索フロー (リアルタイム)
+    |<color:#0066CC>- - - - -| <color:#0066CC>VPN接続 (月4時間のみ)
+    |<color:#00BCD4>· · · · ·| <color:#00BCD4>監視ログ
+
+    **コスト構成 ($47.74/月)**
+    * OpenSearch: $31.46 (65.9%)
+    * DataSync: $5.00 (10.5%)
+    * CloudWatch: $4.00 (8.4%)
+    * S3: $2.18 (4.6%)
+    * Lambda: $1.35 (2.8%)
+    * Route53: $0.50 (1.0%)
+    * ACM: $0.00 (無料)
+    * その他: $3.25 (6.8%)
+
+    **削減率: 96% (Pattern 2比)**
+    **HTTPS対応: ACM証明書 (無料)**
+end legend
+
+note as N1
+    **主要な特徴**
+    ・月1回の増分同期 (VPN接続: 月4時間のみ)
+    ・ファイル実体はNASに保持
+    ・メタデータ+テキストのみAWSで管理
+    ・全文検索 (kuromoji) + 画像類似検索 (k-NN)
+    ・100万ファイル対応
+    ・ARM64 (Graviton2) 最適化
+end note
+
+note as N2
+    **バッチ実行タイミング**
+    ・毎月1日 深夜2時 (JST)
+    ・VPN接続時間: 2:00-6:00 (4時間)
+    ・Lambda処理: VPN切断後1-2時間
+    ・合計処理時間: 5-6時間
+end note
+
+note as N3
+    **監視項目**
+    ・VPN接続成功率
+    ・DataSync転送完了時間
+    ・Lambda並列実行数
+    ・OpenSearchインデックス成功率
+    ・検索レスポンスタイム
+end note
+
+note as N4
+    **サブネット構成**
+    **Public Subnet (10.0.0.0/24, AZ-a)**
+    ・NAT Gateway (Elastic IP)
+    ・Internet Gateway経由でインターネット接続
+
+    **Private Subnet 1 (10.0.1.0/24, AZ-a)**
+    ・Lambda Functions (バッチ処理)
+      - VPNManager, FileScanner, TextExtractor
+      - ImageExtractor, BulkIndexer
+    ・OpenSearch Service
+    ・NAT Gateway経由でインターネットアクセス
+
+    **Private Subnet 2 (10.0.2.0/24, AZ-b)**
+    ・SearchAPI Lambda (検索API)
+    ・Multi-AZ冗長性
+end note
+
+@enduml

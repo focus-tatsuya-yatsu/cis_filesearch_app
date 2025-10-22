@@ -8,17 +8,19 @@ import { ExplorerView } from './ExplorerView'
 // react-resizable-panelsのモック
 jest.mock('react-resizable-panels', () => ({
   Panel: ({ children }: { children: React.ReactNode }) => <div data-testid="panel">{children}</div>,
-  PanelGroup: ({ children }: { children: React.ReactNode }) => <div data-testid="panel-group">{children}</div>,
-  PanelResizeHandle: ({ children }: { children: React.ReactNode }) => <div data-testid="panel-resize-handle">{children}</div>,
+  PanelGroup: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="panel-group">{children}</div>
+  ),
+  PanelResizeHandle: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="panel-resize-handle">{children}</div>
+  ),
 }))
 
 // FolderTreeとSearchResultCardのモック
 jest.mock('./FolderTree', () => ({
   FolderTree: ({ data, onSelectFolder, selectedPath }: any) => (
     <div data-testid="folder-tree">
-      <button onClick={() => onSelectFolder('/Documents')}>
-        Documents
-      </button>
+      <button onClick={() => onSelectFolder('/Documents')}>Documents</button>
       <div>Selected: {selectedPath || 'none'}</div>
     </div>
   ),

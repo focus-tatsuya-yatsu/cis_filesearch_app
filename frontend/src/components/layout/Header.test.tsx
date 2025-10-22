@@ -23,7 +23,7 @@ describe('Header', () => {
     return render(
       <ThemeProvider>
         <Header />
-      </ThemeProvider>,
+      </ThemeProvider>
     )
   }
 
@@ -116,7 +116,7 @@ describe('Header', () => {
     it('通知と設定がスクリーンリーダー用テキストを持つ', () => {
       renderWithTheme()
       const srOnlyTexts = screen.getAllByText(/通知|設定/)
-      const srOnlyElements = srOnlyTexts.filter(el => el.classList.contains('sr-only'))
+      const srOnlyElements = srOnlyTexts.filter((el) => el.classList.contains('sr-only'))
       expect(srOnlyElements.length).toBeGreaterThan(0)
     })
 

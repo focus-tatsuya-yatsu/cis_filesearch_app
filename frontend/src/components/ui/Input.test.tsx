@@ -189,7 +189,14 @@ describe('Input', () => {
     })
 
     it('label、placeholder、valueが同時に使用される', () => {
-      render(<Input label="メールアドレス" placeholder="example@test.com" value="test@test.com" onChange={() => {}} />)
+      render(
+        <Input
+          label="メールアドレス"
+          placeholder="example@test.com"
+          value="test@test.com"
+          onChange={() => {}}
+        />
+      )
 
       expect(screen.getByText('メールアドレス')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('example@test.com')).toBeInTheDocument()

@@ -1,0 +1,59 @@
+# ============================================================================
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and fill in your values
+# ============================================================================
+
+# AWS Region
+aws_region  = "ap-northeast-1"
+environment = "prod"
+
+# Project Configuration
+project_name = "cis-filesearch"
+
+# VPN Configuration (On-premise to AWS)
+customer_gateway_ip     = "203.0.113.1" # Replace with your VPN router public IP
+customer_gateway_bgp_asn = 65000
+
+# NAS Configuration
+nas_smb_server      = "192.168.1.100" # Replace with your NAS IP
+nas_smb_domain      = "WORKGROUP"
+nas_smb_username    = "nas_admin" # Replace with your NAS username
+nas_smb_password    = "YourSecurePassword123!" # Replace with your NAS password
+nas_smb_subdirectory = "/files"
+
+# DataSync Configuration
+datasync_bandwidth_limit = 100 # Mbps
+
+# OpenSearch Configuration
+opensearch_instance_type   = "t3.small.search"
+opensearch_ebs_volume_size = 50 # GB
+
+# Lambda Configuration
+lambda_runtime_nodejs = "nodejs20.x"
+lambda_runtime_python = "python3.11"
+lambda_architecture   = "arm64" # Graviton2 for cost optimization
+
+# EventBridge Schedule (Monthly Batch)
+batch_schedule = "cron(0 2 1 * ? *)" # Every 1st day of month at 2:00 AM JST
+
+# Notification
+admin_email = "admin@company.com" # Replace with your admin email
+
+# Frontend Configuration
+frontend_domain    = "filesearch.company.com" # Replace with your frontend domain
+route53_zone_name  = "company.com"            # Replace with your Route53 zone name
+
+# Cognito Configuration
+cognito_mfa_enabled              = false # Set to true to enable MFA (SMS/TOTP)
+cognito_use_ses                  = false # Set to true to use SES for email sending
+cognito_admin_only_user_creation = true  # Only admins can create users
+
+# WAF Configuration
+enable_waf = false # Set to true to enable WAF for CloudFront (additional cost)
+
+# Additional Tags
+tags = {
+  Department = "IT"
+  CostCenter = "Engineering"
+  Owner      = "FileSearch Team"
+}

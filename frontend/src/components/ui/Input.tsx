@@ -53,11 +53,7 @@ export const Input: FC<InputProps> = forwardRef<HTMLInputElement, InputProps>(
         />
       </div>
       {/* Error Message - Apple System Colors */}
-      {error && (
-        <p className="mt-1 text-sm text-[#FF3B30] dark:text-[#FF453A]">
-          {error}
-        </p>
-      )}
+      {error && <p className="mt-1 text-sm text-[#FF3B30] dark:text-[#FF453A]">{error}</p>}
     </div>
   )
 )

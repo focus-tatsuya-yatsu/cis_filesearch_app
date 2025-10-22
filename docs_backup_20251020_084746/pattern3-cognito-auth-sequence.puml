@@ -1,0 +1,252 @@
+@startuml CIS File Search Cognito Authentication Sequence
+
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v18.0/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/AWSSimplified.puml
+
+!include AWSPuml/NetworkingContentDelivery/CloudFront.puml
+!include AWSPuml/Storage/SimpleStorageService.puml
+!include AWSPuml/SecurityIdentityCompliance/Cognito.puml
+!include AWSPuml/NetworkingContentDelivery/APIGateway.puml
+!include AWSPuml/Compute/Lambda.puml
+!include AWSPuml/Analytics/OpenSearchService.puml
+!include AWSPuml/Database/DynamoDB.puml
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam maxmessagesize 250
+skinparam BoxPadding 10
+
+title CIS File Search - Cognito認証フロー詳細シーケンス\nOAuth 2.0 Authorization Code Grant with PKCE
+
+actor "👤 ユーザー" as User
+participant "🌐 Browser\n(Next.js SPA)" as Browser
+box "CDN Layer" #E1F5FE
+    participant "☁️ CloudFront" as CF
+    participant "🪣 S3 Bucket\n(Static)" as S3
+end box
+box "Authentication Layer" #F3E5F5
+    participant "🎨 Cognito\nHosted UI" as HostedUI
+    participant "🔐 Cognito\nUser Pool" as Cognito
+end box
+box "API Layer" #FFF9C4
+    participant "🔌 API Gateway\n(Cognito Authorizer)" as APIGW
+    participant "λ SearchAPI\nLambda" as Lambda
+end box
+box "Data Layer" #BBDEFB
+    participant "🔍 OpenSearch" as OS
+    participant "🗂️ DynamoDB" as DDB
+end box
+
+== 初回アクセス（未認証） ==
+
+User -> Browser : ① アクセス\nhttps://filesearch.company.com
+activate Browser
+
+Browser -> CF : ② GET / HTTP/2\nHost: filesearch.company.com
+activate CF
+
+CF -> S3 : ③ GetObject index.html\n(Origin Access Control)
+activate S3
+
+S3 --> CF : ④ 200 OK\nindex.html (gzip圧縮)
+deactivate S3
+
+CF --> Browser : ⑤ 200 OK\nContent-Encoding: gzip\nCache-Control: public, max-age=300
+deactivate CF
+
+Browser -> Browser : ⑥ Next.js SPA起動\nlocalStorageチェック\n→ トークンなし
+
+note right of Browser
+    **localStorage確認**
+    ```javascript
+    const idToken = localStorage.getItem('id_token');
+    const accessToken = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+
+    if (!idToken || !accessToken) {
+        redirectToLogin();
+    }
+    ```
+end note
+
+Browser -> Browser : ⑦ PKCE Code Verifier生成\n(43-128文字のランダム文字列)
+
+note right of Browser
+    **PKCE Code Verifier生成**
+    ```javascript
+    const codeVerifier = generateCodeVerifier();
+    // 例: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    // SHA-256ハッシュのBase64URL: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+
+    localStorage.setItem('pkce_code_verifier', codeVerifier);
+    ```
+end note
+
+Browser -> Browser : ⑧ Code Challenge生成\n(Code VerifierのSHA-256)
+
+Browser -> HostedUI : ⑨ Redirect to Login\nGET /oauth2/authorize?\n  response_type=code&\n  client_id=xxx&\n  redirect_uri=https://filesearch.company.com/callback&\n  scope=openid+email+profile&\n  code_challenge_method=S256&\n  code_challenge=E9Melhoa2...
+activate HostedUI
+
+== ユーザー認証 ==
+
+HostedUI --> User : ⑩ ログイン画面表示
+deactivate HostedUI
+
+User -> HostedUI : ⑪ 認証情報入力\nusername (email): user@company.com\npassword: ************
+activate HostedUI
+
+HostedUI -> Cognito : ⑫ InitiateAuth\nAuthFlow: USER_SRP_AUTH\nUsername: user@company.com\nSRP_A: (Secure Remote Password)
+activate Cognito
+
+Cognito -> Cognito : ⑬ パスワード検証\n- 最小12文字\n- 大文字/小文字/数字/記号\n- アカウントロックアウトチェック\n- Advanced Security (不正アクセス検知)
+
+alt MFA有効時
+    Cognito --> HostedUI : ⑭ MFAチャレンジ\nChallengeName: SMS_MFA or SOFTWARE_TOKEN_MFA
+    HostedUI --> User : ⑮ MFAコード入力画面
+    User -> HostedUI : ⑯ MFAコード入力\n例: 123456
+    HostedUI -> Cognito : ⑰ RespondToAuthChallenge\nMFA_CODE: 123456
+    Cognito -> Cognito : ⑱ MFAコード検証
+end
+
+Cognito -> Cognito : ⑲ Authorization Code生成\n(有効期限: 5分)
+
+Cognito --> HostedUI : ⑳ 302 Redirect\nLocation: https://filesearch.company.com/callback?code=xxx
+deactivate Cognito
+
+HostedUI --> Browser : ㉑ Redirect to Callback URL
+deactivate HostedUI
+
+== トークン交換 ==
+
+Browser -> Browser : ㉒ Callback URLパース\ncode = urlParams.get('code')
+
+Browser -> Browser : ㉓ PKCE Code Verifier取得\nlocalStorage.getItem('pkce_code_verifier')
+
+Browser -> Cognito : ㉔ POST /oauth2/token\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code&\nclient_id=xxx&\ncode=xxx&\nredirect_uri=https://filesearch.company.com/callback&\ncode_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+activate Cognito
+
+Cognito -> Cognito : ㉕ Code検証\n- Code有効期限チェック\n- Redirect URI一致チェック\n- PKCE Code Challenge検証:\n  SHA256(code_verifier) == code_challenge
+
+note right of Cognito
+    **PKCE検証**
+    ```
+    received_code_challenge = SHA256(code_verifier)
+    if (received_code_challenge == stored_code_challenge) {
+        // 検証成功
+        issue_tokens();
+    } else {
+        // 検証失敗
+        return 400 Bad Request;
+    }
+    ```
+end note
+
+Cognito -> Cognito : ㉖ JWT生成\n- ID Token (RS256署名)\n- Access Token (RS256署名)\n- Refresh Token
+
+Cognito --> Browser : ㉗ 200 OK\nContent-Type: application/json\n\n{\n  "id_token": "eyJraWQiOiJxxx...",\n  "access_token": "eyJraWQiOiJxxx...",\n  "refresh_token": "eyJjdHkiOiJKV1Q...",\n  "expires_in": 3600,\n  "token_type": "Bearer"\n}
+deactivate Cognito
+
+Browser -> Browser : ㉘ トークン保存\nlocalStorage.setItem('id_token', tokens.id_token)\nlocalStorage.setItem('access_token', tokens.access_token)\nlocalStorage.setItem('refresh_token', tokens.refresh_token)\nlocalStorage.setItem('expires_at', Date.now() + 3600*1000)
+
+Browser -> Browser : ㉙ PKCE Code Verifier削除\nlocalStorage.removeItem('pkce_code_verifier')
+
+Browser --> User : ㉚ ダッシュボード表示\n認証完了
+deactivate Browser
+
+== 検索API呼び出し（認証済み） ==
+
+User -> Browser : ㉛ 検索クエリ入力\n「プロジェクト 提案書」
+activate Browser
+
+Browser -> Browser : ㉜ Access Token有効期限チェック\nconst expiresAt = localStorage.getItem('expires_at')\nif (Date.now() > expiresAt) {\n  await refreshAccessToken();\n}
+
+Browser -> APIGW : ㉝ POST /api/search HTTP/2\nHost: api.filesearch.company.com\nAuthorization: Bearer eyJraWQiOiJxxx...\nContent-Type: application/json\n\n{\n  "query": "プロジェクト 提案書",\n  "filters": {"fileType": "pdf"}\n}
+activate APIGW
+
+APIGW -> APIGW : ㉞ Cognito Authorizer起動\nJWT検証開始
+
+APIGW -> Cognito : ㉟ GET /.well-known/jwks.json\n(JSON Web Key Set取得)
+activate Cognito
+
+Cognito --> APIGW : ㊱ 200 OK\n{\n  "keys": [\n    {\n      "kid": "qxx...",\n      "alg": "RS256",\n      "kty": "RSA",\n      "n": "xxx...",\n      "e": "AQAB"\n    }\n  ]\n}
+deactivate Cognito
+
+APIGW -> APIGW : ㊲ JWT署名検証\n- Header.kid → JWKS照合\n- RS256署名検証\n- exp (有効期限)チェック\n- iss (Issuer)チェック\n- aud (Audience)チェック
+
+note right of APIGW
+    **JWT検証ステップ**
+    1. Header.kidでJWKS内の公開鍵を特定
+    2. RS256署名検証 (公開鍵で復号)
+    3. Payload検証:
+       - exp: 1745305200 > Date.now()/1000
+       - iss: https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_xxx
+       - aud: client_id
+       - token_use: "access"
+end note
+
+alt JWT検証失敗
+    APIGW --> Browser : ㊳ 401 Unauthorized\nWWW-Authenticate: Bearer error="invalid_token"
+    Browser -> Browser : Refresh Token使用
+    Browser -> Cognito : POST /oauth2/token\ngrant_type=refresh_token&\nrefresh_token=xxx
+    Cognito --> Browser : 新しいAccess Token
+    Browser -> APIGW : リトライ (新しいトークン)
+end
+
+APIGW -> APIGW : ㊴ 認可コンテキスト生成\n{\n  "sub": "a1b2c3d4-...",\n  "email": "user@company.com",\n  "cognito:username": "user@company.com"\n}
+
+APIGW -> Lambda : ㊵ Invoke\nevent.requestContext.authorizer = {\n  claims: {\n    sub: "a1b2c3d4-...",\n    email: "user@company.com"\n  }\n}
+activate Lambda
+
+Lambda -> Lambda : ㊶ ユーザーコンテキスト取得\nconst userId = event.requestContext.authorizer.claims.sub\nconst userEmail = event.requestContext.authorizer.claims.email
+
+Lambda -> OS : ㊷ Search Query\nPOST /files/_search\n{\n  "query": {\n    "bool": {\n      "must": [\n        {"match": {"content": "プロジェクト 提案書"}}\n      ],\n      "filter": [\n        {"term": {"fileType": "pdf"}}\n      ]\n    }\n  }\n}
+activate OS
+
+OS --> Lambda : ㊸ Search Results\n{\n  "hits": {\n    "total": 42,\n    "hits": [...]\n  }\n}
+deactivate OS
+
+Lambda -> DDB : ㊹ BatchGetItem\nKeys: [file_id_1, file_id_2, ...]
+activate DDB
+
+DDB --> Lambda : ㊺ File Metadata\n{\n  "file_id_1": {...},\n  "file_id_2": {...}\n}
+deactivate DDB
+
+Lambda -> Lambda : ㊻ 検索結果マージ\n- OpenSearch検索結果\n- DynamoDBメタデータ\n- アクセスログ記録
+
+Lambda --> APIGW : ㊼ 200 OK\n{\n  "success": true,\n  "data": {\n    "total": 42,\n    "results": [...]\n  }\n}
+deactivate Lambda
+
+APIGW --> Browser : ㊽ 200 OK\nContent-Type: application/json\nAccess-Control-Allow-Origin: https://filesearch.company.com
+deactivate APIGW
+
+Browser --> User : ㊾ 検索結果表示\n42件の検索結果
+deactivate Browser
+
+== トークンリフレッシュ（1時間後） ==
+
+User -> Browser : ㊿ 検索リクエスト\n(Access Token期限切れ)
+activate Browser
+
+Browser -> Browser : Access Token期限チェック\nDate.now() > expiresAt → true
+
+Browser -> Cognito : POST /oauth2/token\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=refresh_token&\nclient_id=xxx&\nrefresh_token=eyJjdHkiOiJKV1Q...
+activate Cognito
+
+Cognito -> Cognito : Refresh Token検証\n- 有効期限チェック (30日)\n- Revocationチェック
+
+Cognito --> Browser : 200 OK\n{\n  "id_token": "eyJraWQiOiJxxx...",\n  "access_token": "eyJraWQiOiJxxx...",\n  "expires_in": 3600,\n  "token_type": "Bearer"\n}
+deactivate Cognito
+
+Browser -> Browser : 新しいトークン保存\nlocalStorage.setItem('id_token', tokens.id_token)\nlocalStorage.setItem('access_token', tokens.access_token)\nlocalStorage.setItem('expires_at', Date.now() + 3600*1000)
+
+Browser -> APIGW : 検索リクエスト再送\nAuthorization: Bearer {new_access_token}
+
+APIGW -> Lambda : 正常処理
+Lambda --> Browser : 検索結果
+Browser --> User : 検索結果表示
+deactivate Browser
+
+@enduml

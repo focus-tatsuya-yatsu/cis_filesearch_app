@@ -139,7 +139,7 @@ export default function TestDarkMode() {
             <h3 className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
               Filter Panel
             </h3>
-            <FilterPanel onFilterChange={(filters) => console.log('Filters:', filters)} />
+            <FilterPanel onFilterApply={(filters) => console.log('Filters:', filters)} />
           </div>
 
           {/* Search Result Card */}

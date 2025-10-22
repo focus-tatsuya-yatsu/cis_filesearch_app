@@ -1,0 +1,377 @@
+@startuml CIS File Search Deployment Flow
+
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v18.0/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/AWSSimplified.puml
+
+!include AWSPuml/DeveloperTools/CodeBuild.puml
+!include AWSPuml/Storage/SimpleStorageService.puml
+!include AWSPuml/NetworkingContentDelivery/CloudFront.puml
+!include AWSPuml/NetworkingContentDelivery/Route53.puml
+!include AWSPuml/ManagementGovernance/CloudWatch.puml
+!include AWSPuml/General/Users.puml
+
+skinparam rectangle {
+    BackgroundColor<<Dev>> #FFF9C4
+    BorderColor<<Dev>> #F57F17
+    BackgroundColor<<CI>> #E1F5FE
+    BorderColor<<CI>> #01579B
+    BackgroundColor<<AWS>> #FFF7E6
+    BorderColor<<AWS>> #FF9800
+    BackgroundColor<<Success>> #C8E6C9
+    BorderColor<<Success>> #2E7D32
+    BackgroundColor<<Failed>> #FFCDD2
+    BorderColor<<Failed>> #C62828
+}
+
+title CIS File Search - CI/CD デプロイフロー\nGitHub Actions → S3 → CloudFront
+
+' ================================
+' Development Environment
+' ================================
+rectangle "開発環境" <<Dev>> {
+    actor "👨‍💻 開発者" as Dev
+
+    rectangle "ローカルリポジトリ" as LocalRepo {
+        folder "src/" as src {
+            file "pages/" as pages
+            file "components/" as components
+            file "hooks/" as hooks
+            file "services/" as services
+        }
+
+        file "package.json" as packageJson
+        file "next.config.js" as nextConfig
+        file ".env.local" as envLocal
+    }
+}
+
+' ================================
+' CI/CD Pipeline (GitHub Actions)
+' ================================
+rectangle "CI/CDパイプライン (GitHub Actions)" <<CI>> {
+    rectangle "1️⃣ Trigger" as trigger {
+        note right
+            **トリガー条件**
+            - push to main
+            - paths: src/**, public/**
+            - package.json変更
+            - next.config.js変更
+        end note
+    }
+
+    rectangle "2️⃣ Checkout" as checkout {
+        note right: actions/checkout@v4
+    }
+
+    rectangle "3️⃣ Setup Node.js" as setupNode {
+        note right
+            Node.js 20
+            cache: yarn
+        end note
+    }
+
+    rectangle "4️⃣ Install Dependencies" as install {
+        note right: yarn install --frozen-lockfile
+    }
+
+    rectangle "5️⃣ Lint & Test" as test {
+        note right
+            yarn lint
+            yarn test
+            yarn type-check
+        end note
+    }
+
+    rectangle "6️⃣ Build Next.js" as build {
+        note right
+            **環境変数**
+            NEXT_PUBLIC_COGNITO_USER_POOL_ID
+            NEXT_PUBLIC_COGNITO_CLIENT_ID
+            NEXT_PUBLIC_API_ENDPOINT
+
+            **コマンド**
+            yarn build
+
+            **出力**
+            .next/ ディレクトリ
+        end note
+    }
+
+    rectangle "7️⃣ Static Export" as export {
+        note right
+            **コマンド**
+            yarn export
+
+            **出力**
+            out/ ディレクトリ
+            - index.html
+            - _next/static/
+            - assets/
+
+            **サイズ**
+            ~50MB (gzip圧縮前)
+        end note
+    }
+
+    rectangle "8️⃣ Configure AWS" as awsConfig {
+        note right
+            **AWS Credentials**
+            aws-access-key-id
+            aws-secret-access-key
+            region: ap-northeast-1
+        end note
+    }
+
+    rectangle "9️⃣ S3 Sync" as s3Sync {
+        note right
+            **静的アセット (長期キャッシュ)**
+            aws s3 sync out/ s3://bucket/ \
+              --exclude "*.html" \
+              --exclude "*.json" \
+              --cache-control "public, max-age=31536000, immutable"
+
+            **HTMLファイル (短期キャッシュ)**
+            aws s3 sync out/ s3://bucket/ \
+              --exclude "*" \
+              --include "*.html" \
+              --cache-control "public, max-age=300, must-revalidate"
+
+            **オプション**
+            --delete (古いファイル削除)
+            --size-only (サイズ変更のみ同期)
+        end note
+    }
+
+    rectangle "🔟 CloudFront Invalidation" as cfInvalidation {
+        note right
+            **コマンド**
+            aws cloudfront create-invalidation \
+              --distribution-id E1XXXXXXXXX \
+              --paths "/*"
+
+            **完了時間**
+            30-60秒
+
+            **コスト**
+            最初の1,000パス: 無料/月
+            以降: $0.005/パス
+        end note
+    }
+
+    rectangle "1️⃣1️⃣ Deployment Summary" as summary {
+        note right
+            ✅ Deployment completed
+            🌐 Frontend URL
+            📦 S3 Bucket
+            ☁️ CloudFront Distribution
+            ⏱️ Deploy Time
+        end note
+    }
+}
+
+' ================================
+' AWS Infrastructure
+' ================================
+rectangle "AWS インフラストラクチャ" <<AWS>> {
+    SimpleStorageService(s3, "S3 Bucket", "cis-filesearch-frontend-prod\n- Versioning: Enabled\n- Intelligent-Tiering\n- Server-Side Encryption: AES256\n- Lifecycle Policy: 90日後Archive")
+
+    CloudFront(cloudfront, "CloudFront Distribution", "E1XXXXXXXXX\n- Custom Domain: filesearch.company.com\n- TLS 1.3 (ACM)\n- Cache Behavior:\n  • HTML: max-age=300 (5分)\n  • JS/CSS: max-age=31536000 (1年)\n- Compression: Brotli/Gzip")
+
+    Route53(route53, "Route53", "A Record (Alias)\nfilesearch.company.com\n→ CloudFront")
+
+    CloudWatch(cloudwatch, "CloudWatch", "- Access Logs\n- Error Rate Alarms\n- Cache Hit Ratio\n- Origin Latency")
+}
+
+' ================================
+' Users
+' ================================
+Users(users, "ユーザー", "50名\nHTTPS アクセス")
+
+' ================================
+' Success/Failure Paths
+' ================================
+rectangle "✅ デプロイ成功" <<Success>> {
+    note as successNote
+        **成功時の通知**
+        ・GitHub Actions通知: ✅ Workflow succeeded
+        ・Slack通知: 新バージョンデプロイ完了
+        ・メトリクス記録: CloudWatch Custom Metrics
+        ・ロールバック不要
+    end note
+}
+
+rectangle "❌ デプロイ失敗" <<Failed>> {
+    note as failedNote
+        **失敗時の対応**
+        ・GitHub Actions通知: ❌ Workflow failed
+        ・Slack通知: デプロイ失敗アラート
+        ・自動ロールバック:
+          1. S3バージョニングで前バージョンに復元
+          2. CloudFront Invalidation再実行
+        ・エラーログ: CloudWatch Logs
+    end note
+}
+
+' ================================
+' Flow Connections
+' ================================
+
+' Development Flow
+Dev --> LocalRepo : コード作成・修正
+LocalRepo --> trigger : git push origin main
+
+' CI/CD Flow
+trigger --> checkout
+checkout --> setupNode
+setupNode --> install
+install --> test
+
+test --> build : テスト成功
+test .down.> failedNote : テスト失敗
+
+build --> export : ビルド成功
+build .down.> failedNote : ビルド失敗
+
+export --> awsConfig
+awsConfig --> s3Sync
+s3Sync --> s3 : ① ファイルアップロード\n(差分のみ)
+
+s3Sync --> cfInvalidation : ② S3同期完了
+cfInvalidation --> cloudfront : ③ キャッシュ無効化\nパス: /*
+
+cfInvalidation --> summary : ④ Invalidation完了
+
+summary --> successNote : デプロイ成功
+
+' AWS Infrastructure Flow
+cloudfront <--> s3 : Origin Access Control\n(OAC)
+
+route53 --> cloudfront : DNS解決\nAlias Record
+
+cloudfront --> users : ⑤ 静的コンテンツ配信\nHTTPS (TLS 1.3)
+
+' Monitoring Flow
+s3 .up.> cloudwatch : S3イベント通知
+cloudfront .up.> cloudwatch : アクセスログ\nメトリクス
+
+' Rollback Flow (Dotted)
+failedNote .right.> s3 : ロールバック\nS3バージョニング復元
+s3 .right.> cfInvalidation : キャッシュ再無効化
+
+' ================================
+' Deployment Timing Diagram
+' ================================
+note as timingNote
+    **デプロイタイミング**
+
+    ┌─────────────────────────────────────────────────────────┐
+    │ Phase                    │ Duration  │ Cumulative      │
+    ├─────────────────────────────────────────────────────────┤
+    │ 1. Checkout              │ 5s        │ 5s              │
+    │ 2. Setup Node.js         │ 10s       │ 15s             │
+    │ 3. Install Dependencies  │ 30s       │ 45s             │
+    │ 4. Lint & Test           │ 20s       │ 1m 5s           │
+    │ 5. Build Next.js         │ 60s       │ 2m 5s           │
+    │ 6. Static Export         │ 10s       │ 2m 15s          │
+    │ 7. Configure AWS         │ 5s        │ 2m 20s          │
+    │ 8. S3 Sync               │ 15s       │ 2m 35s          │
+    │ 9. CloudFront Invalidate │ 45s       │ 3m 20s          │
+    │ 10. Summary              │ 5s        │ 3m 25s          │
+    └─────────────────────────────────────────────────────────┘
+
+    **合計デプロイ時間**: 約3分25秒
+
+    **CloudFront配信開始**: Invalidation完了後30-60秒
+    **実質ダウンタイム**: 0秒 (Blue/Green自動切替)
+end note
+
+' ================================
+' Rollback Strategy
+' ================================
+note as rollbackNote
+    **ロールバック戦略**
+
+    **方法1: S3バージョニング復元**
+    ```bash
+    # 現在のバージョンIDを確認
+    aws s3api list-object-versions \
+      --bucket cis-filesearch-frontend-prod \
+      --prefix index.html
+
+    # 前バージョンに復元
+    aws s3api copy-object \
+      --copy-source cis-filesearch-frontend-prod/index.html?versionId=xxx \
+      --bucket cis-filesearch-frontend-prod \
+      --key index.html
+
+    # CloudFront キャッシュ無効化
+    aws cloudfront create-invalidation \
+      --distribution-id E1XXXXXXXXX \
+      --paths "/*"
+    ```
+
+    **方法2: GitHub Actions Revert**
+    ```bash
+    # コミットをrevert
+    git revert HEAD
+    git push origin main
+
+    # 自動的に新しいデプロイが開始
+    ```
+
+    **ロールバック時間**: 1-2分
+end note
+
+' ================================
+' Environment Variables Management
+' ================================
+note as envNote
+    **環境変数管理**
+
+    **GitHub Secrets**
+    - AWS_ACCESS_KEY_ID
+    - AWS_SECRET_ACCESS_KEY
+    - COGNITO_USER_POOL_ID
+    - COGNITO_CLIENT_ID
+    - CLOUDFRONT_DISTRIBUTION_ID
+
+    **ビルド時環境変数**
+    ```yaml
+    env:
+      NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+      NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      NEXT_PUBLIC_API_ENDPOINT: https://api.filesearch.company.com
+    ```
+
+    **セキュリティ**
+    - 秘密鍵はGitHub Secretsで管理
+    - NEXT_PUBLIC_* のみクライアントに公開
+    - ビルド時に環境変数を埋め込み
+end note
+
+' ================================
+' Cache Strategy
+' ================================
+note as cacheNote
+    **キャッシュ戦略**
+
+    **静的アセット (JS/CSS/Images)**
+    - Cache-Control: public, max-age=31536000, immutable
+    - ファイル名にハッシュ含む: main.abc123.js
+    - CloudFrontで1年間キャッシュ
+    - コード変更時は新ハッシュファイル生成 → キャッシュ無効化不要
+
+    **HTMLファイル (index.html, 404.html)**
+    - Cache-Control: public, max-age=300, must-revalidate
+    - CloudFrontで5分間キャッシュ
+    - デプロイ時にInvalidation実行
+
+    **API レスポンス**
+    - Cache-Control: no-cache, no-store, must-revalidate
+    - キャッシュしない（動的コンテンツ）
+
+    **キャッシュヒット率目標**: 90%以上
+end note
+
+@enduml

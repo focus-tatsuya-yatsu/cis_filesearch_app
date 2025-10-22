@@ -80,7 +80,7 @@ export const useClipboard = (timeout = 2000): UseClipboardReturn => {
         console.error('Failed to copy to clipboard:', err)
       }
     },
-    [timeout],
+    [timeout]
   )
 
   return {

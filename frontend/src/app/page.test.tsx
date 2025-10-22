@@ -493,7 +493,9 @@ describe('HomePage', () => {
 
       // Act - エクスプローラービューに戻す
       buttons = screen.getAllByTestId(/button-/)
-      const explorerButton = buttons.find((button) => button.textContent?.includes('エクスプローラー'))
+      const explorerButton = buttons.find((button) =>
+        button.textContent?.includes('エクスプローラー')
+      )
       await user.click(explorerButton!)
 
       // Assert
@@ -684,7 +686,9 @@ describe('HomePage', () => {
 
       // Act - explorerビューに戻す
       buttons = screen.getAllByTestId(/button-/)
-      const explorerButton = buttons.find((button) => button.textContent?.includes('エクスプローラー'))
+      const explorerButton = buttons.find((button) =>
+        button.textContent?.includes('エクスプローラー')
+      )
       await user.click(explorerButton!)
 
       // Assert - explorerビュー
@@ -804,7 +808,9 @@ describe('HomePage', () => {
       })
 
       buttons = screen.getAllByTestId(/button-/)
-      const explorerButton = buttons.find((button) => button.textContent?.includes('エクスプローラー'))
+      const explorerButton = buttons.find((button) =>
+        button.textContent?.includes('エクスプローラー')
+      )
       await user.click(explorerButton!)
 
       await waitFor(() => {

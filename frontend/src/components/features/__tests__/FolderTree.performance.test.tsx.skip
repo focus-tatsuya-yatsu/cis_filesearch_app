@@ -118,7 +118,11 @@ const TestWrapper = ({ initialData }: { initialData: TreeNode[] }) => {
       <div data-testid="external-state">{externalState}</div>
       <div data-testid="selected-path">{selectedPath || 'none'}</div>
 
-      <FolderTree data={initialData} onSelectFolder={handleSelectFolder} selectedPath={selectedPath} />
+      <FolderTree
+        data={initialData}
+        onSelectFolder={handleSelectFolder}
+        selectedPath={selectedPath}
+      />
     </div>
   )
 }

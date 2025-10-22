@@ -12,6 +12,7 @@ This guide provides step-by-step instructions for measuring performance optimiza
    - Edge: Same as Chrome extension
 
 2. **Enable Profiling in Development**
+
    ```bash
    # Run dev server
    yarn dev
@@ -34,14 +35,14 @@ This guide provides step-by-step instructions for measuring performance optimiza
 
 ### Target Benchmarks
 
-| Component | Scenario | Expected Renders | Expected Duration |
-|-----------|----------|------------------|-------------------|
-| FilterPanel | Parent state change (search results) | 0 | N/A (no render) |
-| FilterPanel | Filter change | 1 | < 10ms |
-| ThemeContext consumers | Provider re-render (theme unchanged) | 0 | N/A (no render) |
-| ThemeContext consumers | Theme toggle | 1 | < 5ms |
-| FolderTree node | Sibling node expand | 0 | N/A (no render) |
-| FolderTree node | Own expand | 1 | < 16ms (60 FPS) |
+| Component              | Scenario                             | Expected Renders | Expected Duration |
+| ---------------------- | ------------------------------------ | ---------------- | ----------------- |
+| FilterPanel            | Parent state change (search results) | 0                | N/A (no render)   |
+| FilterPanel            | Filter change                        | 1                | < 10ms            |
+| ThemeContext consumers | Provider re-render (theme unchanged) | 0                | N/A (no render)   |
+| ThemeContext consumers | Theme toggle                         | 1                | < 5ms             |
+| FolderTree node        | Sibling node expand                  | 0                | N/A (no render)   |
+| FolderTree node        | Own expand                           | 1                | < 16ms (60 FPS)   |
 
 ## Step-by-Step Profiling Instructions
 
@@ -310,12 +311,14 @@ This guide provides step-by-step instructions for measuring performance optimiza
 ### Optimization Success Indicators
 
 ✅ **Good Signs**:
+
 - Components missing from flamegraph (no re-render)
 - Short render duration (< 16ms)
 - Stable frame rate (60 FPS)
 - Low memory overhead (< 1MB)
 
 ❌ **Warning Signs**:
+
 - Components rendering unnecessarily
 - Long render duration (> 50ms)
 - Frame drops (< 30 FPS)
@@ -328,6 +331,7 @@ This guide provides step-by-step instructions for measuring performance optimiza
 **Symptoms**: Component appears in flamegraph when it shouldn't
 
 **Solutions**:
+
 1. Check if parent passes stable props (use useCallback)
 2. Verify React.memo is applied correctly
 3. Check custom comparison function logic
@@ -338,6 +342,7 @@ This guide provides step-by-step instructions for measuring performance optimiza
 **Symptoms**: Performance same as before optimization
 
 **Solutions**:
+
 1. Verify correct import (optimized vs original)
 2. Check if React.memo wrapper is present
 3. Clear browser cache and rebuild
@@ -348,6 +353,7 @@ This guide provides step-by-step instructions for measuring performance optimiza
 **Symptoms**: Memory increasing steadily during interactions
 
 **Solutions**:
+
 1. Check for missing cleanup in useEffect
 2. Verify event listeners are removed
 3. Check for circular references in memoized values
@@ -358,6 +364,7 @@ This guide provides step-by-step instructions for measuring performance optimiza
 ### Enable Profiling in Production
 
 1. **Build with Profiling**
+
    ```bash
    # Next.js doesn't require special build for profiling
    yarn build
@@ -443,11 +450,11 @@ jobs:
 
 ### Expected Performance Improvements
 
-| Component | Optimization | Improvement | Memory Overhead |
-|-----------|--------------|-------------|-----------------|
-| FilterPanel | React.memo + useCallback | 75-85% re-render reduction | < 500 bytes |
-| ThemeContext | useMemo + useCallback | 100% unnecessary re-render elimination | < 200 bytes |
-| FolderTree | React.memo + custom comparison | 90-95% re-render reduction | ~100 bytes/node |
+| Component    | Optimization                   | Improvement                            | Memory Overhead |
+| ------------ | ------------------------------ | -------------------------------------- | --------------- |
+| FilterPanel  | React.memo + useCallback       | 75-85% re-render reduction             | < 500 bytes     |
+| ThemeContext | useMemo + useCallback          | 100% unnecessary re-render elimination | < 200 bytes     |
+| FolderTree   | React.memo + custom comparison | 90-95% re-render reduction             | ~100 bytes/node |
 
 ### Key Takeaways
 
