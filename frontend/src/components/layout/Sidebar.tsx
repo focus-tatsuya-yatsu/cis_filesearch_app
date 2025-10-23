@@ -13,14 +13,20 @@ interface SidebarProps {
 /**
  * Sidebar Component (Collapsible)
  *
- * Collapsible sidebar with smooth animations
+ * Collapsible sidebar with smooth animations and vertical text display
  *
  * Features:
  * - Collapsible to left edge (60px collapsed width)
  * - Close button in header
- * - Clickable tab when collapsed to expand
+ * - Clickable vertical tab when collapsed to expand
+ * - Proper vertical text rendering without cutoff (writing-mode: vertical-rl)
  * - Framer Motion slide animations
  * - Persistent state via useSidebarState hook (in parent)
+ *
+ * Layout Strategy (Collapsed State):
+ * - Icon: Fixed position at top with margin-bottom
+ * - Text: Flex-1 container with vertical writing mode
+ * - Uses flex-col layout to prevent vertical text overflow
  *
  * @example
  * ```tsx
@@ -63,14 +69,19 @@ export const Sidebar: FC<SidebarProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onToggleCollapse}
-            className="absolute inset-0 flex items-center justify-center hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors cursor-pointer group"
+            className="absolute inset-0 flex flex-col items-center justify-center hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors cursor-pointer group"
             aria-label="サイドバーを開く"
           >
-            <div className="flex flex-col items-center gap-2">
-              <ChevronRight className="h-6 w-6 text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors" />
-              <div className="writing-mode-vertical text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors whitespace-nowrap">
+            {/* Icon positioned at top with fixed spacing */}
+            <div className="mb-3">
+              <ChevronRight className="h-5 w-5 text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors" />
+            </div>
+
+            {/* Vertical text with guaranteed height */}
+            <div className="flex-1 flex items-start justify-center min-h-0 py-2">
+              <span className="writing-mode-vertical text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors">
                 {title}
-              </div>
+              </span>
             </div>
           </motion.button>
         ) : (
