@@ -1,9 +1,9 @@
 import { FC, ReactNode } from 'react'
-
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 
-import { ThemeProvider } from '@/contexts/ThemeContext'
+// ThemeProvider の代わりに Providers をインポートします
+import { Providers } from './providers'
 import '@/styles/globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -35,7 +35,8 @@ const RootLayout: FC<RootLayoutProps> = ({ children }) => (
             `,
         }}
       />
-      <ThemeProvider>{children}</ThemeProvider>
+      {/* ThemeProvider の代わりに Providers で囲みます */}
+      <Providers>{children}</Providers>
     </body>
   </html>
 )

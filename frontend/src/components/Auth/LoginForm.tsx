@@ -1,184 +1,197 @@
 /**
  * ログインフォームコンポーネント
  *
- * AWS Cognito認証を使用したログイン画面
+ * ユーザー名とパスワードでログイン
  */
 
 'use client'
 
-import { useState, FC } from 'react'
-
+import { FC, useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/contexts/AuthContext'
+import { getCognitoErrorMessage } from '@/utils/authErrors'
+import { validateEmail, validatePassword } from '@/utils/validation'
 
-export const LoginForm: FC = () => {
-  const { login, confirmMFA } = useAuth()
+// ========================================
+// Types
+// ========================================
+
+interface LoginFormProps {
+  /** パスワード忘れリンククリック時のコールバック */
+  onForgotPassword: () => void
+  /** 新しいパスワードが必要な時のコールバック */
+  onNewPasswordRequired: () => void
+}
+
+// ========================================
+// Component
+// ========================================
+
+export const LoginForm: FC<LoginFormProps> = ({ onForgotPassword, onNewPasswordRequired }) => {
+  const { login } = useAuth()
   const router = useRouter()
 
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [mfaCode, setMfaCode] = useState('')
-  const [error, setError] = useState('')
+
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+
   const [isLoading, setIsLoading] = useState(false)
-  const [requiresMFA, setRequiresMFA] = useState(false)
-  const [mfaType, setMfaType] = useState<'SMS_MFA' | 'SOFTWARE_TOKEN_MFA'>()
+  const [error, setError] = useState('')
 
   /**
-   * ログインフォーム送信処理
+   * フォーム送信ハンドラ
    */
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
+    setEmailError(null)
+    setPasswordError(null)
+
+    // バリデーション
+    const emailValidation = validateEmail(email)
+    const passwordValidation = validatePassword(password)
+
+    let hasError = false
+
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error)
+      hasError = true
+    }
+
+    if (!passwordValidation.isValid) {
+      setPasswordError(passwordValidation.error)
+      hasError = true
+    }
+
+    if (hasError) return
+
     setIsLoading(true)
 
     try {
-      const result = await login(username, password)
+      const result = await login(email, password)
 
-      if (result.requiresMFA) {
-        setRequiresMFA(true)
-        setMfaType(result.mfaType)
-      } else {
-        // ログイン成功 → 検索ページへリダイレクト
+      if (result.success) {
+        // ログイン成功 → 検索画面にリダイレクト
         router.push('/search')
+      } else if (result.requiresNewPassword) {
+        // 新しいパスワード必要 → 新規パスワード設定画面へ
+        onNewPasswordRequired()
+      } else if (result.requiresMFA) {
+        // MFA必要 → MFA画面へ（今回は未実装）
+        setError('MFA認証が必要です。（未実装）')
       }
     } catch (err) {
-      console.error('Login error:', err)
-      setError('ログインに失敗しました。ユーザー名とパスワードを確認してください。')
+      const errorMessage = getCognitoErrorMessage(err)
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
   }
 
-  /**
-   * MFA確認処理
-   */
-  const handleMFAConfirm = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
-
-    try {
-      await confirmMFA(mfaCode)
-      router.push('/search')
-    } catch (err) {
-      console.error('MFA confirmation error:', err)
-      setError('認証コードが正しくありません。もう一度お試しください。')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  /**
-   * MFA画面に戻る
-   */
-  const handleBackToLogin = () => {
-    setRequiresMFA(false)
-    setMfaCode('')
-    setError('')
-  }
-
-  // MFA確認画面
-  if (requiresMFA) {
-    return (
-      <div className="w-full max-w-md space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-center">多要素認証</h2>
-          <p className="mt-2 text-sm text-center text-gray-600">
-            {mfaType === 'SMS_MFA'
-              ? 'SMSに送信された6桁のコードを入力してください'
-              : 'Google Authenticatorアプリの6桁のコードを入力してください'}
-          </p>
-        </div>
-
-        <form onSubmit={handleMFAConfirm} className="space-y-4">
-          <div>
-            <label htmlFor="mfaCode" className="block text-sm font-medium mb-2">
-              認証コード
-            </label>
-            <Input
-              id="mfaCode"
-              type="text"
-              value={mfaCode}
-              onChange={(e) => setMfaCode(e.target.value)}
-              placeholder="123456"
-              required
-              maxLength={6}
-              pattern="[0-9]{6}"
-              autoComplete="one-time-code"
-              className="text-center text-2xl tracking-widest"
-            />
-          </div>
-
-          {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</div>}
-
-          <div className="space-y-2">
-            <Button type="submit" disabled={isLoading} className="w-full">
-              {isLoading ? '確認中...' : '確認'}
-            </Button>
-
-            <Button type="button" variant="ghost" onClick={handleBackToLogin} className="w-full">
-              ログイン画面に戻る
-            </Button>
-          </div>
-        </form>
-      </div>
-    )
-  }
-
-  // ログイン画面
   return (
     <div className="w-full max-w-md space-y-6">
+      {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-center">CIS ファイル検索システム</h2>
-        <p className="mt-2 text-sm text-center text-gray-600">ログインしてください</p>
+        <h2 className="text-2xl font-bold text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+          CIS ファイル検索システム
+        </h2>
+        <p className="mt-2 text-sm text-center text-[#6E6E73] dark:text-[#98989D]">
+          ログインするにはメールアドレスとパスワードを入力してください
+        </p>
       </div>
 
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium mb-2">
-            ユーザー名 / メールアドレス
-          </label>
-          <Input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="user@example.com"
-            required
-            autoComplete="username"
-          />
-        </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Global Error */}
+        {error && (
+          <div className="bg-[#FF3B30]/10 dark:bg-[#FF453A]/10 border border-[#FF3B30] dark:border-[#FF453A] rounded-xl p-4">
+            <p className="text-sm text-[#FF3B30] dark:text-[#FF453A]">{error}</p>
+          </div>
+        )}
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium mb-2">
-            パスワード
-          </label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            autoComplete="current-password"
-          />
-        </div>
+        {/* Email Input */}
+        <Input
+          label="メールアドレス"
+          type="email"
+          placeholder="example@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={emailError ?? undefined}
+          disabled={isLoading}
+          required
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          }
+        />
 
-        {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</div>}
+        {/* Password Input */}
+        <Input
+          label="パスワード"
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={passwordError ?? undefined}
+          disabled={isLoading}
+          required
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          }
+        />
 
-        <Button type="submit" disabled={isLoading} className="w-full">
+        {/* Submit Button */}
+        <Button type="submit" disabled={isLoading} loading={isLoading} className="w-full">
           {isLoading ? 'ログイン中...' : 'ログイン'}
         </Button>
 
-        <div className="text-center text-sm text-gray-500">
-          <a href="/forgot-password" className="hover:text-gray-700 underline">
-            パスワードをお忘れですか？
-          </a>
+        {/* Forgot Password Link */}
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-sm text-[#007AFF] dark:text-[#0A84FF] hover:underline"
+            disabled={isLoading}
+          >
+            パスワードを忘れた方
+          </button>
         </div>
       </form>
+
+      {/* Footer */}
+      <p className="text-xs text-center text-[#6E6E73] dark:text-[#98989D]">
+        AWS Cognitoのセキュアな認証システムを使用しています
+      </p>
     </div>
   )
 }

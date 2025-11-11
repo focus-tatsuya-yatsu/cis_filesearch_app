@@ -1,0 +1,59 @@
+{
+  "Comment": "CloudFront Response Headers Policy - CIS File Search Application",
+  "Name": "CIS-FileSearch-Security-Headers-Policy",
+  "SecurityHeadersConfig": {
+    "StrictTransportSecurity": {
+      "AccessControlMaxAgeSec": 31536000,
+      "IncludeSubdomains": true,
+      "Preload": true,
+      "Override": true
+    },
+    "ContentSecurityPolicy": {
+      "ContentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cognito-idp.ap-northeast-1.amazonaws.com https://*.amazoncognito.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://cognito-idp.ap-northeast-1.amazonaws.com https://*.amazoncognito.com https://*.execute-api.ap-northeast-1.amazonaws.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+      "Override": true
+    },
+    "ContentTypeOptions": {
+      "Override": true
+    },
+    "FrameOptions": {
+      "FrameOption": "DENY",
+      "Override": true
+    },
+    "ReferrerPolicy": {
+      "ReferrerPolicy": "strict-origin-when-cross-origin",
+      "Override": true
+    },
+    "XSSProtection": {
+      "ModeBlock": true,
+      "Protection": true,
+      "Override": true
+    }
+  },
+  "CustomHeadersConfig": {
+    "Items": [
+      {
+        "Header": "Permissions-Policy",
+        "Value": "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
+        "Override": true
+      },
+      {
+        "Header": "X-Content-Type-Options",
+        "Value": "nosniff",
+        "Override": true
+      }
+    ]
+  },
+  "CorsConfig": {
+    "AccessControlAllowOrigins": {
+      "Items": ["*"]
+    },
+    "AccessControlAllowHeaders": {
+      "Items": ["*"]
+    },
+    "AccessControlAllowMethods": {
+      "Items": ["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"]
+    },
+    "AccessControlMaxAgeSec": 86400,
+    "OriginOverride": false
+  }
+}
