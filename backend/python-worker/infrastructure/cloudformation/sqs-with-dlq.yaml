@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'SQS Queue with Dead Letter Queue for File Processing'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Environment name
+
+  QueueName:
+    Type: String
+    Default: file-processing-queue
+    Description: Name of the main processing queue
+
+  DLQName:
+    Type: String
+    Default: file-processing-dlq
+    Description: Name of the dead letter queue
+
+  VisibilityTimeout:
+    Type: Number
+    Default: 300
+    MinValue: 30
+    MaxValue: 43200
+    Description: Visibility timeout in seconds (must be >= max processing time)
+
+  MessageRetentionPeriod:
+    Type: Number
+    Default: 1209600
+    MinValue: 60
+    MaxValue: 1209600
+    Description: Message retention period in seconds (default 14 days)
+
+  MaxReceiveCount:
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 1000
+    Description: Number of times a message can be received before being sent to DLQ
+
+Resources:
+  # Dead Letter Queue
+  FileProcessingDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${DLQName}-${Environment}'
+      MessageRetentionPeriod: !Ref MessageRetentionPeriod
+      VisibilityTimeout: !Ref VisibilityTimeout
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: CISFileSearch
+        - Key: Component
+          Value: DeadLetterQueue
+
+  # Main Processing Queue
+  FileProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${QueueName}-${Environment}'
+      VisibilityTimeout: !Ref VisibilityTimeout
+      MessageRetentionPeriod: !Ref MessageRetentionPeriod
+      ReceiveMessageWaitTimeSeconds: 20  # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt FileProcessingDLQ.Arn
+        maxReceiveCount: !Ref MaxReceiveCount
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: CISFileSearch
+        - Key: Component
+          Value: ProcessingQueue
+
+  # Queue Policy for S3 Event Notifications
+  FileProcessingQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref FileProcessingQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3ToSendMessage
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt FileProcessingQueue.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:aws:s3:::cis-filesearch-storage-${Environment}'
+
+  # CloudWatch Alarms
+  DLQMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${DLQName}-messages-${Environment}'
+      AlarmDescription: Alert when messages are in DLQ
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FileProcessingDLQ.QueueName
+      TreatMissingData: notBreaching
+
+  QueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${QueueName}-depth-${Environment}'
+      AlarmDescription: Alert when queue depth is high
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FileProcessingQueue.QueueName
+      TreatMissingData: notBreaching
+
+  OldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${QueueName}-old-message-${Environment}'
+      AlarmDescription: Alert when oldest message age exceeds threshold
+      MetricName: ApproximateAgeOfOldestMessage
+      Namespace: AWS/SQS
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3600  # 1 hour
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FileProcessingQueue.QueueName
+      TreatMissingData: notBreaching
+
+Outputs:
+  QueueURL:
+    Description: URL of the main processing queue
+    Value: !Ref FileProcessingQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-QueueURL'
+
+  QueueARN:
+    Description: ARN of the main processing queue
+    Value: !GetAtt FileProcessingQueue.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-QueueARN'
+
+  QueueName:
+    Description: Name of the main processing queue
+    Value: !GetAtt FileProcessingQueue.QueueName
+    Export:
+      Name: !Sub '${AWS::StackName}-QueueName'
+
+  DLQueueURL:
+    Description: URL of the dead letter queue
+    Value: !Ref FileProcessingDLQ
+    Export:
+      Name: !Sub '${AWS::StackName}-DLQueueURL'
+
+  DLQueueARN:
+    Description: ARN of the dead letter queue
+    Value: !GetAtt FileProcessingDLQ.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-DLQueueARN'
+
+  DLQueueName:
+    Description: Name of the dead letter queue
+    Value: !GetAtt FileProcessingDLQ.QueueName
+    Export:
+      Name: !Sub '${AWS::StackName}-DLQueueName'

@@ -1,0 +1,35 @@
+{
+  "task_name": "DocuWorks-PDF-Upload",
+  "source": {
+    "type": "local",
+    "path": "C:\\CIS-FileSearch\\converted",
+    "include_patterns": ["*.pdf"],
+    "exclude_patterns": ["*.tmp", "~*"]
+  },
+  "destination": {
+    "type": "s3",
+    "bucket": "cis-filesearch-s3-landing",
+    "prefix": "docuworks-converted/",
+    "region": "ap-northeast-1"
+  },
+  "options": {
+    "verify_mode": "POINT_IN_TIME_CONSISTENT",
+    "overwrite_mode": "ALWAYS",
+    "preserve_deleted_files": "REMOVE",
+    "preserve_metadata": true,
+    "task_queueing": "ENABLED",
+    "transfer_mode": "CHANGED",
+    "schedule": {
+      "frequency": "INTERVAL",
+      "interval_minutes": 5
+    },
+    "post_transfer_action": {
+      "delete_source": true,
+      "move_to_archive": false
+    },
+    "logging": {
+      "level": "BASIC",
+      "log_file": "C:\\CIS-FileSearch\\logs\\datasync.log"
+    }
+  }
+}

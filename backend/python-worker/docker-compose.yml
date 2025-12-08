@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: file-processor-worker
+    restart: unless-stopped
+
+    # Environment variables
+    env_file:
+      - .env
+
+    # Volumes
+    volumes:
+      # Temporary file storage
+      - temp-storage:/tmp/file-processor
+      # Logs
+      - ./logs:/var/log
+      # Optional: Custom Tesseract training data
+      # - ./tessdata:/usr/local/share/tessdata
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+    # Logging
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python3.11", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Networks
+    networks:
+      - file-processor-network
+
+volumes:
+  temp-storage:
+    driver: local
+
+networks:
+  file-processor-network:
+    driver: bridge

@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # File Scanner Service
+  # ========================================
+  file-scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cis-file-scanner
+    env_file:
+      - .env
+    environment:
+      # 基本設定
+      NODE_ENV: production
+
+      # AWS設定（.envから読み込み、ここでオーバーライド可能）
+      AWS_REGION: ${AWS_REGION:-ap-northeast-1}
+
+      # S3設定
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-cis-filesearch-landing-dev}
+      S3_UPLOAD_CONCURRENCY: ${S3_UPLOAD_CONCURRENCY:-10}
+
+      # NAS設定
+      NAS_MOUNT_PATH: /mnt/nas
+      NAS_PROTOCOL: ${NAS_PROTOCOL:-mounted}
+
+      # スキャン設定
+      SCAN_BATCH_SIZE: ${SCAN_BATCH_SIZE:-1000}
+      SCAN_PARALLELISM: ${SCAN_PARALLELISM:-20}
+
+      # データベース設定
+      DB_PATH: /app/data/scanner.db
+
+      # ログ設定
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_DIR: /app/logs
+
+    volumes:
+      # NASマウント（ホスト側のパスを適切に設定）
+      - ${HOST_NAS_PATH:-/mnt/nas}:/mnt/nas:ro
+
+      # データ永続化
+      - scanner-data:/app/data
+      - scanner-logs:/app/logs
+
+    networks:
+      - cis-network
+
+    # リソース制限
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # 再起動ポリシー
+    restart: unless-stopped
+
+    # コマンド（デフォルトはヘルプ表示）
+    command: ["--help"]
+
+  # ========================================
+  # スケジュールスキャナー（定期実行用）
+  # ========================================
+  scheduled-scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cis-scheduled-scanner
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      AWS_REGION: ${AWS_REGION:-ap-northeast-1}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-cis-filesearch-landing-dev}
+      NAS_MOUNT_PATH: /mnt/nas
+      NAS_PROTOCOL: ${NAS_PROTOCOL:-mounted}
+      DB_PATH: /app/data/scanner.db
+      LOG_DIR: /app/logs
+
+    volumes:
+      - ${HOST_NAS_PATH:-/mnt/nas}:/mnt/nas:ro
+      - scanner-data:/app/data
+      - scanner-logs:/app/logs
+
+    networks:
+      - cis-network
+
+    restart: unless-stopped
+
+    # 6時間ごとに差分スキャンを実行
+    command: ["schedule", "0 */6 * * *"]
+
+    # 初期は無効化（必要に応じて有効化）
+    profiles:
+      - scheduled
+
+  # ========================================
+  # LocalStack（ローカル開発用AWS環境）
+  # ========================================
+  localstack:
+    image: localstack/localstack:latest
+    container_name: cis-localstack
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=s3,sqs
+      - DEBUG=0
+      - DATA_DIR=/tmp/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - localstack-data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/localstack-init.sh:/docker-entrypoint-initaws.d/init.sh:ro
+    networks:
+      - cis-network
+    profiles:
+      - development
+
+# ========================================
+# ボリューム定義
+# ========================================
+volumes:
+  scanner-data:
+    driver: local
+  scanner-logs:
+    driver: local
+  localstack-data:
+    driver: local
+
+# ========================================
+# ネットワーク定義
+# ========================================
+networks:
+  cis-network:
+    driver: bridge

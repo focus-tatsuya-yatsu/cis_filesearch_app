@@ -1,0 +1,43 @@
+[Unit]
+Description=File Processor Worker Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/python-worker
+
+# Environment
+EnvironmentFile=/home/ec2-user/python-worker/.env
+Environment="TESSDATA_PREFIX=/usr/local/share/tessdata"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+# Command
+ExecStart=/usr/bin/python3.11 /home/ec2-user/python-worker/worker.py
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Memory limit (optional, adjust based on your needs)
+# MemoryLimit=8G
+# CPUQuota=400%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=file-processor
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

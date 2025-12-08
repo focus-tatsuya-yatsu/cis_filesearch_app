@@ -1,0 +1,40 @@
+# AWS SDK
+boto3>=1.34.0,<1.35.0
+botocore>=1.34.0,<1.35.0
+
+# OpenSearch
+opensearch-py>=2.4.0,<2.5.0
+requests-aws4auth>=1.2.0,<2.0.0
+
+# Image Processing & OCR
+Pillow>=10.0.0,<11.0.0
+pytesseract>=0.3.10,<1.0.0
+pdf2image>=1.17.0,<2.0.0
+PyPDF2>=3.0.0,<4.0.0
+
+# Async & Concurrency
+aiofiles>=23.0.0,<24.0.0
+
+# Configuration & Logging
+python-dotenv>=1.0.0,<2.0.0
+python-json-logger>=2.0.0,<3.0.0
+
+# Monitoring
+psutil>=5.9.0,<6.0.0
+
+# NumPy for vector calculations
+numpy>=1.24.0,<2.0.0
+
+# Testing (optional - can be installed separately)
+pytest>=7.4.0,<8.0.0
+pytest-asyncio>=0.21.0,<1.0.0
+pytest-mock>=3.12.0,<4.0.0
+moto>=4.2.0,<5.0.0
+
+# Development tools (optional - can be installed separately)
+black>=23.0.0,<24.0.0
+flake8>=7.0.0,<8.0.0
+isort>=5.13.0,<6.0.0
+
+# Note: urllib3 version will be resolved automatically
+# to satisfy all package requirements

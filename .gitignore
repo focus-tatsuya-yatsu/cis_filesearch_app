@@ -47,6 +47,12 @@ lerna-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
 # ========================================
 # プロジェクト固有の設定
 # ========================================
@@ -176,3 +182,9 @@ coverage/
 # ドキュメント生成
 /docs/.vitepress/cache
 /docs/.vitepress/dist
+
+# 仮想環境
+venv/
+.venv/
+env/
+.env/

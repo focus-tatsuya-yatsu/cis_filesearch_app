@@ -1,0 +1,15 @@
+# OCR Dependencies for Python Worker
+# Python 3.11+ required
+
+# Core OCR library
+pytesseract==0.3.10
+
+# Image processing
+Pillow==10.4.0
+
+# PDF to image conversion
+pdf2image==1.17.0
+
+# Additional dependencies for PDF processing
+# Note: poppler-utils must be installed on the system
+# Amazon Linux 2023: sudo dnf install -y poppler-utils

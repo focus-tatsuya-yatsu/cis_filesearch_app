@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <!-- Configuration for code coverage using coverlet -->
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <!-- Output formats -->
+          <Format>cobertura,opencover,json</Format>
+
+          <!-- Exclude patterns -->
+          <Exclude>
+            <!-- Test assemblies -->
+            [*]*.Tests.*,
+            [*]*.Test.*,
+            <!-- Generated code -->
+            [*]*.Generated.*,
+            <!-- Program.cs (entry point) -->
+            [*]*Program,
+            <!-- Migration files -->
+            [*]*Migrations.*
+          </Exclude>
+
+          <!-- Exclude by attribute -->
+          <ExcludeByAttribute>
+            Obsolete,
+            GeneratedCodeAttribute,
+            CompilerGeneratedAttribute,
+            ExcludeFromCodeCoverageAttribute
+          </ExcludeByAttribute>
+
+          <!-- Exclude by file path -->
+          <ExcludeByFile>
+            <!-- Generated files -->
+            **/*.Designer.cs,
+            **/*.g.cs,
+            **/*.g.i.cs,
+            <!-- Assembly info -->
+            **/AssemblyInfo.cs
+          </ExcludeByFile>
+
+          <!-- Include only production code directory -->
+          <IncludeDirectory>../DocuWorksConverter/</IncludeDirectory>
+
+          <!-- Coverage settings -->
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>true</UseSourceLink>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+          <DeterministicReport>true</DeterministicReport>
+
+          <!-- Thresholds for CI/CD (optional) -->
+          <Threshold>80</Threshold>
+          <ThresholdType>line,branch,method</ThresholdType>
+          <ThresholdStat>minimum</ThresholdStat>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+
+  <!-- Test execution settings -->
+  <RunConfiguration>
+    <!-- Number of test assemblies to run in parallel -->
+    <MaxCpuCount>0</MaxCpuCount>
+
+    <!-- Timeout for test run (in milliseconds) -->
+    <TestSessionTimeout>600000</TestSessionTimeout>
+
+    <!-- Results directory -->
+    <ResultsDirectory>.\TestResults</ResultsDirectory>
+
+    <!-- Target platform (x64) -->
+    <TargetPlatform>x64</TargetPlatform>
+
+    <!-- Target framework -->
+    <TargetFrameworkVersion>net7.0</TargetFrameworkVersion>
+
+    <!-- Collect source information -->
+    <CollectSourceInformation>true</CollectSourceInformation>
+  </RunConfiguration>
+
+  <!-- Logger settings -->
+  <LoggerRunSettings>
+    <Loggers>
+      <Logger friendlyName="console" enabled="True">
+        <Configuration>
+          <Verbosity>normal</Verbosity>
+        </Configuration>
+      </Logger>
+      <Logger friendlyName="trx" enabled="True">
+        <Configuration>
+          <LogFileName>test-results.trx</LogFileName>
+        </Configuration>
+      </Logger>
+    </Loggers>
+  </LoggerRunSettings>
+
+  <!-- xUnit specific settings -->
+  <xUnit>
+    <!-- Parallel execution settings -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    <MaxParallelThreads>0</MaxParallelThreads>
+
+    <!-- Test output settings -->
+    <AppDomain>ifAvailable</AppDomain>
+    <DiagnosticMessages>false</DiagnosticMessages>
+    <MethodDisplay>method</MethodDisplay>
+    <PreEnumerateTheories>true</PreEnumerateTheories>
+    <ShadowCopy>false</ShadowCopy>
+  </xUnit>
+
+  <!-- Environment variables for testing -->
+  <TestRunParameters>
+    <!-- AWS LocalStack endpoint -->
+    <Parameter name="AWS_ENDPOINT_URL" value="http://localhost:4566" />
+    <Parameter name="AWS_ACCESS_KEY_ID" value="test" />
+    <Parameter name="AWS_SECRET_ACCESS_KEY" value="test" />
+    <Parameter name="AWS_DEFAULT_REGION" value="us-east-1" />
+
+    <!-- Test environment settings -->
+    <Parameter name="TEST_ENVIRONMENT" value="LocalStack" />
+    <Parameter name="ENABLE_INTEGRATION_TESTS" value="true" />
+  </TestRunParameters>
+</RunSettings>
