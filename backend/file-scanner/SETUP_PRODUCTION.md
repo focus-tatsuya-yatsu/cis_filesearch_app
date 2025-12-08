@@ -25,7 +25,7 @@
 
 ```bash
 # プロジェクトディレクトリに移動
-cd /Users/tatsuya/focus_project/cis_filesearch_app/frontend/backend/file-scanner
+cd /Users/tatsuya/focus_project/cis_filesearch_app/backend/file-scanner
 
 # 検証スクリプトを実行
 ./verify-setup.sh
@@ -51,7 +51,7 @@ cd /Users/tatsuya/focus_project/cis_filesearch_app/frontend/backend/file-scanner
 ### Step 1: プロジェクトディレクトリに移動
 
 ```bash
-cd /Users/tatsuya/focus_project/cis_filesearch_app/frontend/backend/file-scanner
+cd /Users/tatsuya/focus_project/cis_filesearch_app/backend/file-scanner
 ```
 
 ### Step 2: 依存関係のインストール

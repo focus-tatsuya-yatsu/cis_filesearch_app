@@ -31,7 +31,7 @@ CIS File Scannerは、オンプレミスのNASに保存されているファイ�
 
 ```bash
 git clone [repository-url]
-cd frontend/backend/file-scanner
+cd backend/file-scanner
 ```
 
 ### 2. 依存関係のインストール
