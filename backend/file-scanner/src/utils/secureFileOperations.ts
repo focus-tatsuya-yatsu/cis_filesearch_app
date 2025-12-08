@@ -153,7 +153,7 @@ export class SecureFileSystemAdapter {
     const validatedPath = await this.validatePath(filePath);
 
     // アダプター経由で読み込み
-    const metadata = await this.adapter.getFileMetadata(validatedPath);
+    const metadata = await this.adapter.getMetadata(validatedPath);
 
     if (!metadata) {
       throw new Error(`File not found: ${filePath}`);
@@ -219,7 +219,7 @@ export const createSecureAdapterMiddleware = (
 ) => {
   const secureAdapter = SecureFileOperations.wrapAdapter(adapter, baseDir);
 
-  return (req: any, res: any, next: any) => {
+  return (req: any, _res: any, next: any) => {
     // リクエストにセキュアなアダプターを注入
     req.secureAdapter = secureAdapter;
     next();

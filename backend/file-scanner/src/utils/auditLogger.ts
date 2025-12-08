@@ -302,7 +302,7 @@ export class AuditLogger {
   /**
    * CloudWatchへの送信（プレースホルダー）
    */
-  private async sendToCloudWatch(logEntry: AuditLogEntry): Promise<void> {
+  private async sendToCloudWatch(_logEntry: AuditLogEntry): Promise<void> {
     // TODO: Phase Bで実装（AWS SDK統合）
     // CloudWatchLogs.putLogEvents() を使用
   }

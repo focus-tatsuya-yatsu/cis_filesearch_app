@@ -4,6 +4,7 @@
  */
 
 import sqlite3Import from 'sqlite3';
+import type { Database } from 'sqlite3';
 const sqlite3 = sqlite3Import.verbose();
 import { promisify } from 'util';
 import * as path from 'path';
@@ -38,7 +39,7 @@ export interface DatabaseConfig {
  * ファイルメタデータのローカル管理
  */
 export class DatabaseManager {
-  private db: sqlite3.Database | null = null;
+  private db: Database | null = null;
   private readonly config: DatabaseConfig;
   private isInitialized: boolean = false;
 
@@ -485,7 +486,7 @@ export class DatabaseManager {
     if (!this.db) return;
 
     await new Promise<void>((resolve, reject) => {
-      this.db!.close((err) => {
+      this.db!.close((err: Error | null) => {
         if (err) {
           reject(err);
         } else {

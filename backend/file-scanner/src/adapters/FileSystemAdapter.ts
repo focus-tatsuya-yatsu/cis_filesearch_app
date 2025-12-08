@@ -88,6 +88,12 @@ export interface FileSystemAdapter {
     path: string,
     options?: ScanOptions
   ): AsyncGenerator<FileMetadata>;
+
+  /**
+   * ベースパスを取得（オプショナル）
+   * Path Traversal保護に使用
+   */
+  getBasePath?(): string;
 }
 
 /**
