@@ -9,6 +9,7 @@ import { defaultProvider } from '@aws-sdk/credential-provider-node';
 
 export interface SearchQuery {
   query: string;
+  searchMode?: 'and' | 'or'; // AND検索 or OR検索
   fileType?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -96,6 +97,7 @@ export async function searchDocuments(
 
   const {
     query,
+    searchMode = 'or', // デフォルトはOR検索
     fileType,
     dateFrom,
     dateTo,
@@ -120,8 +122,8 @@ export async function searchDocuments(
           'extracted_text'  // 本文
         ],
         type: 'best_fields',
-        operator: 'or',
-        fuzziness: 'AUTO',
+        operator: searchMode, // 'and' または 'or'
+        fuzziness: searchMode === 'or' ? 'AUTO' : '0', // AND検索では曖昧検索無効
       },
     });
   }

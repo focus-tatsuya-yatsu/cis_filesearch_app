@@ -108,7 +108,7 @@ export const SearchInterface: FC = () => {
    * - 検索履歴に追加
    */
   const handleSearch = useCallback(
-    async (query: string) => {
+    async (query: string, searchMode: 'and' | 'or' = 'or') => {
       // クエリ検証
       const validation = validateSearchQuery(query)
       if (!validation.isValid) {
@@ -124,6 +124,7 @@ export const SearchInterface: FC = () => {
         // 実際のAPI呼び出し
         const response = await searchFiles({
           q: query,
+          searchMode,
           page: 1,
           limit: 20,
           sortBy: 'relevance',
@@ -155,11 +156,11 @@ export const SearchInterface: FC = () => {
   /**
    * 検索履歴アイテムクリック処理
    *
-   * 選択されたクエリで検索を再実行
+   * 選択されたクエリで検索を再実行（デフォルトはOR検索）
    */
   const handleSelectHistory = useCallback(
     (query: string) => {
-      handleSearch(query)
+      handleSearch(query, 'or')
     },
     [handleSearch]
   )

@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 
     // クエリパラメータを取得
     const query = searchParams.get('q') || '';
+    const searchMode = (searchParams.get('searchMode') || 'or') as 'and' | 'or';
     const fileType = searchParams.get('fileType') || undefined;
     const dateFrom = searchParams.get('dateFrom') || undefined;
     const dateTo = searchParams.get('dateTo') || undefined;
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
     // 検索パラメータを構築
     const searchQuery: SearchQuery = {
       query,
+      searchMode,
       fileType,
       dateFrom,
       dateTo,
@@ -79,6 +81,7 @@ export async function GET(request: NextRequest) {
         },
         query: {
           q: query,
+          searchMode,
           fileType,
           dateFrom,
           dateTo,

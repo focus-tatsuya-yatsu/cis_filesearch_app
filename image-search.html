@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>画像類似検索 - CIS FileSearch</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 30px;
+        font-size: 2rem;
+      }
+      .upload-area {
+        background: white;
+        border: 3px dashed #3498db;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+      }
+      .upload-area:hover {
+        border-color: #2980b9;
+        background: #f8f9fa;
+      }
+      .upload-area.dragover {
+        border-color: #27ae60;
+        background: #e8f5e9;
+      }
+      .upload-icon {
+        font-size: 48px;
+        color: #bdc3c7;
+        margin-bottom: 15px;
+      }
+      .upload-text {
+        color: #7f8c8d;
+        font-size: 1.1rem;
+      }
+      .upload-hint {
+        color: #95a5a6;
+        font-size: 0.9rem;
+        margin-top: 10px;
+      }
+      #fileInput {
+        display: none;
+      }
+      .preview-area {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: none;
+      }
+      .preview-area.show {
+        display: block;
+      }
+      .preview-title {
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 15px;
+      }
+      .preview-images {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .preview-image {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 8px;
+        object-fit: contain;
+        border: 2px solid #ecf0f1;
+      }
+      .search-btn {
+        display: block;
+        width: 100%;
+        max-width: 300px;
+        margin: 20px auto;
+        padding: 15px 30px;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .search-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(52, 152, 219, 0.4);
+      }
+      .search-btn:disabled {
+        background: #bdc3c7;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+      .results-area {
+        margin-top: 30px;
+      }
+      .results-title {
+        font-size: 1.3rem;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+      }
+      .result-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+      }
+      .result-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+      .result-card.low-similarity {
+        opacity: 0.6;
+        filter: grayscale(50%);
+      }
+      .result-card.low-similarity:hover {
+        opacity: 0.8;
+        filter: grayscale(30%);
+      }
+      .result-thumbnail {
+        width: 100%;
+        height: 180px;
+        object-fit: contain;
+        background: #f8f9fa;
+        border-bottom: 1px solid #ecf0f1;
+      }
+      .result-info {
+        padding: 15px;
+      }
+      .result-filename {
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 8px;
+        word-break: break-all;
+        font-size: 0.95rem;
+      }
+      .result-similarity {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      .similarity-high {
+        background: #d4edda;
+        color: #155724;
+      }
+      .similarity-medium {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .similarity-low {
+        background: #e9ecef;
+        color: #6c757d;
+      }
+      .low-similarity-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background: #6c757d;
+        color: white;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        margin-left: 5px;
+      }
+      .result-path {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+        word-break: break-all;
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #7f8c8d;
+      }
+      .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .error {
+        background: #fee;
+        color: #c00;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .no-results {
+        text-align: center;
+        padding: 40px;
+        color: #7f8c8d;
+      }
+      .legend {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.85rem;
+        color: #666;
+      }
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .legend-dot.high {
+        background: #28a745;
+      }
+      .legend-dot.medium {
+        background: #ffc107;
+      }
+      .legend-dot.low {
+        background: #6c757d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 画像類似検索</h1>
+
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">
+          クリックまたはドラッグ＆ドロップで画像をアップロード
+        </div>
+        <div class="upload-hint">対応形式: JPG, PNG, GIF, WebP</div>
+        <input type="file" id="fileInput" accept="image/*" multiple />
+      </div>
+
+      <div class="preview-area" id="previewArea">
+        <div class="preview-title">📷 アップロード画像</div>
+        <div class="preview-images" id="previewImages"></div>
+      </div>
+
+      <button class="search-btn" id="searchBtn" disabled>
+        🔍 類似画像を検索
+      </button>
+
+      <div class="results-area" id="resultsArea"></div>
+    </div>
+
+    <script>
+      const API_ENDPOINT =
+        "https://5xbn3ng31f.execute-api.ap-northeast-1.amazonaws.com/default/cis-filesearch-image-search";
+
+      const uploadArea = document.getElementById("uploadArea");
+      const fileInput = document.getElementById("fileInput");
+      const previewArea = document.getElementById("previewArea");
+      const previewImages = document.getElementById("previewImages");
+      const searchBtn = document.getElementById("searchBtn");
+      const resultsArea = document.getElementById("resultsArea");
+
+      let selectedFiles = [];
+
+      // ドラッグ＆ドロップ
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.classList.add("dragover");
+      });
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("dragover");
+      });
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove("dragover");
+        handleFiles(e.dataTransfer.files);
+      });
+
+      uploadArea.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+
+      function handleFiles(files) {
+        selectedFiles = Array.from(files).filter((f) =>
+          f.type.startsWith("image/")
+        );
+        if (selectedFiles.length === 0) return;
+
+        previewImages.innerHTML = "";
+        selectedFiles.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            img.className = "preview-image";
+            previewImages.appendChild(img);
+          };
+          reader.readAsDataURL(file);
+        });
+
+        previewArea.classList.add("show");
+        searchBtn.disabled = false;
+      }
+
+      searchBtn.addEventListener("click", async () => {
+        if (selectedFiles.length === 0) return;
+
+        searchBtn.disabled = true;
+        searchBtn.textContent = "検索中...";
+        resultsArea.innerHTML =
+          '<div class="loading"><div class="loading-spinner"></div>類似画像を検索しています...</div>';
+
+        try {
+          const file = selectedFiles[0];
+          const base64 = await fileToBase64(file);
+
+          const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64, k: 20 }),
+          });
+
+          if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+
+          const data = await response.json();
+          displayResults(data.results || []);
+        } catch (error) {
+          resultsArea.innerHTML = `<div class="error">検索中にエラーが発生しました: ${error.message}</div>`;
+        } finally {
+          searchBtn.disabled = false;
+          searchBtn.textContent = "🔍 類似画像を検索";
+        }
+      });
+
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function displayResults(results) {
+        if (results.length === 0) {
+          resultsArea.innerHTML =
+            '<div class="no-results">類似する画像が見つかりませんでした</div>';
+          return;
+        }
+
+        // 類似度でソート（降順）
+        results.sort((a, b) => b.similarity - a.similarity);
+
+        // 凡例
+        let html = `
+                <div class="results-title">検索結果: ${results.length}件</div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-dot high"></div>高い類似度 (80%以上)</div>
+                    <div class="legend-item"><div class="legend-dot medium"></div>中程度 (60-80%)</div>
+                    <div class="legend-item"><div class="legend-dot low"></div>低い類似度 (60%未満)</div>
+                </div>
+                <div class="results-grid">
+            `;
+
+        results.forEach((result) => {
+          const similarity = result.similarity;
+          let simClass,
+            simLabel,
+            cardClass = "";
+
+          if (similarity >= 80) {
+            simClass = "similarity-high";
+            simLabel = "";
+          } else if (similarity >= 60) {
+            simClass = "similarity-medium";
+            simLabel = "";
+          } else {
+            simClass = "similarity-low";
+            simLabel = '<span class="low-similarity-badge">低い類似度</span>';
+            cardClass = "low-similarity";
+          }
+
+          const thumbnailUrl =
+            result.thumbnail_url ||
+            'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23ddd" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23999" font-size="12">No Image</text></svg>';
+
+          html += `
+                    <div class="result-card ${cardClass}">
+                        <img src="${thumbnailUrl}" alt="${
+            result.file_name
+          }" class="result-thumbnail" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2212%22>No Image</text></svg>'">
+                        <div class="result-info">
+                            <div class="result-filename">${
+                              result.file_name
+                            }</div>
+                            <span class="result-similarity ${simClass}">類似度: ${similarity}%</span>
+                            ${simLabel}
+                            <div class="result-path">📁 ${
+                              result.file_path || "パス不明"
+                            }</div>
+                        </div>
+                    </div>
+                `;
+        });
+
+        html += "</div>";
+        resultsArea.innerHTML = html;
+      }
+    </script>
+  </body>
+</html>

@@ -5,7 +5,7 @@ import { Search, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 
 interface SearchBarProps {
-  onSearch: (query: string) => void
+  onSearch: (query: string, searchMode: 'and' | 'or') => void
   placeholder?: string
   initialValue?: string
   isLoading?: boolean
@@ -40,13 +40,18 @@ export const SearchBar: FC<SearchBarProps> = ({
   isLoading = false,
 }) => {
   const [query, setQuery] = useState(initialValue)
+  const [searchMode, setSearchMode] = useState<'and' | 'or'>('or')
   const [isFocused, setIsFocused] = useState(false)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      onSearch(query.trim())
+      onSearch(query.trim(), searchMode)
     }
+  }
+
+  const toggleSearchMode = () => {
+    setSearchMode(prev => prev === 'or' ? 'and' : 'or')
   }
 
   const handleClear = () => {
@@ -56,13 +61,14 @@ export const SearchBar: FC<SearchBarProps> = ({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className={`w-full transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        isFocused ? 'scale-[1.01]' : 'scale-100'
-      }`}
-    >
-      <div className="relative flex items-center gap-3">
+    <div className="w-full space-y-3">
+      <form
+        onSubmit={handleSubmit}
+        className={`w-full transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isFocused ? 'scale-[1.01]' : 'scale-100'
+        }`}
+      >
+        <div className="relative flex items-center gap-3">
         <div className="relative flex-1">
           {/* 検索アイコン */}
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6E6E73] dark:text-[#98989D] pointer-events-none" />
@@ -143,5 +149,44 @@ export const SearchBar: FC<SearchBarProps> = ({
         </Button>
       </div>
     </form>
+
+    {/* AND/OR検索モード切り替え */}
+    <div className="flex items-center justify-center gap-2">
+      <span className="text-sm text-[#6E6E73] dark:text-[#98989D]">検索モード:</span>
+      <button
+        type="button"
+        onClick={toggleSearchMode}
+        className={`
+          px-4 py-2 rounded-lg font-medium text-sm
+          transition-all duration-200 ease-out
+          ${searchMode === 'and'
+            ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
+            : 'bg-[#F5F5F7] dark:bg-[#1C1C1E] text-[#6E6E73] dark:text-[#98989D] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
+          }
+        `}
+      >
+        AND検索
+      </button>
+      <button
+        type="button"
+        onClick={toggleSearchMode}
+        className={`
+          px-4 py-2 rounded-lg font-medium text-sm
+          transition-all duration-200 ease-out
+          ${searchMode === 'or'
+            ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
+            : 'bg-[#F5F5F7] dark:bg-[#1C1C1E] text-[#6E6E73] dark:text-[#98989D] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
+          }
+        `}
+      >
+        OR検索
+      </button>
+      <span className="text-xs text-[#86868B] dark:text-[#86868B] ml-2">
+        {searchMode === 'and'
+          ? '（すべてのキーワードを含む）'
+          : '（いずれかのキーワードを含む）'}
+      </span>
+    </div>
+  </div>
   )
 }

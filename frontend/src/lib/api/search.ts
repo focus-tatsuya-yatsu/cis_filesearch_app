@@ -5,6 +5,7 @@
 
 export interface SearchParams {
   q?: string;
+  searchMode?: 'and' | 'or';
   fileType?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -61,6 +62,7 @@ export async function searchFiles(
 
   // パラメータを追加
   if (params.q) searchParams.set('q', params.q);
+  if (params.searchMode) searchParams.set('searchMode', params.searchMode);
   if (params.fileType) searchParams.set('fileType', params.fileType);
   if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
   if (params.dateTo) searchParams.set('dateTo', params.dateTo);
