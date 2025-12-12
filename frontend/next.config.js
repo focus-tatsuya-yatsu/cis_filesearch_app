@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ Static Export有効化
-  output: 'export',
+  // ⚠️ Static Export無効化（API Routes使用のため）
+  // 検索APIなど、サーバーサイド機能が必要なため、完全な静的エクスポートは使用しません
+  // output: 'export',
 
   // ✅ 厳格モード
   reactStrictMode: true,

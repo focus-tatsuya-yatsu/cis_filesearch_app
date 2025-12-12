@@ -317,6 +317,121 @@ async function showStatistics() {
   await database.close();
 }
 
+/**
+ * SQSキューを診断
+ */
+async function diagnoseSQS() {
+  logger.info('========================================');
+  logger.info('SQS Queue Diagnostics');
+  logger.info('========================================');
+
+  const config = loadConfig();
+
+  if (!config.aws.sqs.queueUrl) {
+    logger.error('SQS_QUEUE_URL is not set');
+    process.exit(1);
+  }
+
+  try {
+    const publisher = new SQSPublisher({
+      awsConfig: config.aws,
+      dryRun: false
+    });
+
+    // キューメトリクスを取得
+    const metrics = await publisher.getQueueMetrics();
+
+    console.log('\n📊 Queue Metrics:');
+    console.log(`  Messages in Queue: ${metrics.approximateNumberOfMessages}`);
+    console.log(`  Messages in Flight: ${metrics.approximateNumberOfMessagesNotVisible}`);
+    console.log(`  Messages Delayed: ${metrics.approximateNumberOfMessagesDelayed}`);
+
+    // 処理速度の分析
+    const totalMessages = metrics.approximateNumberOfMessages +
+                         metrics.approximateNumberOfMessagesNotVisible;
+
+    console.log('\n⚠️ Analysis:');
+
+    if (metrics.approximateNumberOfMessages > 1000) {
+      console.log(`  ⚠️ High backlog detected: ${metrics.approximateNumberOfMessages} messages`);
+      console.log('  Recommendation: Increase python-worker instances');
+    } else if (metrics.approximateNumberOfMessages > 100) {
+      console.log(`  ⚠️ Moderate backlog: ${metrics.approximateNumberOfMessages} messages`);
+      console.log('  Recommendation: Monitor worker processing speed');
+    } else {
+      console.log(`  ✅ Queue is healthy: ${metrics.approximateNumberOfMessages} messages`);
+    }
+
+    if (metrics.approximateNumberOfMessagesNotVisible > 500) {
+      console.log(`  ⚠️ High in-flight messages: ${metrics.approximateNumberOfMessagesNotVisible}`);
+      console.log('  Possible issue: Workers not deleting messages after processing');
+    }
+
+    // DLQ確認
+    if (config.aws.sqs.dlqUrl) {
+      console.log('\n🔴 Checking Dead Letter Queue...');
+      const dlqPublisher = new SQSPublisher({
+        awsConfig: {
+          ...config.aws,
+          sqs: {
+            queueUrl: config.aws.sqs.dlqUrl,
+            dlqUrl: undefined
+          }
+        },
+        dryRun: false
+      });
+
+      const dlqMetrics = await dlqPublisher.getQueueMetrics();
+      console.log(`  DLQ Messages: ${dlqMetrics.approximateNumberOfMessages}`);
+
+      if (dlqMetrics.approximateNumberOfMessages > 0) {
+        console.log('  ⚠️ Failed messages detected in DLQ!');
+        console.log('  Action required: Investigate and reprocess failed messages');
+      } else {
+        console.log('  ✅ No failed messages in DLQ');
+      }
+
+      await dlqPublisher.cleanup();
+    }
+
+    // 統計情報
+    const stats = publisher.getStatistics();
+    console.log('\n📈 Publisher Statistics:');
+    console.log(`  Published: ${stats.publishedCount}`);
+    console.log(`  Failed: ${stats.failedCount}`);
+    console.log(`  Queued: ${stats.queuedCount}`);
+
+    // 推奨アクション
+    console.log('\n💡 Recommendations:');
+
+    const backlog = metrics.approximateNumberOfMessages;
+    const estimatedHours = backlog / (10 * 60); // 10 files/min
+
+    if (backlog > 100) {
+      console.log('  1. Scale up python-worker instances:');
+      console.log(`     - Current backlog: ${backlog} messages`);
+      console.log(`     - Estimated time to clear (1 worker): ${estimatedHours.toFixed(1)} hours`);
+      console.log('     - Recommended: 4-8 worker instances');
+
+      console.log('\n  2. Enable batch processing in python-worker:');
+      console.log('     - Change sqs_max_messages from 1 to 10');
+      console.log('     - Implement bulk indexing in OpenSearch');
+
+      console.log('\n  3. Monitor CloudWatch Logs:');
+      console.log('     - Check for processing errors');
+      console.log('     - Verify OpenSearch connection');
+    } else {
+      console.log('  ✅ System is operating normally');
+    }
+
+    await publisher.cleanup();
+
+  } catch (error) {
+    logger.error('Diagnostics failed:', error);
+    process.exit(1);
+  }
+}
+
 // CLIコマンドを設定
 program
   .name('cis-file-scanner')
@@ -349,6 +464,12 @@ program
   .command('stats')
   .description('Show scanning statistics')
   .action(showStatistics);
+
+// SQS診断コマンド
+program
+  .command('diagnose-sqs')
+  .description('Diagnose SQS queue status and performance')
+  .action(diagnoseSQS);
 
 // CLIを実行
 program.parse();

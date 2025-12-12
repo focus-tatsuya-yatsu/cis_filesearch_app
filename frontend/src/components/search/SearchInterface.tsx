@@ -25,6 +25,7 @@ import { SearchHistory } from './SearchHistory'
 import { Spinner } from '@/components/ui'
 import { useSearchHistory } from '@/hooks'
 import type { SearchResult, FilterOptions } from '@/types'
+import { searchFiles, validateSearchQuery } from '@/lib/api/search'
 
 // ========================================
 // Dummy Data (TODO: Replace with API)
@@ -102,24 +103,51 @@ export const SearchInterface: FC = () => {
    *
    * - 検索クエリ状態を更新
    * - ローディング状態を表示
-   * - API呼び出しをシミュレート
+   * - 実際のAPIを呼び出し
    * - 結果を更新
    * - 検索履歴に追加
    */
   const handleSearch = useCallback(
     async (query: string) => {
+      // クエリ検証
+      const validation = validateSearchQuery(query)
+      if (!validation.isValid) {
+        console.error('Invalid query:', validation.error)
+        return
+      }
+
       setSearchQuery(query)
       setIsSearching(true)
       setHasSearched(true)
 
-      // TODO: Replace with actual API call
-      setTimeout(() => {
-        setSearchResults(dummyResults)
-        setIsSearching(false)
+      try {
+        // 実際のAPI呼び出し
+        const response = await searchFiles({
+          q: query,
+          page: 1,
+          limit: 20,
+          sortBy: 'relevance',
+          sortOrder: 'desc',
+        })
 
-        // Add to history with result count
-        addToHistory(query, dummyResults.length)
-      }, 1500)
+        // 結果を更新
+        setSearchResults(response.data.results)
+
+        // 検索履歴に追加
+        addToHistory(query, response.data.pagination.total)
+
+      } catch (error: any) {
+        console.error('Search failed:', error)
+
+        // エラー時は空配列をセット
+        setSearchResults([])
+
+        // TODO: エラートーストを表示
+        alert(`検索に失敗しました: ${error.message}`)
+
+      } finally {
+        setIsSearching(false)
+      }
     },
     [addToHistory]
   )
