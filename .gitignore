@@ -188,3 +188,5 @@ venv/
 .venv/
 env/
 .env/
+# Lambda deployment zips
+backend/lambda-search-api/*.zip
