@@ -270,7 +270,7 @@ function buildFilterQuery(params) {
   
   // 日付フィルター
   if (params.dateFrom || params.dateTo) {
-    const dateField = params.dateFilterType === 'modification' ? 'modified_date' : 'created_date';
+    const dateField = params.dateFilterType === 'modification' ? 'modified_at' : 'created_at';
     const dateFilter = { range: { [dateField]: {} } };
     if (params.dateFrom) dateFilter.range[dateField].gte = params.dateFrom;
     if (params.dateTo) dateFilter.range[dateField].lte = params.dateTo;
@@ -410,7 +410,7 @@ exports.handler = async (event) => {
               filter: filterClauses
             }
           },
-          _source: ['file_name', 'file_path', 'file_type', 'file_size', 'modified_date', 'content']
+          _source: ['file_name', 'file_path', 'file_type', 'file_size', 'modified_at', 'content']
         };
         
         console.log('Text search body:', JSON.stringify(textSearchBody));
@@ -467,7 +467,7 @@ exports.handler = async (event) => {
               }
             }
           },
-          _source: ['file_name', 'file_path', 'file_type', 'file_size', 'modified_date', 'department', 'tags']
+          _source: ['file_name', 'file_path', 'file_type', 'file_size', 'modified_at', 'department', 'tags']
         };
         
         // テキスト検索結果をマップに保存（後でスニペットを結合）
@@ -568,7 +568,7 @@ exports.handler = async (event) => {
             filter: filterClauses
           }
         },
-        _source: ['file_name', 'file_path', 'file_type', 'file_size', 'modified_date', 'department', 'tags']
+        _source: ['file_name', 'file_path', 'file_type', 'file_size', 'modified_at', 'department', 'tags']
       };
     } else {
       // テキスト検索
@@ -619,12 +619,12 @@ exports.handler = async (event) => {
             file_name: {}
           }
         },
-        _source: ['file_name', 'file_path', 'file_type', 'file_size', 'created_date', 'modified_date', 'department', 'tags', 'content']
+        _source: ['file_name', 'file_path', 'file_type', 'file_size', 'created_at', 'modified_at', 'department', 'tags', 'content']
       };
       
       // ソート
       if (sortBy === 'date') {
-        searchBody.sort = [{ modified_date: { order: sortOrder, missing: '_last' } }];
+        searchBody.sort = [{ modified_at: { order: sortOrder, missing: '_last' } }];
       } else if (sortBy === 'size') {
         searchBody.sort = [{ file_size: { order: sortOrder } }];
       } else if (sortBy === 'name') {
