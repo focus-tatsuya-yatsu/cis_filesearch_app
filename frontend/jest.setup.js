@@ -1,6 +1,17 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 
+// Mock Next.js Web API globals (Request, Response, Headers, etc.)
+import { TextEncoder, TextDecoder } from 'util'
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+// Mock fetch API for Next.js API routes
+import { Request, Response, Headers } from 'whatwg-fetch'
+global.Request = Request
+global.Response = Response
+global.Headers = Headers
+
 // Mock window.matchMedia (for ThemeContext tests)
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

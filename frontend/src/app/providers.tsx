@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { Toaster } from 'sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext' // layout.tsx から移動
 
@@ -23,6 +24,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <ThemeProvider>
+        {/* Toast Notification Provider */}
+        <Toaster
+          position="top-right"
+          expand={false}
+          richColors
+          closeButton
+          duration={3000}
+          toastOptions={{
+            style: {
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            },
+            className: 'sonner-toast',
+          }}
+        />
         {children}
       </ThemeProvider>
     </AuthProvider>

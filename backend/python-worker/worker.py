@@ -1,7 +1,13 @@
 """
-Main Worker Module
-EC2 File Processing Worker
+Main Worker Module - FIXED VERSION
+EC2 File Processing Worker with Enhanced Error Handling
 Polls SQS, downloads files from S3, processes them, and indexes to OpenSearch
+
+CHANGES FROM ORIGINAL:
+1. Added _send_to_dlq() method to explicitly send failed messages to DLQ
+2. Modified message handling to ALWAYS delete messages from main queue
+3. Improved error handling with proper cleanup
+4. Added message processing state tracking
 """
 
 import os
@@ -68,6 +74,11 @@ class FileProcessingWorker:
     """
     Main worker class for file processing
     Handles the complete pipeline: SQS → S3 → Process → OpenSearch
+
+    ENHANCEMENTS:
+    - Guaranteed message deletion from main queue
+    - Explicit DLQ handling for failed messages
+    - Improved error recovery
     """
 
     def __init__(self, config):
@@ -100,15 +111,97 @@ class FileProcessingWorker:
             'processed': 0,
             'succeeded': 0,
             'failed': 0,
+            'sent_to_dlq': 0,
             'start_time': time.time(),
         }
 
+        # DLQ URL (取得)
+        self.dlq_url = self._get_dlq_url()
+
         self.logger.info("Worker initialized successfully")
+
+    def _get_dlq_url(self) -> Optional[str]:
+        """
+        Get DLQ URL from environment or derive from main queue
+
+        Returns:
+            DLQ URL or None
+        """
+        # 環境変数から直接取得を試みる
+        dlq_url = os.environ.get('DLQ_QUEUE_URL')
+        if dlq_url:
+            self.logger.info(f"DLQ URL from env: {dlq_url}")
+            return dlq_url
+
+        # メインキューのURLからDLQ名を推測
+        try:
+            main_queue_url = self.config.aws.sqs_queue_url
+            # file-processing-queue-production → file-processing-dlq-production
+            dlq_name = main_queue_url.split('/')[-1].replace('queue', 'dlq')
+
+            response = self.sqs_client.get_queue_url(QueueName=dlq_name)
+            dlq_url = response['QueueUrl']
+            self.logger.info(f"DLQ URL derived: {dlq_url}")
+            return dlq_url
+        except Exception as e:
+            self.logger.warning(f"Could not get DLQ URL: {e}")
+            return None
 
     def _handle_shutdown_signal(self, signum, frame):
         """Handle shutdown signals"""
         self.logger.info(f"Received signal {signum}, initiating graceful shutdown...")
         self.shutdown_requested = True
+
+    def _send_to_dlq(self, message: Dict[str, Any], error_message: str = None):
+        """
+        Send failed message to Dead Letter Queue
+
+        NEW METHOD: Explicitly handles failed messages
+
+        Args:
+            message: SQS message
+            error_message: Error description
+        """
+        if not self.dlq_url:
+            self.logger.warning("DLQ URL not configured - cannot send failed message")
+            return False
+
+        try:
+            # メッセージ本文を取得
+            message_body = message.get('Body', '{}')
+
+            # メッセージ属性を準備
+            message_attributes = {
+                'FailedAt': {
+                    'StringValue': datetime.utcnow().isoformat(),
+                    'DataType': 'String'
+                },
+                'OriginalMessageId': {
+                    'StringValue': message.get('MessageId', 'unknown'),
+                    'DataType': 'String'
+                }
+            }
+
+            if error_message:
+                message_attributes['ErrorMessage'] = {
+                    'StringValue': error_message[:256],  # DynamoDB制限対策
+                    'DataType': 'String'
+                }
+
+            # DLQに送信
+            self.sqs_client.send_message(
+                QueueUrl=self.dlq_url,
+                MessageBody=message_body,
+                MessageAttributes=message_attributes
+            )
+
+            self.logger.info(f"Message sent to DLQ: {message.get('MessageId')}")
+            self.stats['sent_to_dlq'] += 1
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to send message to DLQ: {e}", exc_info=True)
+            return False
 
     def download_file_from_s3(
         self,
@@ -185,15 +278,17 @@ class FileProcessingWorker:
             self.logger.warning(f"Failed to upload thumbnail: {e}")
             return None
 
-    def process_sqs_message(self, message: Dict[str, Any]) -> bool:
+    def process_sqs_message(self, message: Dict[str, Any]) -> tuple[bool, str]:
         """
         Process a single SQS message
+
+        MODIFIED: Now returns (success, error_message) tuple
 
         Args:
             message: SQS message
 
         Returns:
-            True if processing successful
+            (success, error_message): Processing result and error description
         """
         temp_file_path = None
 
@@ -217,8 +312,9 @@ class FileProcessingWorker:
             # Check if file type is supported
             if not self.file_router.is_supported(key):
                 ext = Path(key).suffix.lower()
-                self.logger.warning(f"Unsupported file type: {ext}")
-                return False
+                error_msg = f"Unsupported file type: {ext}"
+                self.logger.warning(error_msg)
+                return (False, error_msg)
 
             # Create temporary file
             file_ext = Path(key).suffix
@@ -231,15 +327,17 @@ class FileProcessingWorker:
 
             # Download file from S3
             if not self.download_file_from_s3(bucket, key, temp_file_path):
-                return False
+                error_msg = "S3 download failed"
+                return (False, error_msg)
 
             # Process file
             self.logger.info("Starting file processing...")
             result = self.file_router.process_file(temp_file_path)
 
             if not result.success:
-                self.logger.error(f"Processing failed: {result.error_message}")
-                return False
+                error_msg = f"Processing failed: {result.error_message}"
+                self.logger.error(error_msg)
+                return (False, error_msg)
 
             # Prepare document for indexing
             document = result.to_dict()
@@ -257,31 +355,44 @@ class FileProcessingWorker:
                 if thumbnail_url:
                     document['thumbnail_url'] = thumbnail_url
 
-            # Index to OpenSearch
+            # Index to OpenSearch (non-blocking failure)
+            opensearch_indexed = False
             if self.opensearch.is_connected():
                 self.logger.info("Indexing to OpenSearch...")
-                if not self.opensearch.index_document(document, document_id=key):
-                    self.logger.error("Failed to index document")
-                    return False
-
-                self.logger.info("Successfully indexed document")
+                try:
+                    opensearch_indexed = self.opensearch.index_document(document, document_id=key)
+                    if opensearch_indexed:
+                        self.logger.info("Successfully indexed document to OpenSearch")
+                    else:
+                        self.logger.warning("OpenSearch indexing failed - storing for retry")
+                        # Store document in S3 for later retry
+                        self._store_for_retry(document, key)
+                except Exception as e:
+                    self.logger.error(f"OpenSearch indexing exception: {e}", exc_info=True)
+                    self._store_for_retry(document, key)
             else:
-                self.logger.warning("OpenSearch not connected - skipping indexing")
+                self.logger.warning("OpenSearch not connected - storing document for later indexing")
+                self._store_for_retry(document, key)
 
+            # IMPORTANT: Return success even if OpenSearch failed
+            # The file was processed successfully, indexing can be retried later
             self.logger.info(
-                f"Successfully processed: {Path(key).name} "
-                f"({result.char_count:,} chars, {result.processing_time_seconds:.2f}s)"
+                f"Processing completed: {Path(key).name} "
+                f"({result.char_count:,} chars, {result.processing_time_seconds:.2f}s) "
+                f"[OpenSearch: {'✓' if opensearch_indexed else '✗ (stored for retry)'}]"
             )
 
-            return True
+            return (True, None)
 
         except json.JSONDecodeError as e:
-            self.logger.error(f"Invalid message format: {e}")
-            return False
+            error_msg = f"Invalid message format: {e}"
+            self.logger.error(error_msg)
+            return (False, error_msg)
 
         except Exception as e:
-            self.logger.error(f"Error processing message: {e}", exc_info=True)
-            return False
+            error_msg = f"Error processing message: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return (False, error_msg)
 
         finally:
             # Cleanup temporary file
@@ -296,6 +407,8 @@ class FileProcessingWorker:
         """
         Main worker loop
         Polls SQS and processes messages
+
+        MODIFIED: Enhanced error handling with guaranteed message deletion
         """
         self.logger.info("Starting to poll SQS queue...")
         self.logger.info(f"Queue URL: {self.config.aws.sqs_queue_url[:50]}...")
@@ -329,28 +442,54 @@ class FileProcessingWorker:
                         break
 
                     receipt_handle = message['ReceiptHandle']
+                    message_id = message.get('MessageId', 'unknown')
                     self.stats['processed'] += 1
+
+                    # Message processing state
+                    processing_success = False
+                    error_message = None
 
                     try:
                         # Process the message
-                        success = self.process_sqs_message(message)
+                        success, error_msg = self.process_sqs_message(message)
 
                         if success:
-                            # Delete message from queue
+                            self.logger.info(f"Message {message_id} processed successfully")
+                            self.stats['succeeded'] += 1
+                            processing_success = True
+                        else:
+                            self.logger.error(f"Message {message_id} processing failed: {error_msg}")
+                            error_message = error_msg
+                            self.stats['failed'] += 1
+
+                    except Exception as e:
+                        self.logger.error(f"Unexpected error processing message {message_id}: {e}", exc_info=True)
+                        error_message = str(e)
+                        self.stats['failed'] += 1
+
+                    finally:
+                        # CRITICAL: Always delete message from queue (success or failure)
+                        # This prevents messages from being stuck "in flight"
+                        try:
                             self.sqs_client.delete_message(
                                 QueueUrl=self.config.aws.sqs_queue_url,
                                 ReceiptHandle=receipt_handle
                             )
-                            self.logger.info("Message processed and deleted from queue")
-                            self.stats['succeeded'] += 1
+                            self.logger.info(f"✓ Message {message_id} deleted from queue")
 
-                        else:
-                            self.logger.error("Processing failed - message will be retried")
-                            self.stats['failed'] += 1
+                            # If processing failed, send to DLQ AFTER deletion
+                            if not processing_success and error_message:
+                                self._send_to_dlq(message, error_message)
 
-                    except Exception as e:
-                        self.logger.error(f"Error processing message: {e}", exc_info=True)
-                        self.stats['failed'] += 1
+                        except Exception as delete_error:
+                            # This is CRITICAL - message will reappear after visibility timeout
+                            self.logger.critical(
+                                f"❌ FAILED to delete message {message_id}: {delete_error}",
+                                exc_info=True
+                            )
+                            self._send_metric('MessageDeleteFailed', 1)
+                            # Send alert to CloudWatch
+                            self._send_alert(f"Critical: Failed to delete SQS message {message_id}")
 
             except KeyboardInterrupt:
                 self.logger.info("Received keyboard interrupt")
@@ -364,6 +503,84 @@ class FileProcessingWorker:
         self.logger.info("Worker stopped")
         self._print_statistics()
 
+    def _send_metric(self, metric_name: str, value: float):
+        """
+        Send custom metric to CloudWatch
+
+        NEW METHOD: For monitoring critical failures
+
+        Args:
+            metric_name: Metric name
+            value: Metric value
+        """
+        try:
+            cloudwatch = boto3.client('cloudwatch', region_name=self.config.aws.region)
+            cloudwatch.put_metric_data(
+                Namespace='CISFileSearch/Worker',
+                MetricData=[
+                    {
+                        'MetricName': metric_name,
+                        'Value': value,
+                        'Unit': 'Count',
+                        'Timestamp': datetime.utcnow()
+                    }
+                ]
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to send metric {metric_name}: {e}")
+
+    def _send_alert(self, message: str):
+        """
+        Send critical alert to CloudWatch Logs
+
+        NEW METHOD: For critical failures that need immediate attention
+
+        Args:
+            message: Alert message
+        """
+        try:
+            # Log with CRITICAL level for CloudWatch alarms
+            self.logger.critical(f"ALERT: {message}")
+
+            # Also send to CloudWatch metric for alarm triggering
+            self._send_metric('CriticalError', 1)
+
+        except Exception as e:
+            self.logger.error(f"Failed to send alert: {e}")
+
+    def _store_for_retry(self, document: Dict[str, Any], key: str):
+        """
+        Store document in S3 for later retry
+
+        NEW METHOD: Handles OpenSearch indexing failures gracefully
+
+        Args:
+            document: Document that failed to index
+            key: Original file key
+        """
+        try:
+            # Create retry key with date partitioning
+            retry_key = f"retry-index/{datetime.utcnow().strftime('%Y-%m-%d')}/{key}.json"
+
+            # Store document as JSON in S3
+            self.s3_client.put_object(
+                Bucket=self.config.aws.s3_bucket,
+                Key=retry_key,
+                Body=json.dumps(document, ensure_ascii=False, indent=2),
+                ContentType='application/json',
+                Metadata={
+                    'original-key': key,
+                    'retry-reason': 'opensearch-indexing-failed',
+                    'failed-at': datetime.utcnow().isoformat(),
+                    'file-name': document.get('file_name', 'unknown')
+                }
+            )
+
+            self.logger.info(f"Stored document for retry: s3://{self.config.aws.s3_bucket}/{retry_key}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to store document for retry: {e}", exc_info=True)
+
     def _print_statistics(self):
         """Print worker statistics"""
         runtime = time.time() - self.stats['start_time']
@@ -374,6 +591,7 @@ class FileProcessingWorker:
         self.logger.info(f"Total Processed: {self.stats['processed']}")
         self.logger.info(f"Succeeded: {self.stats['succeeded']}")
         self.logger.info(f"Failed: {self.stats['failed']}")
+        self.logger.info(f"Sent to DLQ: {self.stats['sent_to_dlq']}")
 
         if self.stats['processed'] > 0:
             success_rate = (self.stats['succeeded'] / self.stats['processed']) * 100
@@ -389,20 +607,21 @@ class FileProcessingWorker:
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
-        description='File Processing Worker for AWS EC2',
+        description='File Processing Worker for AWS EC2 (FIXED VERSION)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Environment Variables:
   AWS_REGION              AWS region (default: ap-northeast-1)
   S3_BUCKET              S3 bucket name
   SQS_QUEUE_URL          SQS queue URL (required)
+  DLQ_QUEUE_URL          DLQ queue URL (optional, will be derived if not provided)
   OPENSEARCH_ENDPOINT    OpenSearch endpoint URL
   OPENSEARCH_INDEX       OpenSearch index name (default: file-index)
   LOG_LEVEL              Logging level (DEBUG, INFO, WARNING, ERROR)
 
 Example:
-  python worker.py
-  python worker.py --validate-only
+  python worker_fixed.py
+  python worker_fixed.py --validate-only
         """
     )
 
@@ -427,7 +646,7 @@ Example:
     logger = setup_logging(config)
 
     logger.info("=" * 60)
-    logger.info("File Processing Worker - Starting")
+    logger.info("File Processing Worker (FIXED VERSION) - Starting")
     logger.info("=" * 60)
 
     # Print configuration summary

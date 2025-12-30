@@ -1,0 +1,184 @@
+================================================================================
+  OpenSearch k-NN Setup - Quick Start Guide
+================================================================================
+
+STEP 1: Copy scripts to EC2
+--------------------------------------------------------------------------------
+# On your local machine:
+
+scp -i ~/.ssh/your-key.pem \
+  ec2-*.sh \
+  ec2-user@<EC2_IP>:/home/ec2-user/
+
+
+STEP 2: Connect to EC2
+--------------------------------------------------------------------------------
+ssh -i ~/.ssh/your-key.pem ec2-user@<EC2_IP>
+
+
+STEP 3: Make scripts executable
+--------------------------------------------------------------------------------
+chmod +x *.sh
+
+
+STEP 4: Create k-NN index
+--------------------------------------------------------------------------------
+./ec2-create-opensearch-knn-index.sh
+
+Expected output:
+  ✓ Successfully connected to OpenSearch
+  ✓ Index created successfully
+  ✓ k-NN is properly enabled
+  ✓ Mapping verified successfully
+
+
+STEP 5: Verify index
+--------------------------------------------------------------------------------
+./ec2-verify-index.sh
+
+
+STEP 6: Index sample data
+--------------------------------------------------------------------------------
+./ec2-index-sample-data.sh 10
+
+
+STEP 7: Test k-NN search
+--------------------------------------------------------------------------------
+./ec2-test-knn-search.sh 5
+
+
+================================================================================
+  Manual Commands (if scripts don't work)
+================================================================================
+
+Set environment variables:
+--------------------------------------------------------------------------------
+ENDPOINT="https://vpc-cis-filesearch-opensearch-xuupcgptq6a4opklfeh65x3uqe.ap-northeast-1.es.amazonaws.com"
+REGION="ap-northeast-1"
+
+
+Create index:
+--------------------------------------------------------------------------------
+curl -X PUT "${ENDPOINT}/cis-files" \
+  -H "Content-Type: application/json" \
+  --aws-sigv4 "aws:amz:${REGION}:es" \
+  --user "$(aws configure get aws_access_key_id):$(aws configure get aws_secret_access_key)" \
+  -d '{
+  "settings": {"index": {"knn": true, "number_of_shards": 2}},
+  "mappings": {
+    "properties": {
+      "file_name": {"type": "text"},
+      "file_path": {"type": "text"},
+      "image_embedding": {
+        "type": "knn_vector",
+        "dimension": 512,
+        "method": {"name": "hnsw", "space_type": "l2", "engine": "nmslib"}
+      }
+    }
+  }
+}'
+
+
+Index a document:
+--------------------------------------------------------------------------------
+VECTOR=$(python3 -c "import random; print('[' + ','.join([str(random.uniform(-1, 1)) for _ in range(512)]) + ']')")
+
+curl -X POST "${ENDPOINT}/cis-files/_doc/1" \
+  -H "Content-Type: application/json" \
+  --aws-sigv4 "aws:amz:${REGION}:es" \
+  --user "$(aws configure get aws_access_key_id):$(aws configure get aws_secret_access_key)" \
+  -d "{\"file_name\":\"test.jpg\",\"file_path\":\"/test/test.jpg\",\"image_embedding\":${VECTOR}}"
+
+
+Search with k-NN:
+--------------------------------------------------------------------------------
+QUERY=$(python3 -c "import random; print('[' + ','.join([str(random.uniform(-1, 1)) for _ in range(512)]) + ']')")
+
+curl -X POST "${ENDPOINT}/cis-files/_search" \
+  -H "Content-Type: application/json" \
+  --aws-sigv4 "aws:amz:${REGION}:es" \
+  --user "$(aws configure get aws_access_key_id):$(aws configure get aws_secret_access_key)" \
+  -d "{\"size\":5,\"query\":{\"knn\":{\"image_embedding\":{\"vector\":${QUERY},\"k\":5}}}}" | jq '.'
+
+
+Check document count:
+--------------------------------------------------------------------------------
+curl -X GET "${ENDPOINT}/cis-files/_count" \
+  --aws-sigv4 "aws:amz:${REGION}:es" \
+  --user "$(aws configure get aws_access_key_id):$(aws configure get aws_secret_access_key)" | jq '.count'
+
+
+================================================================================
+  Troubleshooting
+================================================================================
+
+Connection Error:
+--------------------------------------------------------------------------------
+# Test connection
+curl -v ${ENDPOINT}
+
+# Check security group allows HTTPS (443) from EC2
+
+
+Access Denied (403):
+--------------------------------------------------------------------------------
+# Check IAM credentials
+aws sts get-caller-identity
+
+# Verify IAM role has OpenSearch permissions
+
+
+No Search Results:
+--------------------------------------------------------------------------------
+# Check document count
+curl -X GET "${ENDPOINT}/cis-files/_count" \
+  --aws-sigv4 "aws:amz:${REGION}:es" \
+  --user "$(aws configure get aws_access_key_id):$(aws configure get aws_secret_access_key)"
+
+# Index sample data
+./ec2-index-sample-data.sh 10
+
+
+Delete and recreate index:
+--------------------------------------------------------------------------------
+curl -X DELETE "${ENDPOINT}/cis-files" \
+  --aws-sigv4 "aws:amz:${REGION}:es" \
+  --user "$(aws configure get aws_access_key_id):$(aws configure get aws_secret_access_key)"
+
+./ec2-create-opensearch-knn-index.sh
+
+
+================================================================================
+  Files Created
+================================================================================
+
+Scripts (all in /Users/tatsuya/focus_project/cis_filesearch_app/scripts/):
+  - ec2-create-opensearch-knn-index.sh  (Create k-NN index)
+  - ec2-verify-index.sh                  (Verify index configuration)
+  - ec2-index-sample-data.sh             (Index sample documents)
+  - ec2-test-knn-search.sh               (Test k-NN search)
+
+Documentation:
+  - ec2-opensearch-quick-reference.md    (Command reference)
+  - DEPLOY_TO_EC2.md                     (Deployment guide)
+  - QUICK_START.txt                      (This file)
+
+Main docs:
+  - ../docs/EC2_OPENSEARCH_KNN_SETUP.md  (Comprehensive setup guide)
+  - ../EC2_OPENSEARCH_SETUP_SUMMARY.md   (Summary and next steps)
+
+
+================================================================================
+  Need Help?
+================================================================================
+
+1. Read the detailed guide:
+   cat ec2-opensearch-quick-reference.md
+
+2. Check troubleshooting section:
+   cat DEPLOY_TO_EC2.md
+
+3. Review comprehensive docs:
+   cat ../docs/EC2_OPENSEARCH_KNN_SETUP.md
+
+================================================================================

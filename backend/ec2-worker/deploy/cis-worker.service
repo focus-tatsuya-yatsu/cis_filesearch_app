@@ -1,0 +1,48 @@
+[Unit]
+Description=CIS File Processor Worker
+After=network.target
+
+[Service]
+Type=simple
+# ✅ SECURITY FIX: Run as non-privileged user
+User=cis-worker
+Group=cis-worker
+WorkingDirectory=/opt/cis-file-processor
+Environment="PATH=/opt/cis-file-processor/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/opt/cis-file-processor/venv/bin/python /opt/cis-file-processor/src/main.py
+
+# Restart policy with exponential backoff
+Restart=on-failure
+RestartSec=10s
+StartLimitBurst=5
+StartLimitIntervalSec=300s
+
+# Resource Limits - Prevent resource exhaustion
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+MemoryHigh=1.5G
+CPUQuota=80%
+
+# ✅ SECURITY HARDENING - systemd sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/cis-worker /tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# Logging
+StandardOutput=append:/var/log/cis-worker/worker.log
+StandardError=append:/var/log/cis-worker/error.log
+SyslogIdentifier=cis-worker
+
+[Install]
+WantedBy=multi-user.target

@@ -24,3 +24,7 @@ export type { UseSearchHistoryReturn } from './useSearchHistory'
 // Sidebar state hook
 export { useSidebarState } from './useSidebarState'
 export type { UseSidebarStateReturn } from './useSidebarState'
+
+// Toast notification hook
+export { useToast } from './useToast'
+export type { ToastType, ToastConfig } from './useToast'

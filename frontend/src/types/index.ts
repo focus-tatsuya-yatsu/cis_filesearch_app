@@ -3,7 +3,7 @@ export interface SearchResult {
   id: string
   fileName: string
   filePath: string
-  fileType: string
+  fileType?: string  // Optional: may be undefined for some results
   fileSize: number
   modifiedDate: string
   snippet: string
@@ -40,4 +40,30 @@ export interface TreeNode {
   type: 'file' | 'folder'
   path: string
   children?: TreeNode[]
+}
+
+// 画像検索の型定義
+export interface ImageSearchState {
+  imageFile: File | null
+  imagePreviewUrl: string | null
+  isUploading: boolean
+  embedding: number[] | null
+  error: string | null
+}
+
+export interface ImageEmbeddingResponse {
+  success: boolean
+  data: {
+    embedding: number[]
+    dimensions: number
+    fileName: string
+    fileSize: number
+    fileType: string
+  }
+}
+
+export interface ImageEmbeddingError {
+  error: string
+  code: string
+  message?: string
 }

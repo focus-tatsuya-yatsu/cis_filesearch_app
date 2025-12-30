@@ -69,6 +69,18 @@ class ThumbnailConfig:
     format: str = 'JPEG'
 
 
+
+@dataclass
+class PreviewConfig:
+    """プレビュー設定"""
+    dpi: int = 150                    # 解像度
+    max_width: int = 1240             # 最大幅（A4横幅相当）
+    max_height: int = 1754            # 最大高さ
+    quality: int = 85                 # JPEG品質
+    format: str = "JPEG"              # 出力形式
+    max_pages: int = 50               # 最大ページ数
+    enabled: bool = True              # プレビュー機能有効化
+
 @dataclass
 class OCRConfig:
     """OCR設定"""
@@ -99,10 +111,12 @@ class Config:
     def __init__(self):
         """設定の初期化"""
         # AWS設定
+        # ✅ SECURITY FIX: Use IAM role instead of hardcoded credentials
+        # On EC2, boto3 automatically uses instance IAM role
         self.aws = AWSConfig(
             region=os.getenv('AWS_REGION', 'ap-northeast-1'),
-            access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+            access_key_id=None,  # Use IAM role
+            secret_access_key=None  # Use IAM role
         )
 
         # S3設定
@@ -145,6 +159,16 @@ class Config:
             max_width=int(os.getenv('THUMBNAIL_MAX_WIDTH', '300')),
             max_height=int(os.getenv('THUMBNAIL_MAX_HEIGHT', '300')),
             quality=int(os.getenv('THUMBNAIL_QUALITY', '85'))
+        )
+
+        # プレビュー設定
+        self.preview = PreviewConfig(
+            dpi=int(os.getenv("PREVIEW_DPI", "150")),
+            max_width=int(os.getenv("PREVIEW_MAX_WIDTH", "1240")),
+            max_height=int(os.getenv("PREVIEW_MAX_HEIGHT", "1754")),
+            quality=int(os.getenv("PREVIEW_QUALITY", "85")),
+            max_pages=int(os.getenv("PREVIEW_MAX_PAGES", "50")),
+            enabled=os.getenv("ENABLE_PREVIEW", "true").lower() == "true"
         )
 
         # OCR設定
@@ -190,14 +214,17 @@ class Config:
         return True
 
     def get_boto3_config(self) -> dict:
-        """Boto3クライアント用の設定を取得"""
+        """
+        Boto3クライアント用の設定を取得
+
+        ✅ SECURITY: EC2上ではIAMロールを使用（認証情報不要）
+        """
         config = {
             'region_name': self.aws.region
         }
 
-        if self.aws.access_key_id and self.aws.secret_access_key:
-            config['aws_access_key_id'] = self.aws.access_key_id
-            config['aws_secret_access_key'] = self.aws.secret_access_key
+        # EC2 IAM roleを使用する場合は認証情報を指定しない
+        # boto3が自動的にInstance Metadata Serviceから取得
 
         return config
 

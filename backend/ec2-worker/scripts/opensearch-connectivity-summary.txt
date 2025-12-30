@@ -1,0 +1,186 @@
+================================================================================
+  EC2 → OpenSearch VPC 接続トラブルシューティング - 実行サマリー
+================================================================================
+
+実行する順序:
+
+1. クイックテスト (30秒)
+   ./test-opensearch-connection.sh
+
+2. 詳細診断 (1-2分)
+   ./diagnose-opensearch.sh
+
+3. 自動修正 (1-2分 + 5-10分の待機時間)
+   ./fix-opensearch-connectivity.sh
+   sleep 300  # 5分待機
+   ./test-opensearch-connection.sh  # 再テスト
+
+4. Pythonからの接続確認 (30秒)
+   python3 test-opensearch-with-sigv4.py
+
+================================================================================
+よくある問題と即座の解決方法
+================================================================================
+
+[問題1] DNS解決に失敗
+症状: ✗ DNS resolution failed
+
+解決:
+VPC_ID=$(aws ec2 describe-instances --instance-ids $(ec2-metadata --instance-id | cut -d ' ' -f 2) --query 'Reservations[0].Instances[0].VpcId' --output text)
+aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-support
+aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-hostnames
+
+--------------------------------------------------------------------------------
+
+[問題2] Port 443に接続できない
+症状: ✗ Cannot connect to port 443
+
+解決:
+./fix-opensearch-connectivity.sh
+
+または手動で:
+EC2_SG=$(aws ec2 describe-instances --instance-ids $(ec2-metadata --instance-id | cut -d ' ' -f 2) --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' --output text)
+OS_SG=$(aws opensearch describe-domain --domain-name cis-filesearch-opensearch --query 'DomainStatus.VPCOptions.SecurityGroupIds[0]' --output text --region ap-northeast-1)
+aws ec2 authorize-security-group-ingress --group-id $OS_SG --protocol tcp --port 443 --source-group $EC2_SG --region ap-northeast-1
+
+--------------------------------------------------------------------------------
+
+[問題3] HTTP 403 Forbidden
+症状: HTTP Response Code: 403
+
+解決:
+./fix-opensearch-connectivity.sh
+
+注意: IAMポリシー変更は5-10分かかる場合があります
+      → sleep 300 で待機してから再テスト
+
+--------------------------------------------------------------------------------
+
+[問題4] 異なるVPC
+症状: ✗ ERROR: EC2 and OpenSearch are in DIFFERENT VPCs!
+
+解決:
+- VPCピアリングを設定 (推奨)
+- またはリソースを同じVPCに移動
+
+================================================================================
+1行でテスト
+================================================================================
+
+curl -s -o /dev/null -w "%{http_code}\n" "https://vpc-cis-filesearch-opensearch-xuupcgptq6a4opklfeh65x3uqe.ap-northeast-1.es.amazonaws.com/_cluster/health"
+
+結果の見方:
+  200 → ✓ 成功
+  403 → ネットワークOK、IAM権限不足
+  000 → ネットワーク接続失敗
+
+================================================================================
+スクリプト説明
+================================================================================
+
+test-opensearch-connection.sh
+  目的: 接続の簡易テスト
+  所要時間: 30秒
+  実行: ./test-opensearch-connection.sh
+
+diagnose-opensearch.sh
+  目的: 詳細な診断とトラブルシューティング
+  所要時間: 1-2分
+  実行: ./diagnose-opensearch.sh
+  出力: 各チェック項目の詳細結果と修正コマンド
+
+fix-opensearch-connectivity.sh
+  目的: 一般的な問題の自動修正
+  所要時間: 1-2分 (+ IAM変更の場合は5-10分待機)
+  実行: ./fix-opensearch-connectivity.sh
+  内容:
+    - セキュリティグループルール追加
+    - VPC DNS設定有効化
+    - IAM権限設定
+    - OpenSearchアクセスポリシー更新
+
+test-opensearch-with-sigv4.py
+  目的: Python + AWS SigV4認証での接続テスト
+  所要時間: 30秒
+  実行: python3 test-opensearch-with-sigv4.py
+  内容:
+    - AWS認証情報取得
+    - OpenSearchクライアント作成
+    - クラスター健全性チェック
+    - インデックス操作テスト
+
+================================================================================
+ドキュメント
+================================================================================
+
+README.md
+  完全なドキュメント
+  - 各スクリプトの詳細説明
+  - トラブルシューティングガイド
+  - FAQ
+  - AWS設定手順
+
+QUICK_REFERENCE.md
+  クイックリファレンス
+  - よく使うコマンド集
+  - 問題診断フローチャート
+  - チェックリスト
+  - 緊急時の対応
+
+opensearch-connectivity-diagnostic.md (docs/)
+  技術的な詳細説明
+  - 接続失敗の原因分析
+  - セキュリティグループ設定詳細
+  - IAM権限設定詳細
+  - ネットワーク設定詳細
+
+================================================================================
+必要な権限
+================================================================================
+
+EC2インスタンスロールに必要:
+- ec2:DescribeInstances
+- ec2:DescribeSecurityGroups
+- ec2:DescribeVpcs
+- ec2:AuthorizeSecurityGroupIngress
+- es:DescribeDomain
+- es:ESHttpGet
+- es:ESHttpPost
+- iam:GetInstanceProfile
+
+修正スクリプト実行に追加で必要:
+- ec2:ModifyVpcAttribute
+- es:UpdateDomainConfig
+- iam:PutRolePolicy
+
+================================================================================
+サポート情報
+================================================================================
+
+問題が解決しない場合:
+
+1. 診断レポートを保存
+   ./diagnose-opensearch.sh > diagnostic-report.txt 2>&1
+
+2. 以下の情報を収集
+   - EC2インスタンスID
+   - OpenSearchドメイン名
+   - VPC ID
+   - エラーメッセージ全文
+
+3. AWSサポートまたは開発チームに連絡
+
+================================================================================
+更新情報
+================================================================================
+
+作成日: 2025-01-XX
+バージョン: 1.0
+
+含まれるスクリプト:
+- test-opensearch-connection.sh (簡易テスト)
+- diagnose-opensearch.sh (詳細診断)
+- fix-opensearch-connectivity.sh (自動修正)
+- test-opensearch-with-sigv4.py (Python接続テスト)
+
+================================================================================

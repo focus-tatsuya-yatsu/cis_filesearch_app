@@ -1,0 +1,62 @@
+# terraform.tfvars.example
+# Example Terraform variables file - Copy to terraform.tfvars and customize
+
+# Project Configuration
+project_name = "cis-filesearch"
+environment  = "production"
+aws_region   = "ap-northeast-1"
+
+# Network Configuration
+vpc_id             = "vpc-xxxxxxxxxxxxxxxxx"
+private_subnet_ids = [
+  "subnet-xxxxxxxxxxxxxxxxx",
+  "subnet-yyyyyyyyyyyyyyyyy",
+  "subnet-zzzzzzzzzzzzzzzzz"
+]
+
+# SSH access (for debugging only, leave empty for production)
+allow_ssh_from = [
+  # "10.0.0.0/8"  # VPN CIDR
+]
+
+# AMI and Instance Configuration
+ami_id           = "ami-xxxxxxxxxxxxxxxxx" # Python Worker AMI (update after building)
+instance_type    = "c5.xlarge"
+key_pair_name    = "your-key-pair-name"
+# ebs_kms_key_arn = "arn:aws:kms:ap-northeast-1:xxxxxxxxxxxx:key/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Auto Scaling Configuration
+asg_min_size         = 1
+asg_max_size         = 10
+asg_desired_capacity = 2
+
+# Target: 100 messages per instance
+sqs_target_messages_per_instance = 100
+
+# Emergency scale-out threshold: 500 messages
+sqs_high_message_threshold = 500
+
+# Scheduled Scaling (Optional)
+enable_scheduled_scaling = false
+# asg_scheduled_min_size = 3
+# asg_scheduled_desired_capacity = 5
+
+# Application Configuration
+s3_bucket             = "cis-filesearch-storage"
+opensearch_endpoint   = "https://search-xxxxxxxxxxxxx.ap-northeast-1.es.amazonaws.com"
+opensearch_domain_arn = "arn:aws:es:ap-northeast-1:xxxxxxxxxxxx:domain/cis-filesearch"
+opensearch_index      = "file-index"
+log_level             = "INFO"
+
+# Monitoring Configuration
+log_retention_days                = 30
+enable_autoscaling_notifications  = true
+# alarm_sns_topic_arn             = "arn:aws:sns:ap-northeast-1:xxxxxxxxxxxx:topic/alerts"
+
+# Tags
+common_tags = {
+  Project     = "CIS File Search"
+  Environment = "production"
+  ManagedBy   = "Terraform"
+  CostCenter  = "Engineering"
+}

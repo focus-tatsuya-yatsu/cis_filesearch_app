@@ -1,0 +1,21 @@
+# Image Embedding Lambda - Python Dependencies
+
+# Core ML Libraries
+torch==2.1.2
+torchvision==0.16.2
+transformers==4.36.2
+
+# Image Processing
+Pillow==10.2.0
+opencv-python-headless==4.9.0.80
+
+# AWS SDK
+boto3==1.34.34
+botocore==1.34.34
+
+# Utilities
+numpy==1.26.3
+requests==2.31.0
+
+# Optional: For model optimization
+# onnxruntime==1.16.3

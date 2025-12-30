@@ -1,0 +1,64 @@
+[Unit]
+Description=File Processor Worker Service (Resilient Architecture)
+After=network-online.target
+Wants=network-online.target
+# 依存関係を明確に定義
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/python-worker
+
+# Environment Configuration
+EnvironmentFile=/home/ec2-user/python-worker/.env
+Environment="TESSDATA_PREFIX=/usr/local/share/tessdata"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+# Health Check BEFORE Starting (Fail Fast)
+ExecStartPre=/usr/bin/python3.11 /home/ec2-user/python-worker/health_check.py
+ExecStartPre=/usr/bin/python3.11 /home/ec2-user/python-worker/worker.py --validate-only
+
+# Main Service
+ExecStart=/usr/bin/python3.11 /home/ec2-user/python-worker/worker.py
+
+# Graceful Shutdown (60秒でSIGTERM送信)
+TimeoutStopSec=60
+KillMode=mixed
+KillSignal=SIGTERM
+
+# サーキットブレーカーパターン - 5回失敗で5分間停止
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# リソース制限 (メモリリーク防止)
+MemoryMax=6G
+MemoryHigh=5G
+CPUQuota=300%
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging (構造化ログ)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=file-processor
+# ログレベル設定
+SyslogLevel=info
+
+# Security Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/ec2-user/python-worker
+ReadWritePaths=/tmp
+
+# Watchdog (60秒ごとにヘルスチェック)
+WatchdogSec=60
+
+[Install]
+WantedBy=multi-user.target

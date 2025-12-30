@@ -127,9 +127,17 @@ export const SearchHistory: FC<SearchHistoryProps> = ({
               className="group relative border-b border-[#D1D1D6]/30 dark:border-[#38383A]/30 last:border-b-0"
             >
               {/* Clickable Area */}
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectHistory(item.query)}
-                className="w-full px-5 py-3 text-left hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition-colors duration-200 flex items-center justify-between gap-3"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectHistory(item.query)
+                  }
+                }}
+                className="w-full px-5 py-3 cursor-pointer hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition-colors duration-200 flex items-center justify-between gap-3 focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] focus:ring-inset"
                 aria-label={`"${item.query}"を再検索`}
               >
                 <div className="flex-1 min-w-0">
@@ -159,12 +167,12 @@ export const SearchHistory: FC<SearchHistoryProps> = ({
                     e.stopPropagation()
                     onClearItem(item.id)
                   }}
-                  className="p-2 rounded-full hover:bg-[#E5E5EA] dark:hover:bg-[#38383A] transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-2 rounded-full hover:bg-[#E5E5EA] dark:hover:bg-[#38383A] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] dark:focus:ring-[#FF453A]"
                   aria-label={`"${item.query}"を履歴から削除`}
                 >
                   <X className="h-4 w-4 text-[#6E6E73] dark:text-[#8E8E93]" />
                 </button>
-              </button>
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>

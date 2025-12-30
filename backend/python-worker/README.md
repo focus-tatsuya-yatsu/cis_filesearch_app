@@ -437,6 +437,47 @@ backend/python-worker/
 - **Setup Summary**: `/TESSERACT-SETUP-SUMMARY.md`
 - **Processing Flow**: `/docs/deployment/OCR-PROCESSING-FLOW.md`
 
+## Worker Deployment Verification
+
+新しいworkerインスタンスが実際にファイル処理を行っているか検証するためのツール群が用意されています。
+
+### Quick Verification
+
+```bash
+# 最も簡単な方法：クイック検証
+python3 quick-verify.py
+
+# 詳細な分析
+python3 analyze-logs.py --minutes 60 --file-types --opensearch
+
+# インタラクティブな調査
+./ssm-connect.sh
+```
+
+### Verification Tools
+
+| Tool | Purpose |
+|------|---------|
+| `quick-verify.py` | クイック検証スクリプト（推奨） |
+| `analyze-logs.py` | 詳細CloudWatchログ解析 |
+| `verify-deployment.sh` | 包括的検証スクリプト |
+| `check-opensearch.sh` | OpenSearch検証 |
+| `ssm-connect.sh` | インタラクティブSSMツール |
+| `VERIFICATION_GUIDE.md` | 詳細な検証ガイド |
+
+### Success Criteria
+
+デプロイが成功している場合:
+
+1. ✅ CloudWatchログに "Indexed to OpenSearch" メッセージが存在
+2. ✅ OpenSearchインデックスのドキュメント数が増加
+3. ✅ ファイルタイプが正しく検出
+4. ✅ DocuWorksファイルの関連追跡が動作
+5. ✅ エラー率が5%未満
+6. ✅ 処理率が受信メッセージの80%以上
+
+詳細は `VERIFICATION_GUIDE.md` を参照してください。
+
 ## Support
 
 For issues or questions:
@@ -445,6 +486,7 @@ For issues or questions:
 2. Review the full installation guide
 3. Run the test script: `python3.11 test_ocr_setup.py --verbose`
 4. Check system logs: `sudo journalctl -u file-processor -f`
+5. For deployment verification: `python3 quick-verify.py`
 
 ## License
 

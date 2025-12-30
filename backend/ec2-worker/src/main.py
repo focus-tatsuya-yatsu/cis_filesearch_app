@@ -9,6 +9,7 @@ import sys
 import os
 import time
 import json
+import io
 import tempfile
 import hashlib
 from pathlib import Path
@@ -22,9 +23,11 @@ from config import config
 from s3_client import S3Client
 from ocr_processor import OCRProcessor
 from thumbnail_generator import ThumbnailGenerator
+from preview_generator import PreviewGenerator
 from bedrock_client import BedrockClient
 from opensearch_client import OpenSearchClient
 from sqs_handler import SQSHandler
+from log_filter import SensitiveDataFilter, PathSanitizer, setup_secure_logging
 
 # ロギング設定
 def setup_logging():
@@ -43,6 +46,9 @@ def setup_logging():
         file_handler.setFormatter(logging.Formatter(log_format))
         logging.getLogger().addHandler(file_handler)
 
+    # ✅ SECURITY: Add sensitive data filter to all logs
+    setup_secure_logging()
+
     # CloudWatchハンドラーはCloudWatch Agentで処理
 
 logger = logging.getLogger(__name__)
@@ -59,6 +65,7 @@ class FileProcessor:
         self.s3_client = S3Client()
         self.ocr_processor = OCRProcessor()
         self.thumbnail_generator = ThumbnailGenerator()
+        self.preview_generator = PreviewGenerator()
         self.bedrock_client = BedrockClient()
         self.opensearch_client = OpenSearchClient()
 
@@ -87,9 +94,12 @@ class FileProcessor:
         """
         start_time = time.time()
         temp_file = None
+        temp_files_to_cleanup = []  # ✅ Track all temporary files
 
         try:
-            logger.info(f"Processing file: s3://{bucket}/{key}")
+            # ✅ SECURITY: Sanitize file path in logs
+            sanitized_path = PathSanitizer.sanitize_s3_path(f"s3://{bucket}/{key}")
+            logger.info(f"Processing file: {sanitized_path}")
 
             # ファイル情報を取得
             file_info = self.s3_client.get_object_metadata(bucket, key)
@@ -123,6 +133,12 @@ class FileProcessor:
                 thumbnail_result = self._generate_thumbnail(temp_file, key, document)
                 if thumbnail_result:
                     document.update(thumbnail_result)
+
+            # プレビュー生成（有効な場合）
+            if config.preview.enabled:
+                preview_result = self._generate_previews(temp_file, key, document)
+                if preview_result:
+                    document.update(preview_result)
 
             # ベクトル化（有効な場合）
             if config.features.enable_vector_search:
@@ -175,9 +191,17 @@ class FileProcessor:
             return False
 
         finally:
-            # 一時ファイルをクリーンアップ
+            # ✅ SECURITY FIX: Cleanup all temporary files
             if temp_file:
                 self.s3_client.cleanup_temp_file(temp_file)
+
+            for file_to_cleanup in temp_files_to_cleanup:
+                try:
+                    if os.path.exists(file_to_cleanup):
+                        os.remove(file_to_cleanup)
+                        logger.debug(f"Cleaned up temp file: {file_to_cleanup}")
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to cleanup temp file {file_to_cleanup}: {cleanup_error}")
 
     def _perform_ocr(self, file_path: str, document: Dict) -> Dict:
         """
@@ -253,6 +277,69 @@ class FileProcessor:
         except Exception as e:
             logger.error(f"Thumbnail generation error: {str(e)}")
             return {}
+
+    def _generate_previews(self, file_path: str, key: str, document: Dict) -> Dict:
+        """
+        プレビュー画像を生成（全ページ対応）
+
+        Args:
+            file_path: ファイルパス
+            key: S3オブジェクトキー
+            document: ドキュメント情報
+
+        Returns:
+            プレビュー結果
+        """
+        try:
+            logger.debug(f"Generating previews for {file_path}")
+
+            # プレビュー生成
+            previews = self.preview_generator.generate_previews(file_path)
+
+            if not previews:
+                logger.debug("No previews generated")
+                return {}
+
+            # S3にアップロード
+            preview_keys = []
+            base_name = Path(key).stem
+
+            for preview in previews:
+                preview_key = f"previews/{base_name}/page_{preview['page']}.jpg"
+
+                # S3にアップロード
+                preview_io = io.BytesIO(preview["data"])
+
+                preview_url = self.s3_client.upload_fileobj(
+                    preview_io,
+                    config.s3.thumbnail_bucket,
+                    preview_key,
+                    content_type="image/jpeg"
+                )
+
+                if preview_url:
+                    preview_keys.append({
+                        "page": preview['page'],
+                        "s3_key": preview_key,
+                        "width": preview["width"],
+                        "height": preview["height"],
+                        "size": preview["size"]
+                    })
+
+            if preview_keys:
+                logger.info(f"Generated {len(preview_keys)} preview images for {key}")
+                return {
+                    "preview_images": preview_keys,
+                    "total_pages": len(preview_keys)
+                }
+            else:
+                logger.warning("Failed to upload preview images")
+                return {}
+
+        except Exception as e:
+            logger.error(f"Preview generation error: {str(e)}")
+            return {}
+
 
     def _generate_vector(self, file_path: str, document: Dict) -> Dict:
         """

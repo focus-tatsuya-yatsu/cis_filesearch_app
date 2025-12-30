@@ -1,0 +1,12 @@
+# Batch Image Indexing Requirements
+
+# AWS SDK
+boto3>=1.34.0
+botocore>=1.34.0
+
+# OpenSearch
+opensearch-py>=2.4.0
+requests-aws4auth>=1.2.3
+
+# Utilities
+Pillow>=10.0.0

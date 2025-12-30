@@ -1,0 +1,79 @@
+[Unit]
+Description=CIS File Processor Worker - OPTIMIZED VERSION
+After=network.target
+Documentation=https://github.com/your-org/cis-file-search
+
+[Service]
+Type=simple
+# ✅ SECURITY FIX: Run as non-privileged user
+User=cis-worker
+Group=cis-worker
+WorkingDirectory=/opt/cis-file-processor
+Environment="PATH=/opt/cis-file-processor/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# ✅ OPTIMIZATION: Use optimized version with performance monitoring
+ExecStart=/opt/cis-file-processor/venv/bin/python /opt/cis-file-processor/src/main_optimized.py
+
+# ✅ OPTIMIZATION 1: Restart policy tuning
+# - 再起動時の待機時間を短縮（30s → 5s）
+# - メッセージ処理中の再起動でもすぐに復帰して処理を継続
+Restart=always
+RestartSec=5s
+StartLimitBurst=10
+StartLimitIntervalSec=300s
+
+# ✅ OPTIMIZATION 2: Resource Limits - Maximize performance while preventing OOM
+# t3.medium (2vCPU, 4GB RAM) での最適化設定
+LimitNOFILE=65536
+LimitNPROC=8192
+
+# メモリ制限を緩和（3.5GB まで使用可能に）
+# MemoryMax: hard limit (OOM killer発動)
+# MemoryHigh: soft limit (スワップ開始、警告）
+MemoryMax=3584M
+MemoryHigh=3072M
+
+# CPU使用率の上限を緩和（100%まで使用可能）
+# CPUQuota=200% means 2 full cores (100% per core)
+CPUQuota=200%
+
+# ✅ OPTIMIZATION 3: I/O priority
+# SQS処理は I/O bound なので I/O 優先度を上げる
+IOSchedulingClass=best-effort
+IOSchedulingPriority=2
+
+# ✅ OPTIMIZATION 4: CPU scheduling priority
+# CPU priority を上げる（-20 が最高、19 が最低、デフォルト 0）
+Nice=-5
+
+# ✅ SECURITY HARDENING - systemd sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/cis-worker /tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# ✅ OPTIMIZATION 5: Logging with rotation
+StandardOutput=append:/var/log/cis-worker/worker.log
+StandardError=append:/var/log/cis-worker/error.log
+SyslogIdentifier=cis-worker-optimized
+
+# ✅ OPTIMIZATION 6: Graceful shutdown
+# SIGTERM を受信した際のタイムアウト時間を延長
+# 処理中のメッセージを完了させるために60秒待機
+TimeoutStopSec=60s
+
+# ✅ OPTIMIZATION 7: Watchdog
+# プロセスがハングした場合に自動再起動
+WatchdogSec=120s
+
+[Install]
+WantedBy=multi-user.target

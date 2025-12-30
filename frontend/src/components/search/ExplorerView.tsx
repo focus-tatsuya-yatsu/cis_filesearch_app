@@ -11,6 +11,7 @@ import type { SearchResult } from '@/types'
 
 import { FolderTree } from '../features/FolderTree'
 import { SearchResultCard } from '../features/SearchResultCard'
+import { VirtualizedSearchResults } from './VirtualizedSearchResults'
 
 // ダミーのフォルダ構造データ
 const dummyFolderData = [
@@ -135,6 +136,7 @@ const dummyFolderData = [
 
 interface ExplorerViewProps {
   searchResults: SearchResult[]
+  totalResults?: number  // トータル件数を追加
   onPreview?: (id: string) => void
   onDownload?: (id: string) => void
 }
@@ -149,19 +151,29 @@ interface ExplorerViewProps {
  * - Sidebar state persisted to localStorage
  * - Removed view mode toggle (always explorer mode)
  * - Smooth animations for sidebar collapse
+ * - Added totalResults prop for displaying total count
  *
  * @example
  * ```tsx
  * <ExplorerView
  *   searchResults={searchResults}
+ *   totalResults={totalResults}
  *   onPreview={handlePreview}
  *   onDownload={handleDownload}
  * />
  * ```
  */
-export const ExplorerView: FC<ExplorerViewProps> = ({ searchResults, onPreview, onDownload }) => {
+export const ExplorerView: FC<ExplorerViewProps> = ({ 
+  searchResults, 
+  totalResults,
+  onPreview, 
+  onDownload 
+}) => {
   const [selectedFolder, setSelectedFolder] = useState<string>('')
   const { isCollapsed, toggleCollapse } = useSidebarState(false)
+
+  // トータル件数を表示（渡されていない場合はsearchResults.lengthを使用）
+  const displayTotal = totalResults ?? searchResults.length
 
   const handleFolderSelect = (path: string) => {
     setSelectedFolder(path)
@@ -204,20 +216,19 @@ export const ExplorerView: FC<ExplorerViewProps> = ({ searchResults, onPreview, 
                 {selectedFolder ? `${selectedFolder} の検索結果` : '検索結果'}
               </h3>
               <span className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
-                {searchResults.length}件
+                {displayTotal.toLocaleString()}件
               </span>
             </div>
-            {/* 検索結果リスト */}
-            <div className="overflow-y-auto h-[calc(100%-48px)] p-4 space-y-4">
+            {/* 検索結果リスト - 仮想スクロール対応 */}
+            <div className="h-[calc(100%-48px)] p-4">
               {searchResults.length > 0 ? (
-                searchResults.map((result) => (
-                  <SearchResultCard
-                    key={result.id}
-                    result={result}
-                    onPreview={onPreview}
-                    onDownload={onDownload}
-                  />
-                ))
+                <VirtualizedSearchResults
+                  results={searchResults}
+                  onPreview={onPreview || (() => {})}
+                  onDownload={onDownload || (() => {})}
+                  viewMode="list"
+                  className="h-full"
+                />
               ) : (
                 <div className="text-center py-20">
                   <p className="text-[#6E6E73] dark:text-[#8E8E93]">

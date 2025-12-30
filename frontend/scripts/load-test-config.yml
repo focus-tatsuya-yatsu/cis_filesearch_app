@@ -1,0 +1,119 @@
+# Artillery Load Test Configuration
+# 画像検索機能のロードテスト設定
+
+config:
+  target: "{{ $processEnvironment.API_GATEWAY_URL }}"
+  phases:
+    # フェーズ1: ウォームアップ（1分間、1 req/sec）
+    - duration: 60
+      arrivalRate: 1
+      name: "Warmup"
+
+    # フェーズ2: 通常負荷（5分間、10 req/sec）
+    - duration: 300
+      arrivalRate: 10
+      name: "Normal Load"
+
+    # フェーズ3: ピーク負荷（3分間、50 req/sec）
+    - duration: 180
+      arrivalRate: 50
+      name: "Peak Load"
+
+    # フェーズ4: クールダウン（1分間、5 req/sec）
+    - duration: 60
+      arrivalRate: 5
+      name: "Cooldown"
+
+  # パフォーマンス目標
+  ensure:
+    maxErrorRate: 1 # エラー率1%未満
+    p95: 5000 # P95レスポンスタイム5秒未満
+    p99: 8000 # P99レスポンスタイム8秒未満
+
+  # プラグイン
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  # カスタムメトリクス
+  metrics:
+    - name: "image_upload_duration"
+      type: "histogram"
+    - name: "search_duration"
+      type: "histogram"
+    - name: "cache_hit_rate"
+      type: "rate"
+
+scenarios:
+  # シナリオ1: 画像アップロード → 検索
+  - name: "Image Search Flow"
+    weight: 70
+    flow:
+      # 画像をアップロードして埋め込みベクトル生成
+      - post:
+          url: "/api/image-embedding/"
+          beforeRequest: "selectRandomImage"
+          formData:
+            image: "@{{ imageFile }}"
+          capture:
+            - json: "$.data.embedding"
+              as: "embedding"
+            - json: "$.performance.totalTime"
+              as: "uploadTime"
+            - json: "$.performance.cached"
+              as: "cached"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: "data.embedding"
+
+      # 埋め込みベクトルで検索
+      - get:
+          url: "/search"
+          qs:
+            imageEmbedding: "{{ embedding }}"
+            size: 20
+            sortBy: "relevance"
+          capture:
+            - json: "$.took"
+              as: "searchTime"
+            - json: "$.pagination.total"
+              as: "totalResults"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+      # カスタムメトリクスを記録
+      - function: "recordMetrics"
+
+  # シナリオ2: キャッシュされた画像の再検索
+  - name: "Cached Image Search"
+    weight: 30
+    flow:
+      # 同じ画像を再度アップロード（キャッシュヒット期待）
+      - post:
+          url: "/api/image-embedding/"
+          beforeRequest: "selectCachedImage"
+          formData:
+            image: "@{{ cachedImageFile }}"
+          capture:
+            - json: "$.data.embedding"
+              as: "embedding"
+            - json: "$.performance.cached"
+              as: "cached"
+          expect:
+            - statusCode: 200
+            - equals:
+                - "{{ cached }}"
+                - true
+
+      - get:
+          url: "/search"
+          qs:
+            imageEmbedding: "{{ embedding }}"
+            size: 20
+          expect:
+            - statusCode: 200
+
+# テストデータとヘルパー関数
+processor: "./load-test-processor.js"

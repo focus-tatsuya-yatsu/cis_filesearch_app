@@ -1,0 +1,7 @@
+{
+  "Variables": {
+    "OPENSEARCH_INDEX": "file-index-v2-knn",
+    "OPENSEARCH_ENDPOINT": "https://vpc-cis-filesearch-opensearch-xuupcgptq6a4opklfeh65x3uqe.ap-northeast-1.es.amazonaws.com",
+    "NODE_ENV": "production"
+  }
+}

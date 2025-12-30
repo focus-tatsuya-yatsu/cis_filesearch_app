@@ -1,0 +1,23 @@
+# AWS認証情報設定テンプレート
+#
+# このファイルを参考に、~/.aws/credentials ファイルを作成してください
+
+# 1. credentialsファイルを作成
+mkdir -p ~/.aws
+touch ~/.aws/credentials
+touch ~/.aws/config
+
+# 2. ~/.aws/credentials に以下の内容を記載（実際の値に置き換えてください）：
+[default]
+aws_access_key_id = YOUR_ACCESS_KEY_ID_HERE
+aws_secret_access_key = YOUR_SECRET_ACCESS_KEY_HERE
+
+# 3. ~/.aws/config に以下の内容を記載：
+[default]
+region = ap-northeast-1
+output = json
+
+# 例（実際の値ではありません）：
+# [default]
+# aws_access_key_id = AKIAIOSFODNN7EXAMPLE
+# aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY

@@ -27,7 +27,7 @@ class AWSConfig:
     # SQS Configuration
     sqs_queue_url: str = os.environ.get('SQS_QUEUE_URL', '')
     sqs_wait_time_seconds: int = int(os.environ.get('SQS_WAIT_TIME', '20'))
-    sqs_visibility_timeout: int = int(os.environ.get('SQS_VISIBILITY_TIMEOUT', '300'))
+    sqs_visibility_timeout: int = int(os.environ.get('SQS_VISIBILITY_TIMEOUT', '600'))  # Increased to 10 minutes
     sqs_max_messages: int = int(os.environ.get('SQS_MAX_MESSAGES', '1'))
 
     # OpenSearch Configuration

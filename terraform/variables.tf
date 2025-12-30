@@ -76,10 +76,41 @@ variable "opensearch_instance_type" {
   default     = "t3.small.search"
 }
 
-variable "opensearch_ebs_volume_size" {
+variable "opensearch_instance_count" {
+  description = "Number of OpenSearch instances"
+  type        = number
+  default     = 1
+}
+
+variable "opensearch_volume_size" {
   description = "OpenSearch EBS volume size in GB"
   type        = number
   default     = 50
+}
+
+variable "opensearch_ebs_volume_size" {
+  description = "OpenSearch EBS volume size in GB (deprecated, use opensearch_volume_size)"
+  type        = number
+  default     = 50
+}
+
+variable "opensearch_master_user" {
+  description = "OpenSearch master username for fine-grained access control"
+  type        = string
+  default     = "admin"
+  sensitive   = true
+}
+
+variable "opensearch_master_password" {
+  description = "OpenSearch master password for fine-grained access control"
+  type        = string
+  sensitive   = true
+}
+
+variable "create_opensearch_service_role" {
+  description = "Whether to create OpenSearch service linked role (set to false if it already exists)"
+  type        = bool
+  default     = false
 }
 
 # Lambda Configuration

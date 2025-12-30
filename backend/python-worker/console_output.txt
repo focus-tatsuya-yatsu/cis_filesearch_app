@@ -1,0 +1,207 @@
+i-051310dd94772ad70	[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[0m[35m[40m[2J[01;01H[=3h[2J[01;01H[0m[37m[40m  Booting `Amazon Linux (6.1.156-177.286.amzn2023.x86_64) 2023'
+
+[    0.069064] RETBleed: WARNING: Spectre v2 mitigation leaves CPU vulnerable to RETBleed attacks, data leaks possible!
+[    3.522192] systemd-journald[864]: Received client request to flush runtime journal.
+[    3.850190] input: Power Button as /devices/LNXSYSTM:00/LNXPWRBN:00/input/input0
+[    3.893215] ACPI: button: Power Button [PWRF]
+[    3.893772] input: Sleep Button as /devices/LNXSYSTM:00/LNXSLPBN:00/input/input1
+[    3.894865] ACPI: button: Sleep Button [SLPF]
+[    3.895682] RPC: Registered named UNIX socket transport module.
+[    3.896368] RPC: Registered udp transport module.
+[    3.897002] RPC: Registered tcp transport module.
+[    3.897647] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    3.903044] ena 0000:00:05.0: Elastic Network Adapter (ENA) v2.15.0g
+[    3.918361] i8042: PNP: PS/2 Controller [PNP0303:KBD,PNP0f13:MOU] at 0x60,0x64 irq 1,12
+[    3.919542] i8042: Warning: Keylock active
+[    3.920106] ena 0000:00:05.0: ENA device version: 0.10
+[    3.920703] ena 0000:00:05.0: ENA controller version: 0.0.1 implementation version 1
+[    3.921165] serio: i8042 KBD port at 0x60,0x64 irq 1
+[    3.922428] serio: i8042 AUX port at 0x60,0x64 irq 12
+[    4.002944] ena 0000:00:05.0: LLQ is not supported Fallback to host mode policy.
+[    4.015426] ena 0000:00:05.0: Elastic Network Adapter (ENA) found at mem c0400000, mac addr 0e:0e:10:43:9b:51
+[    4.063106] ena 0000:00:05.0 ens5: renamed from eth0
+[    4.244367] zram_generator::config[1446]: zram0: system has too much memory (3827MB), limit is 800MB, ignoring.
+[    4.776060] rm[1470]: removed '/var/lib/cloud/instance/boot-finished'
+[    4.777369] rm[1470]: removed '/var/lib/cloud/instance'
+[    5.053420] ena 0000:00:05.0 ens5: Local page cache is disabled for less than 16 channels
+[    6.356867] cloud-init[1601]: Cloud-init v. 22.2.2 running 'init' at Sun, 14 Dec 2025 10:45:55 +0000. Up 6.31 seconds.
+[    6.382585] cloud-init[1601]: ci-info: ++++++++++++++++++++++++++++++++++++++Net device info+++++++++++++++++++++++++++++++++++++++
+[    6.384825] cloud-init[1601]: ci-info: +--------+------+-----------------------------+---------------+--------+-------------------+
+[    6.386804] cloud-init[1601]: ci-info: | Device |  Up  |           Address           |      Mask     | Scope  |     Hw-Address    |
+[    6.388831] cloud-init[1601]: ci-info: +--------+------+-----------------------------+---------------+--------+-------------------+
+[    6.390832] cloud-init[1601]: ci-info: |  ens5  | True |          10.0.12.64         | 255.255.255.0 | global | 0e:0e:10:43:9b:51 |
+[    6.392907] cloud-init[1601]: ci-info: |  ens5  | True | fe80::c0e:10ff:fe43:9b51/64 |       .       |  link  | 0e:0e:10:43:9b:51 |
+[    6.394850] cloud-init[1601]: ci-info: |   lo   | True |          127.0.0.1          |   255.0.0.0   |  host  |         .         |
+[    6.396930] cloud-init[1601]: ci-info: |   lo   | True |           ::1/128           |       .       |  host  |         .         |
+[    6.398918] cloud-init[1601]: ci-info: +--------+------+-----------------------------+---------------+--------+-------------------+
+[    6.400870] cloud-init[1601]: ci-info: +++++++++++++++++++++++++++++Route IPv4 info+++++++++++++++++++++++++++++
+[    6.402690] cloud-init[1601]: ci-info: +-------+-------------+-----------+-----------------+-----------+-------+
+[    6.404502] cloud-init[1601]: ci-info: | Route | Destination |  Gateway  |     Genmask     | Interface | Flags |
+[    6.406230] cloud-init[1601]: ci-info: +-------+-------------+-----------+-----------------+-----------+-------+
+[    6.407985] cloud-init[1601]: ci-info: |   0   |   0.0.0.0   | 10.0.12.1 |     0.0.0.0     |    ens5   |   UG  |
+[    6.409764] cloud-init[1601]: ci-info: |   1   |   10.0.0.2  | 10.0.12.1 | 255.255.255.255 |    ens5   |  UGH  |
+[    6.411568] cloud-init[1601]: ci-info: |   2   |  10.0.12.0  |  0.0.0.0  |  255.255.255.0  |    ens5   |   U   |
+[    6.413265] cloud-init[1601]: ci-info: |   3   |  10.0.12.1  |  0.0.0.0  | 255.255.255.255 |    ens5   |   UH  |
+[    6.415034] cloud-init[1601]: ci-info: +-------+-------------+-----------+-----------------+-----------+-------+
+[    6.416861] cloud-init[1601]: ci-info: +++++++++++++++++++Route IPv6 info+++++++++++++++++++
+[    6.418314] cloud-init[1601]: ci-info: +-------+-------------+---------+-----------+-------+
+[    6.419927] cloud-init[1601]: ci-info: | Route | Destination | Gateway | Interface | Flags |
+[    6.421443] cloud-init[1601]: ci-info: +-------+-------------+---------+-----------+-------+
+[    6.422884] cloud-init[1601]: ci-info: |   0   |  fe80::/64  |    ::   |    ens5   |   U   |
+[    6.424403] cloud-init[1601]: ci-info: |   2   |    local    |    ::   |    ens5   |   U   |
+[    6.425957] cloud-init[1601]: ci-info: |   3   |  multicast  |    ::   |    ens5   |   U   |
+[    6.427508] cloud-init[1601]: ci-info: +-------+-------------+---------+-----------+-------+
+[    7.101862] cloud-init[1601]: Generating public/private ed25519 key pair.
+[    7.103160] cloud-init[1601]: Your identification has been saved in /etc/ssh/ssh_host_ed25519_key
+[    7.104875] cloud-init[1601]: Your public key has been saved in /etc/ssh/ssh_host_ed25519_key.pub
+[    7.106361] cloud-init[1601]: The key fingerprint is:
+[    7.107243] cloud-init[1601]: SHA256:ho8hsho33UrcUxfmRwAnLmcc2GwP9wUXQ7oZnq4jphY root@ip-10-0-12-64.ap-northeast-1.compute.internal
+[    7.109213] cloud-init[1601]: The key's randomart image is:
+[    7.110205] cloud-init[1601]: +--[ED25519 256]--+
+[    7.111058] cloud-init[1601]: |       ++.o .o=. |
+[    7.111936] cloud-init[1601]: |      .o=+.. o.. |
+[    7.113287] cloud-init[1601]: |      ..=+o.+.   |
+[    7.114170] cloud-init[1601]: |       = o.+.=   |
+[    7.115041] cloud-init[1601]: |  . . o S o *    |
+[    7.115920] cloud-init[1601]: |   = +E* . o     |
+[    7.116816] cloud-init[1601]: |. + + =..   .    |
+[    7.117670] cloud-init[1601]: | + o ...o ..     |
+[    7.118481] cloud-init[1601]: |.   ...o ...     |
+[    7.119311] cloud-init[1601]: +----[SHA256]-----+
+[    7.120277] cloud-init[1601]: Generating public/private ecdsa key pair.
+[    7.121419] cloud-init[1601]: Your identification has been saved in /etc/ssh/ssh_host_ecdsa_key
+[    7.122906] cloud-init[1601]: Your public key has been saved in /etc/ssh/ssh_host_ecdsa_key.pub
+[    7.124455] cloud-init[1601]: The key fingerprint is:
+[    7.125366] cloud-init[1601]: SHA256:9odJ6Gfc5g+X+aKLoiHDBsSCDewgbi7xdpY7fDHbo+w root@ip-10-0-12-64.ap-northeast-1.compute.internal
+[    7.127258] cloud-init[1601]: The key's randomart image is:
+[    7.128209] cloud-init[1601]: +---[ECDSA 256]---+
+[    7.129072] cloud-init[1601]: |o                |
+[    7.129885] cloud-init[1601]: |+=               |
+[    7.130685] cloud-init[1601]: |B +              |
+[    7.131550] cloud-init[1601]: |.*       .       |
+[    7.132417] cloud-init[1601]: |oo.  .  S .      |
+[    7.133247] cloud-init[1601]: |..oo+ oo + +   o |
+[    7.134186] cloud-init[1601]: |.. +=..=. B = +  |
+[    7.135049] cloud-init[1601]: |   .++o.+o = o.. |
+[    7.135980] cloud-init[1601]: |     +Eo o. ++...|
+[    7.136873] cloud-init[1601]: +----[SHA256]-----+
+[    7.616147] cloud-init[1683]: Cloud-init v. 22.2.2 running 'modules:config' at Sun, 14 Dec 2025 10:45:56 +0000. Up 7.53 seconds.
+2025/12/14 10:45:57Z: SSM Agent unable to acquire credentials: <error>no valid credentials could be retrieved for ec2 identity. Default Host Management Err: error calling RequestManagedInstanceRoleToken: AccessDeniedException: Systems Manager's instance management role is not configured for account: 770923989980
+	status code: 400, request id: 55cf2ae9-8666-44f0-a681-d459dc25e9be</error>
+[    8.386227] cloud-init[1699]: Cloud-init v. 22.2.2 running 'modules:final' at Sun, 14 Dec 2025 10:45:57 +0000. Up 8.27 seconds.
+[    8.541888] cloud-init[1699]: + exec
+[    8.542728] cloud-init[1699]: ++ tee /var/log/user-data.log
+[    8.543768] cloud-init[1699]: + exec
+[    8.544461] cloud-init[1699]: ++ date
+[    8.545208] cloud-init[1699]: + echo '=== User Data Script Started at Sun Dec 14 10:45:57 UTC 2025 ==='
+[    8.546884] cloud-init[1699]: === User Data Script Started at Sun Dec 14 10:45:57 UTC 2025 ===
+[    8.548518] cloud-init[1699]: + export AWS_REGION=ap-northeast-1
+[    8.549685] cloud-init[1699]: + AWS_REGION=ap-northeast-1
+[    8.550676] cloud-init[1699]: + export S3_BUCKET=cis-filesearch-worker-scripts
+[    8.552000] cloud-init[1699]: + S3_BUCKET=cis-filesearch-worker-scripts
+[    8.553176] cloud-init[1699]: + export SQS_QUEUE_URL=https://sqs.ap-northeast-1.amazonaws.com/770923989980/cis-filesearch-index-queue
+[    8.555939] cloud-init[1699]: + SQS_QUEUE_URL=https://sqs.ap-northeast-1.amazonaws.com/770923989980/cis-filesearch-index-queue
+[    8.557992] cloud-init[1699]: + export DLQ_QUEUE_URL=https://sqs.ap-northeast-1.amazonaws.com/770923989980/cis-filesearch-dlq
+[    8.560082] cloud-init[1699]: + DLQ_QUEUE_URL=https://sqs.ap-northeast-1.amazonaws.com/770923989980/cis-filesearch-dlq
+[    8.562038] cloud-init[1699]: + export OPENSEARCH_ENDPOINT=https://vpc-cis-filesearch-opensearch-xuupcgptq6a4opklfeh65x3uqe.ap-northeast-1.es.amazonaws.com
+[    8.564612] cloud-init[1699]: + OPENSEARCH_ENDPOINT=https://vpc-cis-filesearch-opensearch-xuupcgptq6a4opklfeh65x3uqe.ap-northeast-1.es.amazonaws.com
+[    8.566969] cloud-init[1699]: + yum update -y
+[   10.213607] cloud-init[1699]: Amazon Linux 2023 repository                     42 kB/s | 3.6 kB     00:00
+[   12.343456] cloud-init[1699]: Amazon Linux 2023 Kernel Livepatch repository    22 kB/s | 2.9 kB     00:00
+[   12.460884] cloud-init[1699]: ================================================================================
+[   12.461073] cloud-init[1699]: WARNING:
+[   12.461268] cloud-init[1699]:   A newer release of "Amazon Linux" is available.
+[   12.461481] cloud-init[1699]:   Available Versions:
+[   12.461686] cloud-init[1699]:   Version 2023.9.20251105:
+[   12.461902] cloud-init[1699]:     Run the following command to upgrade to 2023.9.20251105:
+[   12.462114] cloud-init[1699]:       dnf upgrade --releasever=2023.9.20251105
+[   12.462320] cloud-init[1699]:     Release notes:
+[   12.462533] cloud-init[1699]:      https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.9.20251105.html
+[   12.462745] cloud-init[1699]:   Version 2023.9.20251110:
+[   12.462948] cloud-init[1699]:     Run the following command to upgrade to 2023.9.20251110:
+[   12.463450] cloud-init[1699]:       dnf upgrade --releasever=2023.9.20251110
+[   12.463643] cloud-init[1699]:     Release notes:
+[   12.463856] cloud-init[1699]:      https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.9.20251110.html
+[   12.464077] cloud-init[1699]:   Version 2023.9.20251117:
+[   12.464298] cloud-init[1699]:     Run the following command to upgrade to 2023.9.20251117:
+[   12.464504] cloud-init[1699]:       dnf upgrade --releasever=2023.9.20251117
+[   12.464734] cloud-init[1699]:     Release notes:
+[   12.464962] cloud-init[1699]:      https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.9.20251117.html
+[   12.465184] cloud-init[1699]:   Version 2023.9.20251208:
+[   12.465414] cloud-init[1699]:     Run the following command to upgrade to 2023.9.20251208:
+[   12.465637] cloud-init[1699]:       dnf upgrade --releasever=2023.9.20251208
+[   12.465868] cloud-init[1699]:     Release notes:
+[   12.466084] cloud-init[1699]:      https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.9.20251208.html
+[   12.466319] cloud-init[1699]: ================================================================================
+[   12.688857] cloud-init[1699]: Dependencies resolved.
+[   12.741841] cloud-init[1699]: Nothing to do.
+[   12.742882] cloud-init[1699]: Complete!
+[   12.793391] cloud-init[1699]: + yum install -y python3 python3-pip
+[   13.212699] cloud-init[1699]: Last metadata expiration check: 0:00:01 ago on Sun Dec 14 10:46:01 2025.
+[   13.251377] cloud-init[1699]: Package python3-3.9.24-1.amzn2023.0.3.x86_64 is already installed.
+[   13.253208] cloud-init[1699]: Package python3-pip-21.3.1-2.amzn2023.0.14.noarch is already installed.
+[   13.319718] cloud-init[1699]: Dependencies resolved.
+[   13.359133] cloud-init[1699]: Nothing to do.
+[   13.359270] cloud-init[1699]: Complete!
+[   13.407808] cloud-init[1699]: + pip3 install boto3 opensearch-py requests pillow PyPDF2
+
+Amazon Linux 2023.9.20251027
+Kernel 6.1.156-177.286.amzn2023.x86_64 on an x86_64 (-)
+
+ip-10-0-12-64 login: [   16.591677] cloud-init[1699]: Collecting boto3
+[   16.620785] cloud-init[1699]:   Downloading boto3-1.42.9-py3-none-any.whl (140 kB)
+[   16.836358] cloud-init[1699]: Collecting opensearch-py
+[   16.844486] cloud-init[1699]:   Downloading opensearch_py-3.0.0-py3-none-any.whl (371 kB)
+[   16.865140] cloud-init[1699]: Requirement already satisfied: requests in /usr/lib/python3.9/site-packages (2.25.1)
+[   17.871100] cloud-init[1699]: Collecting pillow
+[   17.879230] cloud-init[1699]:   Downloading pillow-11.3.0-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.6 MB)
+[   18.261798] cloud-init[1699]: Collecting PyPDF2
+[   18.261939] cloud-init[1699]:   Downloading pypdf2-3.0.1-py3-none-any.whl (232 kB)
+[   18.262179] cloud-init[1699]: Requirement already satisfied: jmespath<2.0.0,>=0.7.1 in /usr/lib/python3.9/site-packages (from boto3) (0.10.0)
+[   19.813019] cloud-init[1699]: Collecting botocore<1.43.0,>=1.42.9
+[   19.819690] cloud-init[1699]:   Downloading botocore-1.42.9-py3-none-any.whl (14.5 MB)
+[   20.121250] cloud-init[1699]: Collecting s3transfer<0.17.0,>=0.16.0
+[   20.127445] cloud-init[1699]:   Downloading s3transfer-0.16.0-py3-none-any.whl (86 kB)
+[   20.334034] cloud-init[1699]: Collecting Events
+[   20.341731] cloud-init[1699]:   Downloading Events-0.5-py3-none-any.whl (6.8 kB)
+[   20.425221] cloud-init[1699]: Collecting requests
+[   20.431510] cloud-init[1699]:   Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+[   20.524051] cloud-init[1699]: Collecting urllib3<1.27,>=1.26.19
+[   20.531063] cloud-init[1699]:   Downloading urllib3-1.26.20-py2.py3-none-any.whl (144 kB)
+[   20.539119] cloud-init[1699]: Requirement already satisfied: python-dateutil in /usr/lib/python3.9/site-packages (from opensearch-py) (2.8.1)
+[   20.592904] cloud-init[1699]: Collecting certifi>=2024.07.04
+[   20.599806] cloud-init[1699]:   Downloading certifi-2025.11.12-py3-none-any.whl (159 kB)
+[   20.614097] cloud-init[1699]: Requirement already satisfied: idna<4,>=2.5 in /usr/lib/python3.9/site-packages (from requests) (2.10)
+[   21.163568] cloud-init[1699]: Collecting charset_normalizer<4,>=2
+[   21.169915] cloud-init[1699]:   Downloading charset_normalizer-3.4.4-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (153 kB)
+[   21.433947] cloud-init[1699]: Collecting typing_extensions>=3.10.0.0
+[   21.442232] cloud-init[1699]:   Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+[   21.483164] cloud-init[1699]: Requirement already satisfied: six>=1.5 in /usr/lib/python3.9/site-packages (from python-dateutil->opensearch-py) (1.15.0)
+[   22.137017] cloud-init[1699]: Installing collected packages: urllib3, charset-normalizer, certifi, botocore, typing-extensions, s3transfer, requests, Events, PyPDF2, pillow, opensearch-py, boto3
+[   22.140020] cloud-init[1699]:   Attempting uninstall: urllib3
+[   22.141393] cloud-init[1699]:     Found existing installation: urllib3 1.25.10
+[   22.150580] cloud-init[1699]:     Uninstalling urllib3-1.25.10:
+[   22.650071] cloud-init[1699]:       Successfully uninstalled urllib3-1.25.10
+[   23.871525] cloud-init[1699]:   Attempting uninstall: requests
+[   23.871723] cloud-init[1699]:     Found existing installation: requests 2.25.1
+[   23.872274] cloud-init[1699]: ERROR: Cannot uninstall requests 2.25.1, RECORD file not found. Hint: The package was installed by rpm.
+[   24.272557] cloud-init[1699]: 2025-12-14 10:46:13,606 - cc_scripts_user.py[WARNING]: Failed to run module scripts-user (scripts in /var/lib/cloud/instance/scripts)
+[   24.274914] cloud-init[1699]: 2025-12-14 10:46:13,607 - util.py[WARNING]: Running module scripts-user (<module 'cloudinit.config.cc_scripts_user' from '/usr/lib/python3.9/site-packages/cloudinit/config/cc_scripts_user.py'>) failed
+ci-info: +++++++++++++++++++++++++++++++Authorized keys from /home/ec2-user/.ssh/authorized_keys for user ec2-user+++++++++++++++++++++++++++++++
+ci-info: +---------+-------------------------------------------------------------------------------------------------+---------+----------------+
+ci-info: | Keytype |                                       Fingerprint (sha256)                                      | Options |    Comment     |
+ci-info: +---------+-------------------------------------------------------------------------------------------------+---------+----------------+
+ci-info: | ssh-rsa | 43:32:6e:b3:e4:c3:9d:84:25:37:c0:41:af:b7:9b:45:99:6e:4e:69:3b:2d:41:fa:6e:7d:7e:76:33:8d:9c:0e |    -    | cis-worker-key |
+ci-info: +---------+-------------------------------------------------------------------------------------------------+---------+----------------+
+<14>Dec 14 10:46:13 cloud-init: #############################################################
+<14>Dec 14 10:46:13 cloud-init: -----BEGIN SSH HOST KEY FINGERPRINTS-----
+<14>Dec 14 10:46:13 cloud-init: 256 SHA256:9odJ6Gfc5g+X+aKLoiHDBsSCDewgbi7xdpY7fDHbo+w root@ip-10-0-12-64.ap-northeast-1.compute.internal (ECDSA)
+<14>Dec 14 10:46:13 cloud-init: 256 SHA256:ho8hsho33UrcUxfmRwAnLmcc2GwP9wUXQ7oZnq4jphY root@ip-10-0-12-64.ap-northeast-1.compute.internal (ED25519)
+<14>Dec 14 10:46:13 cloud-init: -----END SSH HOST KEY FINGERPRINTS-----
+<14>Dec 14 10:46:13 cloud-init: #############################################################
+-----BEGIN SSH HOST KEY KEYS-----
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBDFoWcOVa8GSG7fN6b7WO32hnKnVyaxdjt2b/v1F5Y8ZCLc+66XN9gWaPk3+seJQ5XjW+SSuuyW+/OlQCTlZZRs= root@ip-10-0-12-64.ap-northeast-1.compute.internal
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOQeFvjL/jI/EqqwKjtiGjEVDTpG9IVRoSkxrTwu+i+A root@ip-10-0-12-64.ap-northeast-1.compute.internal
+-----END SSH HOST KEY KEYS-----
+[   24.342307] cloud-init[1699]: Cloud-init v. 22.2.2 finished at Sun, 14 Dec 2025 10:46:13 +0000. Datasource DataSourceEc2.  Up 24.33 seconds
+	2025-12-14T10:53:00+00:00

@@ -3,23 +3,33 @@
  * フロントエンドから検索APIを呼び出すクライアント
  */
 
+import { ImageSearchDebugLogger } from './debug-logger'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || '/api/search';
+
 export interface SearchParams {
   q?: string;
   searchMode?: 'and' | 'or';
+  imageEmbedding?: number[];
+  searchType?: 'text' | 'image';
   fileType?: string;
   dateFrom?: string;
   dateTo?: string;
+  dateFilterType?: 'creation' | 'modification';
   page?: number;
   limit?: number;
   sortBy?: 'relevance' | 'date' | 'name' | 'size';
   sortOrder?: 'asc' | 'desc';
+  // フィルター条件
+  categories?: string[];  // ['road', 'structure']
+  folders?: string[];     // ['H22_JOB', 'H23_JOB']
 }
 
 export interface SearchResult {
   id: string;
   fileName: string;
   filePath: string;
-  fileType: string;
+  fileType?: string;
   fileSize: number;
   modifiedDate: string;
   snippet: string;
@@ -35,14 +45,13 @@ export interface SearchResponse {
   success: boolean;
   data: {
     results: SearchResult[];
-    pagination: {
-      total: number;
-      page: number;
-      limit: number;
-      totalPages: number;
-    };
-    query: SearchParams;
-    took: number;
+    total: number;
+    page: number;
+    limit: number;
+    searchType: string;
+    index: string;
+    query?: SearchParams;
+    took?: number;
   };
 }
 
@@ -52,103 +61,227 @@ export interface SearchError {
   message?: string;
 }
 
-/**
- * 検索APIを呼び出す
- */
-export async function searchFiles(
-  params: SearchParams
-): Promise<SearchResponse> {
-  const searchParams = new URLSearchParams();
+export interface ApiErrorResponse {
+  userMessage: string;
+  technicalMessage: string;
+  statusCode: number;
+  retryable: boolean;
+  debugInfo?: {
+    originalError?: string;
+    timestamp: string;
+    endpoint: string;
+  };
+}
 
-  // パラメータを追加
-  if (params.q) searchParams.set('q', params.q);
-  if (params.searchMode) searchParams.set('searchMode', params.searchMode);
-  if (params.fileType) searchParams.set('fileType', params.fileType);
-  if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
-  if (params.dateTo) searchParams.set('dateTo', params.dateTo);
-  if (params.page) searchParams.set('page', params.page.toString());
-  if (params.limit) searchParams.set('limit', params.limit.toString());
-  if (params.sortBy) searchParams.set('sortBy', params.sortBy);
-  if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+const getErrorMessage = (statusCode: number, errorData?: SearchError): string => {
+  switch (statusCode) {
+    case 400:
+      return errorData?.message || '検索条件が正しくありません。入力内容を確認してください。';
+    case 401:
+      return '認証が必要です。ログインしてください。';
+    case 403:
+      return 'このリソースへのアクセス権限がありません。';
+    case 404:
+      return '検索サービスが見つかりません。管理者に連絡してください。';
+    case 429:
+      return 'リクエストが多すぎます。しばらく待ってから再度お試しください。';
+    case 500:
+      return 'サーバーエラーが発生しました。時間をおいて再度お試しください。';
+    case 502:
+      return 'ゲートウェイエラーが発生しました。時間をおいて再度お試しください。';
+    case 503:
+      return 'サービスが一時的に利用できません。しばらく待ってから再度お試しください。';
+    case 504:
+      return 'タイムアウトが発生しました。検索条件を絞り込んで再度お試しください。';
+    default:
+      return errorData?.message || '検索中に予期しないエラーが発生しました。';
+  }
+};
 
-  const url = `/api/search?${searchParams.toString()}`;
+const isRetryableError = (statusCode: number): boolean => {
+  return [429, 502, 503, 504].includes(statusCode);
+};
+
+async function handleSearchResponse(
+  response: Response,
+  url: string,
+  isDevelopment: boolean
+): Promise<SearchResponse | ApiErrorResponse> {
+  if (!response.ok) {
+    let errorData: SearchError | null = null;
+    try {
+      errorData = await response.json();
+    } catch (parseError) {
+      ImageSearchDebugLogger.logError('handleSearchResponse - JSON Parse Error', parseError)
+    }
+
+    const statusCode = response.status;
+    const userMessage = getErrorMessage(statusCode, errorData || undefined);
+    const technicalMessage = errorData?.message || errorData?.error || response.statusText;
+
+    const errorResponse: ApiErrorResponse = {
+      userMessage,
+      technicalMessage,
+      statusCode,
+      retryable: isRetryableError(statusCode),
+    };
+
+    if (isDevelopment) {
+      errorResponse.debugInfo = {
+        originalError: errorData?.error,
+        timestamp: new Date().toISOString(),
+        endpoint: url,
+      };
+      console.error('Search API Error (Development):', { statusCode, userMessage, technicalMessage, errorData, url });
+    }
+
+    return errorResponse;
+  }
+
+  try {
+    const data: SearchResponse = await response.json();
+    return data;
+  } catch (parseError) {
+    ImageSearchDebugLogger.logError('handleSearchResponse - Response Parse Error', parseError)
+    return {
+      userMessage: 'サーバーからの応答を処理できませんでした。',
+      technicalMessage: 'Failed to parse JSON response',
+      statusCode: response.status,
+      retryable: false,
+    };
+  }
+}
+
+function handleSearchError(error: unknown, url: string, isDevelopment: boolean): ApiErrorResponse {
+  let errorMessage = 'Network error';
+  if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+
+  const errorResponse: ApiErrorResponse = {
+    userMessage: 'ネットワークエラーが発生しました。インターネット接続を確認してください。',
+    technicalMessage: errorMessage,
+    statusCode: 0,
+    retryable: true,
+  };
+
+  if (isDevelopment) {
+    errorResponse.debugInfo = {
+      originalError: String(error),
+      timestamp: new Date().toISOString(),
+      endpoint: url,
+    };
+    console.error('Search API Network Error (Development):', error);
+  }
+
+  return errorResponse;
+}
+
+export async function searchFiles(params: SearchParams): Promise<SearchResponse | ApiErrorResponse> {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // 画像検索の場合
+  if (params.imageEmbedding && params.imageEmbedding.length > 0) {
+    const url = API_BASE_URL;
+    const startTime = ImageSearchDebugLogger.startPerformance('Image Search Request')
+
+    ImageSearchDebugLogger.logVectorData(params.imageEmbedding, 'Sending to API')
+
+    const requestBody = {
+      searchQuery: params.q || '', // テキストクエリ（ハイブリッド検索用）
+      imageVector: params.imageEmbedding,
+      searchType: 'image',
+      searchMode: params.searchMode || 'or',
+      page: params.page || 1,
+      limit: params.limit || 20,
+      sortBy: params.sortBy || 'relevance',
+      sortOrder: params.sortOrder || 'desc',
+      // フィルター条件
+      fileType: params.fileType,
+      categories: params.categories,
+      folders: params.folders,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      dateFilterType: params.dateFilterType,
+    }
+
+    ImageSearchDebugLogger.logRequest(url, 'POST', requestBody)
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      ImageSearchDebugLogger.endPerformance('Image Search Request', startTime)
+      const data = await handleSearchResponse(response, url, isDevelopment);
+      ImageSearchDebugLogger.logResponse(url, response.status, data)
+      return data
+    } catch (error: unknown) {
+      ImageSearchDebugLogger.endPerformance('Image Search Request', startTime)
+      ImageSearchDebugLogger.logError('searchFiles (Image Search)', error)
+      return handleSearchError(error, url, isDevelopment);
+    }
+  }
+
+  // テキスト検索の場合（POST）
+  const url = API_BASE_URL;
+
+  const requestBody = {
+    searchQuery: params.q || '',
+    searchType: 'text',
+    searchMode: params.searchMode || 'or',
+    page: params.page || 1,
+    limit: params.limit || 20,
+    sortBy: params.sortBy || 'relevance',
+    sortOrder: params.sortOrder || 'desc',
+    // フィルター条件
+    fileType: params.fileType,
+    categories: params.categories,
+    folders: params.folders,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+    dateFilterType: params.dateFilterType,
+  }
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
     });
-
-    if (!response.ok) {
-      const errorData: SearchError = await response.json();
-      throw new Error(errorData.message || errorData.error);
-    }
-
-    const data: SearchResponse = await response.json();
-    return data;
-
-  } catch (error: any) {
-    console.error('Search API call failed:', error);
-    throw new Error(error.message || 'Failed to perform search');
+    return await handleSearchResponse(response, url, isDevelopment);
+  } catch (error: unknown) {
+    return handleSearchError(error, url, isDevelopment);
   }
 }
 
-/**
- * 検索クエリを検証
- */
-export function validateSearchQuery(query: string): {
-  isValid: boolean;
-  error?: string;
-} {
-  // 空白のみのクエリは無効
+export const isApiError = (response: SearchResponse | ApiErrorResponse): response is ApiErrorResponse => {
+  return 'statusCode' in response && 'userMessage' in response;
+};
+
+export function validateSearchQuery(query: string): { isValid: boolean; error?: string } {
   if (!query || !query.trim()) {
-    return {
-      isValid: false,
-      error: '検索キーワードを入力してください',
-    };
+    return { isValid: false, error: '検索キーワードを入力してください' };
   }
-
-  // 最小文字数チェック（日本語の場合は1文字でOK）
-  if (query.trim().length < 1) {
-    return {
-      isValid: false,
-      error: '検索キーワードは1文字以上入力してください',
-    };
-  }
-
-  // 最大文字数チェック
   if (query.length > 500) {
-    return {
-      isValid: false,
-      error: '検索キーワードは500文字以内で入力してください',
-    };
+    return { isValid: false, error: '検索キーワードは500文字以内で入力してください' };
   }
-
   return { isValid: true };
 }
 
-/**
- * ファイルサイズを人間が読める形式に変換
- */
 export function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let size = bytes;
   let unitIndex = 0;
-
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024;
     unitIndex++;
   }
-
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 }
 
-/**
- * 日付を日本語形式にフォーマット
- */
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('ja-JP', {
@@ -160,9 +293,6 @@ export function formatDate(dateString: string): string {
   }).format(date);
 }
 
-/**
- * ハイライトされたテキストからHTMLタグを削除
- */
 export function stripHighlightTags(text: string): string {
   return text.replace(/<\/?mark>/g, '');
 }

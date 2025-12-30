@@ -1,0 +1,27 @@
+[Unit]
+Description=Worker Auto Recovery System
+After=file-processor.service
+Wants=file-processor.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/ec2-user/python-worker
+
+# Environment
+EnvironmentFile=/home/ec2-user/python-worker/.env
+
+# Command
+ExecStart=/usr/bin/python3.11 /home/ec2-user/python-worker/auto_recovery.py
+
+# Restart policy
+Restart=always
+RestartSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=auto-recovery
+
+[Install]
+WantedBy=multi-user.target

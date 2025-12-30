@@ -1,0 +1,152 @@
+# API Gateway Integration Patch for Lambda Search API
+# Apply this patch to terraform/api_gateway_cognito.tf
+
+# ============================================================================
+# STEP 1: Change /search endpoint from POST to GET
+# ============================================================================
+
+# Line 46-57: Replace POST method with GET method
+# BEFORE:
+# resource "aws_api_gateway_method" "search_post" {
+#   rest_api_id   = aws_api_gateway_rest_api.main.id
+#   resource_id   = aws_api_gateway_resource.search.id
+#   http_method   = "POST"
+#   authorization = "COGNITO_USER_POOLS"
+#   authorizer_id = aws_api_gateway_authorizer.cognito.id
+#
+#   request_parameters = {
+#     "method.request.header.Authorization" = true
+#   }
+# }
+
+# AFTER:
+resource "aws_api_gateway_method" "search_get" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.search.id
+  http_method   = "GET"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+
+  request_parameters = {
+    "method.request.header.Authorization"   = true
+    "method.request.querystring.q"          = false
+    "method.request.querystring.searchMode" = false
+    "method.request.querystring.fileType"   = false
+    "method.request.querystring.dateFrom"   = false
+    "method.request.querystring.dateTo"     = false
+    "method.request.querystring.page"       = false
+    "method.request.querystring.limit"      = false
+    "method.request.querystring.sortBy"     = false
+    "method.request.querystring.sortOrder"  = false
+  }
+}
+
+# ============================================================================
+# STEP 2: Update Lambda Integration
+# ============================================================================
+
+# Line 59-67: Update Lambda integration to use new function
+# BEFORE:
+# resource "aws_api_gateway_integration" "search_lambda" {
+#   rest_api_id             = aws_api_gateway_rest_api.main.id
+#   resource_id             = aws_api_gateway_resource.search.id
+#   http_method             = aws_api_gateway_method.search_post.http_method
+#   integration_http_method = "POST"
+#   type                    = "AWS_PROXY"
+#   uri                     = aws_lambda_function.search_api.invoke_arn
+# }
+
+# AFTER:
+resource "aws_api_gateway_integration" "search_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.search.id
+  http_method             = aws_api_gateway_method.search_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.search_api_prod.invoke_arn
+}
+
+# ============================================================================
+# STEP 3: Update CORS to support GET method
+# ============================================================================
+
+# Line 101-112: Update CORS to include GET method
+# BEFORE:
+# resource "aws_api_gateway_integration_response" "search_options" {
+#   rest_api_id = aws_api_gateway_rest_api.main.id
+#   resource_id = aws_api_gateway_resource.search.id
+#   http_method = aws_api_gateway_method.search_options.http_method
+#   status_code = aws_api_gateway_method_response.search_options_200.status_code
+#
+#   response_parameters = {
+#     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+#     "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+#     "method.response.header.Access-Control-Allow-Origin"  = "'https://${var.frontend_domain}'"
+#   }
+# }
+
+# AFTER: (No change needed - already supports GET)
+
+# ============================================================================
+# STEP 4: Update API Gateway Deployment triggers
+# ============================================================================
+
+# Line 219-237: Add new Lambda function to deployment triggers
+# BEFORE:
+# resource "aws_api_gateway_deployment" "main" {
+#   rest_api_id = aws_api_gateway_rest_api.main.id
+#
+#   triggers = {
+#     redeployment = sha1(jsonencode([
+#       aws_api_gateway_resource.search.id,
+#       aws_api_gateway_method.search_post.id,
+#       aws_api_gateway_integration.search_lambda.id,
+#       aws_api_gateway_resource.files.id,
+#       aws_api_gateway_resource.file_id.id,
+#       aws_api_gateway_method.file_get.id,
+#       aws_api_gateway_integration.file_lambda.id,
+#     ]))
+#   }
+#
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
+
+# AFTER:
+resource "aws_api_gateway_deployment" "main" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.search.id,
+      aws_api_gateway_method.search_get.id,
+      aws_api_gateway_integration.search_lambda.id,
+      aws_api_gateway_resource.files.id,
+      aws_api_gateway_resource.file_id.id,
+      aws_api_gateway_method.file_get.id,
+      aws_api_gateway_integration.file_lambda.id,
+      aws_lambda_function.search_api_prod.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ============================================================================
+# STEP 5: Remove old Lambda function definition (if exists)
+# ============================================================================
+
+# Remove the following resource if it exists:
+# resource "aws_lambda_function" "search_api" { ... }
+# This will be replaced by aws_lambda_function.search_api_prod in lambda_search_api.tf
+
+# ============================================================================
+# STEP 6: Update Lambda Permission (if exists)
+# ============================================================================
+
+# Remove old permission if exists:
+# resource "aws_lambda_permission" "api_gateway_search" { ... }
+# This will be managed by lambda_search_api.tf

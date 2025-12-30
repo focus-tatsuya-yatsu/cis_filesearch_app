@@ -1,0 +1,88 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1,
+      "knn": true,
+      "knn.algo_param.ef_search": 512,
+      "refresh_interval": "10s"
+    },
+    "analysis": {
+      "analyzer": {
+        "japanese_analyzer": {
+          "type": "custom",
+          "tokenizer": "kuromoji_tokenizer",
+          "filter": [
+            "kuromoji_baseform",
+            "kuromoji_part_of_speech",
+            "cjk_width",
+            "ja_stop",
+            "lowercase"
+          ]
+        }
+      },
+      "filter": {
+        "ja_stop": {
+          "type": "stop",
+          "stopwords": "_japanese_"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "file_name": {
+        "type": "text",
+        "analyzer": "japanese_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "file_path": {
+        "type": "text",
+        "analyzer": "japanese_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 2048
+          }
+        }
+      },
+      "file_type": {
+        "type": "keyword"
+      },
+      "file_size": {
+        "type": "long"
+      },
+      "processed_at": {
+        "type": "date"
+      },
+      "extracted_text": {
+        "type": "text",
+        "analyzer": "japanese_analyzer"
+      },
+      "s3_key": {
+        "type": "keyword"
+      },
+      "image_embedding": {
+        "type": "knn_vector",
+        "dimension": 1024,
+        "method": {
+          "name": "hnsw",
+          "space_type": "cosinesimil",
+          "engine": "lucene",
+          "parameters": {
+            "ef_construction": 512,
+            "m": 16
+          }
+        }
+      },
+      "has_image_embedding": {
+        "type": "boolean"
+      }
+    }
+  }
+}

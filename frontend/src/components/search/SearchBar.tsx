@@ -1,14 +1,17 @@
 import { FC, useState, FormEvent } from 'react'
 
-import { Search, X } from 'lucide-react'
+import { Search, X, Image as ImageIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui'
 
 interface SearchBarProps {
   onSearch: (query: string, searchMode: 'and' | 'or') => void
+  onQueryChange?: (query: string) => void
   placeholder?: string
   initialValue?: string
   isLoading?: boolean
+  onImageSearchToggle?: () => void
+  isImageSearchOpen?: boolean
 }
 
 /**
@@ -35,9 +38,12 @@ interface SearchBarProps {
  */
 export const SearchBar: FC<SearchBarProps> = ({
   onSearch,
+  onQueryChange,
   placeholder = 'ファイル名・内容・タグを入力して下さい',
   initialValue = '',
   isLoading = false,
+  onImageSearchToggle,
+  isImageSearchOpen = false,
 }) => {
   const [query, setQuery] = useState(initialValue)
   const [searchMode, setSearchMode] = useState<'and' | 'or'>('or')
@@ -69,13 +75,40 @@ export const SearchBar: FC<SearchBarProps> = ({
         }`}
       >
         <div className="relative flex items-center gap-3">
+        {/* 画像検索トグルボタン */}
+        {onImageSearchToggle && (
+          <button
+            type="button"
+            onClick={onImageSearchToggle}
+            className={`
+              px-4 py-4 rounded-2xl
+              transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
+              flex items-center gap-2
+              ${
+                isImageSearchOpen
+                  ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
+                  : 'bg-white/90 dark:bg-[#1C1C1E]/90 border border-[#D1D1D6]/30 dark:border-[#38383A]/30 text-[#6E6E73] dark:text-[#98989D] hover:border-[#007AFF] dark:hover:border-[#0A84FF]'
+              }
+              disabled:opacity-50 disabled:cursor-not-allowed
+            `}
+            disabled={isLoading}
+            aria-label="画像検索を切り替え"
+          >
+            <ImageIcon className="h-5 w-5" />
+            <span className="text-sm font-medium hidden sm:inline">画像検索</span>
+          </button>
+        )}
+
         <div className="relative flex-1">
           {/* 検索アイコン */}
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6E6E73] dark:text-[#98989D] pointer-events-none" />
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              onQueryChange?.(e.target.value)
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}

@@ -1,0 +1,7 @@
+{
+  "httpMethod": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"imageVector\":[0.1,0.1,0.1],\"searchType\":\"image\",\"limit\":3}"
+}

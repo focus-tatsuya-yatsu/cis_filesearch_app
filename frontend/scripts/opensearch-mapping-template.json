@@ -1,0 +1,80 @@
+{
+  "settings": {
+    "index": {
+      "knn": true,
+      "knn.algo_param.ef_search": 100,
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "refresh_interval": "30s"
+    },
+    "analysis": {
+      "analyzer": {
+        "custom_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "file_name": {
+        "type": "text",
+        "analyzer": "custom_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "file_path": {
+        "type": "text",
+        "analyzer": "custom_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 512
+          }
+        }
+      },
+      "file_type": {
+        "type": "keyword"
+      },
+      "file_size": {
+        "type": "long"
+      },
+      "modified_date": {
+        "type": "date"
+      },
+      "extracted_text": {
+        "type": "text",
+        "analyzer": "custom_analyzer"
+      },
+      "image_embedding": {
+        "type": "knn_vector",
+        "dimension": 1024,
+        "method": {
+          "name": "hnsw",
+          "space_type": "innerproduct",
+          "engine": "faiss",
+          "parameters": {
+            "ef_construction": 128,
+            "m": 24
+          }
+        }
+      },
+      "metadata": {
+        "type": "object",
+        "enabled": false
+      },
+      "s3_location": {
+        "type": "keyword"
+      },
+      "indexed_at": {
+        "type": "date"
+      }
+    }
+  }
+}
