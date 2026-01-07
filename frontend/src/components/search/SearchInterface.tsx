@@ -17,32 +17,33 @@ import { useState, useCallback, useRef, useEffect, FC } from 'react'
 
 import { AnimatePresence } from 'framer-motion'
 
-import { Header } from '@/components/layout/Header'
-import { ExplorerView } from './ExplorerView'
 // import { FilterPanel } from './FilterPanel' // 既存のFilterPanelを置き換え
 import { HierarchicalFilterPanel } from '@/components/filters/HierarchicalFilterPanel' // 新しい階層フィルタパネル
-import { SearchBar } from './SearchBar'
-import { SearchHistory } from './SearchHistory'
-import { ImageSearchDropdown } from './ImageSearchDropdown' // 画像検索ドロップダウン
-import { Spinner, EmptyState } from '@/components/ui'
+import { Header } from '@/components/layout/Header'
 import { PdfPreviewModal } from '@/components/preview/PdfPreviewModal' // プレビューモーダル追加
+import { Spinner, EmptyState } from '@/components/ui'
 import { useSearchHistory, useToast } from '@/hooks'
-import { useFilterStore } from '@/stores/useFilterStore' // フィルタストア追加
-import type { SearchResult, FilterOptions, ImageSearchState } from '@/types'
+import { ImageSearchDebugLogger } from '@/lib/api/debug-logger'
+import { uploadImageForEmbedding, revokeImagePreviewUrl } from '@/lib/api/imageSearch'
 import {
   searchFiles,
   validateSearchQuery,
   isApiError,
   type ApiErrorResponse,
 } from '@/lib/api/search'
-import { uploadImageForEmbedding, revokeImagePreviewUrl } from '@/lib/api/imageSearch'
-import { ImageSearchDebugLogger } from '@/lib/api/debug-logger'
 import {
   IMAGE_SEARCH_MESSAGES,
   TEXT_SEARCH_MESSAGES,
   getErrorMessage,
   createRetryAction,
 } from '@/lib/constants/toast-messages'
+import { useFilterStore } from '@/stores/useFilterStore' // フィルタストア追加
+import type { SearchResult, FilterOptions, ImageSearchState } from '@/types'
+
+import { ExplorerView } from './ExplorerView'
+import { ImageSearchDropdown } from './ImageSearchDropdown' // 画像検索ドロップダウン
+import { SearchBar } from './SearchBar'
+import { SearchHistory } from './SearchHistory'
 
 /**
  * SearchInterface Component
@@ -153,7 +154,7 @@ export const SearchInterface: FC = () => {
         query,
         mode: searchMode,
         searchType: effectiveSearchType,
-        imageEmbedding: hasActiveImage ? imageSearchState.embedding : undefined
+        imageEmbedding: hasActiveImage ? imageSearchState.embedding : undefined,
       })
 
       // フィルタストアから現在の状態を取得
@@ -379,7 +380,7 @@ export const SearchInterface: FC = () => {
       setLastSearchParams({
         ...lastSearchParams,
         searchType: 'text',
-        imageEmbedding: undefined
+        imageEmbedding: undefined,
       })
     }
   }, [lastSearchParams])

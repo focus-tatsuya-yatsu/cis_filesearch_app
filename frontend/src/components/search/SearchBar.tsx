@@ -57,7 +57,7 @@ export const SearchBar: FC<SearchBarProps> = ({
   }
 
   const toggleSearchMode = () => {
-    setSearchMode(prev => prev === 'or' ? 'and' : 'or')
+    setSearchMode((prev) => (prev === 'or' ? 'and' : 'or'))
   }
 
   const handleClear = () => {
@@ -75,12 +75,12 @@ export const SearchBar: FC<SearchBarProps> = ({
         }`}
       >
         <div className="relative flex items-center gap-3">
-        {/* 画像検索トグルボタン */}
-        {onImageSearchToggle && (
-          <button
-            type="button"
-            onClick={onImageSearchToggle}
-            className={`
+          {/* 画像検索トグルボタン */}
+          {onImageSearchToggle && (
+            <button
+              type="button"
+              onClick={onImageSearchToggle}
+              className={`
               px-4 py-4 rounded-2xl
               transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
               flex items-center gap-2
@@ -91,30 +91,30 @@ export const SearchBar: FC<SearchBarProps> = ({
               }
               disabled:opacity-50 disabled:cursor-not-allowed
             `}
-            disabled={isLoading}
-            aria-label="画像検索を切り替え"
-          >
-            <ImageIcon className="h-5 w-5" />
-            <span className="text-sm font-medium hidden sm:inline">画像検索</span>
-          </button>
-        )}
+              disabled={isLoading}
+              aria-label="画像検索を切り替え"
+            >
+              <ImageIcon className="h-5 w-5" />
+              <span className="text-sm font-medium hidden sm:inline">画像検索</span>
+            </button>
+          )}
 
-        <div className="relative flex-1">
-          {/* 検索アイコン */}
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6E6E73] dark:text-[#98989D] pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              onQueryChange?.(e.target.value)
-            }}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={placeholder}
-            disabled={isLoading}
-            aria-label="検索キーワード"
-            className="
+          <div className="relative flex-1">
+            {/* 検索アイコン */}
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6E6E73] dark:text-[#98989D] pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                onQueryChange?.(e.target.value)
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder={placeholder}
+              disabled={isLoading}
+              aria-label="検索キーワード"
+              className="
               w-full pl-12 pr-12 py-4
               text-[1.0625rem] leading-[1.4] font-normal
               bg-white/90 dark:bg-[#1C1C1E]/90
@@ -130,18 +130,18 @@ export const SearchBar: FC<SearchBarProps> = ({
               shadow-sm hover:shadow-md
               disabled:opacity-50 disabled:cursor-not-allowed
             "
-            style={{
-              WebkitAppearance: 'none',
-              MozAppearance: 'none',
-            }}
-          />
-          {/* クリアボタン */}
-          {query && !isLoading && (
-            <button
-              type="button"
-              onClick={handleClear}
-              aria-label="検索をクリア"
-              className="
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+              }}
+            />
+            {/* クリアボタン */}
+            {query && !isLoading && (
+              <button
+                type="button"
+                onClick={handleClear}
+                aria-label="検索をクリア"
+                className="
                 absolute right-4 top-1/2 -translate-y-1/2
                 w-5 h-5 flex items-center justify-center
                 bg-[#C7C7CC] dark:bg-[#48484A]
@@ -149,17 +149,17 @@ export const SearchBar: FC<SearchBarProps> = ({
                 rounded-full transition-all duration-200
                 animate-fade-in-scale
               "
-            >
-              <X className="h-3 w-3 text-white dark:text-[#F5F5F7]" strokeWidth={3} />
-            </button>
-          )}
-        </div>
-        {/* 検索ボタン */}
-        <Button
-          type="submit"
-          size="lg"
-          disabled={!query.trim() || isLoading}
-          className="
+              >
+                <X className="h-3 w-3 text-white dark:text-[#F5F5F7]" strokeWidth={3} />
+              </button>
+            )}
+          </div>
+          {/* 検索ボタン */}
+          <Button
+            type="submit"
+            size="lg"
+            disabled={!query.trim() || isLoading}
+            className="
             px-8 py-4
             bg-[#007AFF] hover:bg-[#0051D5] active:bg-[#004CCC]
             dark:bg-[#0A84FF] dark:hover:bg-[#0066FF] dark:active:bg-[#004DE6]
@@ -170,56 +170,56 @@ export const SearchBar: FC<SearchBarProps> = ({
             transform hover:scale-[1.02] active:scale-[0.98]
             disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
           "
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              検索中...
-            </span>
-          ) : (
-            '検索'
-          )}
-        </Button>
-      </div>
-    </form>
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                検索中...
+              </span>
+            ) : (
+              '検索'
+            )}
+          </Button>
+        </div>
+      </form>
 
-    {/* AND/OR検索モード切り替え */}
-    <div className="flex items-center justify-center gap-2">
-      <span className="text-sm text-[#6E6E73] dark:text-[#98989D]">検索モード:</span>
-      <button
-        type="button"
-        onClick={toggleSearchMode}
-        className={`
+      {/* AND/OR検索モード切り替え */}
+      <div className="flex items-center justify-center gap-2">
+        <span className="text-sm text-[#6E6E73] dark:text-[#98989D]">検索モード:</span>
+        <button
+          type="button"
+          onClick={toggleSearchMode}
+          className={`
           px-4 py-2 rounded-lg font-medium text-sm
           transition-all duration-200 ease-out
-          ${searchMode === 'and'
-            ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
-            : 'bg-[#F5F5F7] dark:bg-[#1C1C1E] text-[#6E6E73] dark:text-[#98989D] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
+          ${
+            searchMode === 'and'
+              ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
+              : 'bg-[#F5F5F7] dark:bg-[#1C1C1E] text-[#6E6E73] dark:text-[#98989D] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
           }
         `}
-      >
-        AND検索
-      </button>
-      <button
-        type="button"
-        onClick={toggleSearchMode}
-        className={`
+        >
+          AND検索
+        </button>
+        <button
+          type="button"
+          onClick={toggleSearchMode}
+          className={`
           px-4 py-2 rounded-lg font-medium text-sm
           transition-all duration-200 ease-out
-          ${searchMode === 'or'
-            ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
-            : 'bg-[#F5F5F7] dark:bg-[#1C1C1E] text-[#6E6E73] dark:text-[#98989D] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
+          ${
+            searchMode === 'or'
+              ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white shadow-md'
+              : 'bg-[#F5F5F7] dark:bg-[#1C1C1E] text-[#6E6E73] dark:text-[#98989D] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
           }
         `}
-      >
-        OR検索
-      </button>
-      <span className="text-xs text-[#86868B] dark:text-[#86868B] ml-2">
-        {searchMode === 'and'
-          ? '（すべてのキーワードを含む）'
-          : '（いずれかのキーワードを含む）'}
-      </span>
+        >
+          OR検索
+        </button>
+        <span className="text-xs text-[#86868B] dark:text-[#86868B] ml-2">
+          {searchMode === 'and' ? '（すべてのキーワードを含む）' : '（いずれかのキーワードを含む）'}
+        </span>
+      </div>
     </div>
-  </div>
   )
 }

@@ -9,63 +9,63 @@
  * 検索パラメータ
  */
 export interface SearchParams {
-  query?: string;
-  searchMode?: 'and' | 'or';
-  fileType?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  page?: number;
-  limit?: number;
-  sortBy?: 'relevance' | 'date' | 'name' | 'size';
-  sortOrder?: 'asc' | 'desc';
+  query?: string
+  searchMode?: 'and' | 'or'
+  fileType?: string
+  dateFrom?: string
+  dateTo?: string
+  page?: number
+  limit?: number
+  sortBy?: 'relevance' | 'date' | 'name' | 'size'
+  sortOrder?: 'asc' | 'desc'
 }
 
 /**
  * 検索結果
  */
 export interface SearchResult {
-  id: string;
-  fileName: string;
-  filePath: string;
-  fileType: string;
-  fileSize: number;
-  modifiedDate: string;
-  snippet: string;
-  relevanceScore: number;
+  id: string
+  fileName: string
+  filePath: string
+  fileType: string
+  fileSize: number
+  modifiedDate: string
+  snippet: string
+  relevanceScore: number
   highlights?: {
-    fileName?: string[];
-    filePath?: string[];
-    extractedText?: string[];
-  };
+    fileName?: string[]
+    filePath?: string[]
+    extractedText?: string[]
+  }
 }
 
 /**
  * 検索APIレスポンス
  */
 export interface SearchApiResponse {
-  success: true;
+  success: true
   data: {
-    results: SearchResult[];
-    total: number;
-    page: number;
-    limit: number;
-    searchType: string;
-    index: string;
-    query?: SearchParams;
-    took?: number;
-  };
+    results: SearchResult[]
+    total: number
+    page: number
+    limit: number
+    searchType: string
+    index: string
+    query?: SearchParams
+    took?: number
+  }
 }
 
 /**
  * エラーレスポンス
  */
 export interface SearchApiError {
-  success: false;
+  success: false
   error: {
-    code: string;
-    message: string;
-    details?: Record<string, any>;
-  };
+    code: string
+    message: string
+    details?: Record<string, any>
+  }
 }
 
 /**
@@ -77,8 +77,8 @@ export class SearchApiException extends Error {
     public code: string,
     public details?: Record<string, any>
   ) {
-    super(message);
-    this.name = 'SearchApiException';
+    super(message)
+    this.name = 'SearchApiException'
   }
 }
 
@@ -86,11 +86,11 @@ export class SearchApiException extends Error {
  * API Gateway URLを取得
  */
 function getApiGatewayUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+  const url = process.env.NEXT_PUBLIC_API_GATEWAY_URL
   if (!url) {
-    throw new Error('NEXT_PUBLIC_API_GATEWAY_URL is not set');
+    throw new Error('NEXT_PUBLIC_API_GATEWAY_URL is not set')
   }
-  return url;
+  return url
 }
 
 /**
@@ -102,7 +102,7 @@ async function getAuthToken(): Promise<string> {
   // 本番環境では AWS Amplify Auth を使用してください
   if (process.env.NODE_ENV === 'development') {
     // 開発用のダミートークンを返す
-    return 'development-jwt-token';
+    return 'development-jwt-token'
   }
 
   // AWS Amplify Authを使用する場合は以下のコメントを解除
@@ -129,61 +129,56 @@ async function getAuthToken(): Promise<string> {
   */
 
   // 仮実装：localStorageから取得（実際の実装では推奨されません）
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
   if (!token) {
-    throw new SearchApiException(
-      'Authentication required. Please log in.',
-      'AUTH_REQUIRED'
-    );
+    throw new SearchApiException('Authentication required. Please log in.', 'AUTH_REQUIRED')
   }
-  return token;
+  return token
 }
 
 /**
  * ファイル検索API呼び出し
  */
-export async function searchFiles(
-  params: SearchParams
-): Promise<SearchApiResponse> {
+export async function searchFiles(params: SearchParams): Promise<SearchApiResponse> {
   try {
     // JWTトークンを取得
-    const token = await getAuthToken();
+    const token = await getAuthToken()
 
     // クエリパラメータを構築
-    const queryParams = new URLSearchParams();
+    const queryParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value));
+        queryParams.append(key, String(value))
       }
-    });
+    })
 
-    const url = `${getApiGatewayUrl()}/search?${queryParams.toString()}`;
+    const url = `${getApiGatewayUrl()}/search?${queryParams.toString()}`
 
     // API呼び出し
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       // キャッシュ戦略
       cache: 'no-store', // SSRの場合
-    });
+    })
 
     if (!response.ok) {
-      const errorData: SearchApiError = await response.json();
+      const errorData: SearchApiError = await response.json()
       throw new SearchApiException(
         errorData.error.message,
         errorData.error.code,
         errorData.error.details
-      );
+      )
     }
 
-    const data: SearchApiResponse = await response.json();
-    return data;
+    const data: SearchApiResponse = await response.json()
+    return data
   } catch (error: any) {
     if (error instanceof SearchApiException) {
-      throw error;
+      throw error
     }
 
     // ネットワークエラー
@@ -191,25 +186,20 @@ export async function searchFiles(
       throw new SearchApiException(
         'Network error. Please check your internet connection.',
         'NETWORK_ERROR'
-      );
+      )
     }
 
     // その他のエラー
-    throw new SearchApiException(
-      error.message || 'An unexpected error occurred',
-      'UNKNOWN_ERROR'
-    );
+    throw new SearchApiException(error.message || 'An unexpected error occurred', 'UNKNOWN_ERROR')
   }
 }
 
 /**
  * 検索サジェスト取得（将来実装予定）
  */
-export async function getSearchSuggestions(
-  query: string
-): Promise<string[]> {
+export async function getSearchSuggestions(query: string): Promise<string[]> {
   try {
-    const token = await getAuthToken();
+    const token = await getAuthToken()
 
     const response = await fetch(
       `${getApiGatewayUrl()}/search/suggestions?q=${encodeURIComponent(query)}`,
@@ -217,20 +207,20 @@ export async function getSearchSuggestions(
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       }
-    );
+    )
 
     if (!response.ok) {
-      throw new Error('Failed to fetch suggestions');
+      throw new Error('Failed to fetch suggestions')
     }
 
-    const data = await response.json();
-    return data.suggestions || [];
+    const data = await response.json()
+    return data.suggestions || []
   } catch (error) {
-    console.error('Failed to fetch suggestions:', error);
-    return [];
+    console.error('Failed to fetch suggestions:', error)
+    return []
   }
 }
 
@@ -238,32 +228,32 @@ export async function getSearchSuggestions(
  * 検索統計情報取得（将来実装予定）
  */
 export async function getSearchStats(): Promise<{
-  totalSearches: number;
-  avgResponseTime: number;
-  popularQueries: string[];
+  totalSearches: number
+  avgResponseTime: number
+  popularQueries: string[]
 }> {
   try {
-    const token = await getAuthToken();
+    const token = await getAuthToken()
 
     const response = await fetch(`${getApiGatewayUrl()}/search/stats`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-    });
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to fetch search stats');
+      throw new Error('Failed to fetch search stats')
     }
 
-    return await response.json();
+    return await response.json()
   } catch (error) {
-    console.error('Failed to fetch search stats:', error);
+    console.error('Failed to fetch search stats:', error)
     return {
       totalSearches: 0,
       avgResponseTime: 0,
       popularQueries: [],
-    };
+    }
   }
 }

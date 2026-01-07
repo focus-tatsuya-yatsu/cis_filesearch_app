@@ -46,71 +46,69 @@ export const Sidebar: FC<SidebarProps> = ({
   onToggleCollapse,
   children,
   title = 'フォルダ構造',
-}) => {
-  return (
-    <motion.div
-      initial={false}
-      animate={{
-        width: isCollapsed ? '60px' : '300px',
-      }}
-      transition={{
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1], // Apple's favorite easing
-      }}
-      className="relative h-full bg-[#F5F5F7] dark:bg-[#1C1C1E] border-r border-[#D1D1D6]/30 dark:border-[#38383A]/30 overflow-hidden"
-    >
-      <AnimatePresence mode="wait">
-        {isCollapsed ? (
-          // Collapsed State: Vertical Tab
-          <motion.button
-            key="collapsed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onToggleCollapse}
-            className="absolute inset-0 flex flex-col items-center justify-center hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors cursor-pointer group"
-            aria-label="サイドバーを開く"
-          >
-            {/* Icon positioned at top with fixed spacing */}
-            <div className="mb-3">
-              <ChevronRight className="h-5 w-5 text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors" />
-            </div>
+}) => (
+  <motion.div
+    initial={false}
+    animate={{
+      width: isCollapsed ? '60px' : '300px',
+    }}
+    transition={{
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1], // Apple's favorite easing
+    }}
+    className="relative h-full bg-[#F5F5F7] dark:bg-[#1C1C1E] border-r border-[#D1D1D6]/30 dark:border-[#38383A]/30 overflow-hidden"
+  >
+    <AnimatePresence mode="wait">
+      {isCollapsed ? (
+        // Collapsed State: Vertical Tab
+        <motion.button
+          key="collapsed"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onToggleCollapse}
+          className="absolute inset-0 flex flex-col items-center justify-center hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors cursor-pointer group"
+          aria-label="サイドバーを開く"
+        >
+          {/* Icon positioned at top with fixed spacing */}
+          <div className="mb-3">
+            <ChevronRight className="h-5 w-5 text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors" />
+          </div>
 
-            {/* Vertical text with guaranteed height */}
-            <div className="flex-1 flex items-start justify-center min-h-0 py-2">
-              <span className="writing-mode-vertical text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors">
-                {title}
-              </span>
-            </div>
-          </motion.button>
-        ) : (
-          // Expanded State: Full Sidebar
-          <motion.div
-            key="expanded"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="h-full flex flex-col"
-          >
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-[#D1D1D6]/30 dark:border-[#38383A]/30 flex items-center justify-between bg-white/50 dark:bg-[#1C1C1E]/50 backdrop-blur-sm">
-              <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{title}</h3>
-              <button
-                onClick={onToggleCollapse}
-                className="p-1.5 rounded-lg hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors group"
-                aria-label="サイドバーを閉じる"
-              >
-                <X className="h-4 w-4 text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#1D1D1F] dark:group-hover:text-[#F5F5F7] transition-colors" />
-              </button>
-            </div>
+          {/* Vertical text with guaranteed height */}
+          <div className="flex-1 flex items-start justify-center min-h-0 py-2">
+            <span className="writing-mode-vertical text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#007AFF] dark:group-hover:text-[#0A84FF] transition-colors">
+              {title}
+            </span>
+          </div>
+        </motion.button>
+      ) : (
+        // Expanded State: Full Sidebar
+        <motion.div
+          key="expanded"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="h-full flex flex-col"
+        >
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-[#D1D1D6]/30 dark:border-[#38383A]/30 flex items-center justify-between bg-white/50 dark:bg-[#1C1C1E]/50 backdrop-blur-sm">
+            <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{title}</h3>
+            <button
+              onClick={onToggleCollapse}
+              className="p-1.5 rounded-lg hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors group"
+              aria-label="サイドバーを閉じる"
+            >
+              <X className="h-4 w-4 text-[#6E6E73] dark:text-[#8E8E93] group-hover:text-[#1D1D1F] dark:group-hover:text-[#F5F5F7] transition-colors" />
+            </button>
+          </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-2">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  )
-}
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-2">{children}</div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </motion.div>
+)

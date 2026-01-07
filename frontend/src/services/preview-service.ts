@@ -4,57 +4,57 @@
  */
 
 export interface PreviewUrlResponse {
-  success: boolean;
+  success: boolean
   data: {
-    previewUrl: string;
-    expiresAt: string;
-    expiresIn: number;
+    previewUrl: string
+    expiresAt: string
+    expiresIn: number
     metadata?: {
-      totalPages: number;
-      fileName: string;
-      fileSize: number;
-      contentType: string;
-    };
-  };
+      totalPages: number
+      fileName: string
+      fileSize: number
+      contentType: string
+    }
+  }
 }
 
 export interface PdfPagesResponse {
-  success: boolean;
+  success: boolean
   data: {
     pages: Array<{
-      pageNumber: number;
-      previewUrl: string;
-      hasKeywords: boolean;
-      keywords: string[];
-    }>;
+      pageNumber: number
+      previewUrl: string
+      hasKeywords: boolean
+      keywords: string[]
+    }>
     metadata: {
-      totalPages: number;
-      fileName: string;
-      fileSize: number;
-    };
-    expiresAt: string;
-  };
+      totalPages: number
+      fileName: string
+      fileSize: number
+    }
+    expiresAt: string
+  }
 }
 
 export interface KeywordHighlightResponse {
-  success: boolean;
+  success: boolean
   data: {
     pages: Array<{
-      pageNumber: number;
-      keywords: string[];
+      pageNumber: number
+      keywords: string[]
       snippets: Array<{
-        text: string;
-        keyword: string;
+        text: string
+        keyword: string
         position?: {
-          x: number;
-          y: number;
-        };
-      }>;
-      matchCount: number;
-    }>;
-    totalMatches: number;
-    keywords: string[];
-  };
+          x: number
+          y: number
+        }
+      }>
+      matchCount: number
+    }>
+    totalMatches: number
+    keywords: string[]
+  }
 }
 
 /**
@@ -79,20 +79,20 @@ export async function getPreviewUrl(
     key,
     fileType,
     expiresIn: expiresIn.toString(),
-  });
+  })
 
   if (pageNumber !== undefined) {
-    params.append('pageNumber', pageNumber.toString());
+    params.append('pageNumber', pageNumber.toString())
   }
 
-  const response = await fetch(`/api/preview?${params.toString()}`);
+  const response = await fetch(`/api/preview?${params.toString()}`)
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get preview URL');
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Failed to get preview URL')
   }
 
-  return response.json();
+  return response.json()
 }
 
 /**
@@ -118,28 +118,28 @@ export async function getPdfPages(
     bucket,
     key,
     expiresIn: expiresIn.toString(),
-  });
+  })
 
   if (startPage !== undefined) {
-    params.append('startPage', startPage.toString());
+    params.append('startPage', startPage.toString())
   }
 
   if (endPage !== undefined) {
-    params.append('endPage', endPage.toString());
+    params.append('endPage', endPage.toString())
   }
 
   if (keywords && keywords.length > 0) {
-    params.append('keywords', keywords.join(','));
+    params.append('keywords', keywords.join(','))
   }
 
-  const response = await fetch(`/api/preview/pages?${params.toString()}`);
+  const response = await fetch(`/api/preview/pages?${params.toString()}`)
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get PDF pages');
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Failed to get PDF pages')
   }
 
-  return response.json();
+  return response.json()
 }
 
 /**
@@ -156,23 +156,23 @@ export async function getKeywordHighlights(
   keywords: string[]
 ): Promise<KeywordHighlightResponse> {
   if (keywords.length === 0) {
-    throw new Error('At least one keyword is required');
+    throw new Error('At least one keyword is required')
   }
 
   const params = new URLSearchParams({
     bucket,
     key,
     keywords: keywords.join(','),
-  });
+  })
 
-  const response = await fetch(`/api/preview/keywords?${params.toString()}`);
+  const response = await fetch(`/api/preview/keywords?${params.toString()}`)
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get keyword highlights');
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Failed to get keyword highlights')
   }
 
-  return response.json();
+  return response.json()
 }
 
 /**
@@ -183,21 +183,16 @@ export class PreviewUrlCache {
   private cache: Map<
     string,
     {
-      url: string;
-      expiresAt: Date;
+      url: string
+      expiresAt: Date
     }
-  > = new Map();
+  > = new Map()
 
   /**
    * キャッシュキーを生成
    */
-  private getCacheKey(
-    bucket: string,
-    key: string,
-    fileType: string,
-    pageNumber?: number
-  ): string {
-    return `${bucket}:${key}:${fileType}:${pageNumber ?? 'all'}`;
+  private getCacheKey(bucket: string, key: string, fileType: string, pageNumber?: number): string {
+    return `${bucket}:${key}:${fileType}:${pageNumber ?? 'all'}`
   }
 
   /**
@@ -210,50 +205,44 @@ export class PreviewUrlCache {
     pageNumber?: number,
     expiresIn: number = 300
   ): Promise<string> {
-    const cacheKey = this.getCacheKey(bucket, key, fileType, pageNumber);
-    const cached = this.cache.get(cacheKey);
+    const cacheKey = this.getCacheKey(bucket, key, fileType, pageNumber)
+    const cached = this.cache.get(cacheKey)
 
     // キャッシュが存在し、有効期限内の場合は再利用
     // ただし、有効期限の80%を過ぎている場合は再生成
     if (cached) {
-      const now = new Date();
-      const expiresAt = cached.expiresAt;
-      const totalLifetime = expiresAt.getTime() - (now.getTime() - expiresIn * 1000);
-      const remainingLifetime = expiresAt.getTime() - now.getTime();
-      const lifetimeRatio = remainingLifetime / totalLifetime;
+      const now = new Date()
+      const { expiresAt } = cached
+      const totalLifetime = expiresAt.getTime() - (now.getTime() - expiresIn * 1000)
+      const remainingLifetime = expiresAt.getTime() - now.getTime()
+      const lifetimeRatio = remainingLifetime / totalLifetime
 
       if (lifetimeRatio > 0.2) {
-        return cached.url;
+        return cached.url
       }
     }
 
     // 新規にURLを生成
-    const response = await getPreviewUrl(
-      bucket,
-      key,
-      fileType,
-      pageNumber,
-      expiresIn
-    );
+    const response = await getPreviewUrl(bucket, key, fileType, pageNumber, expiresIn)
 
     // キャッシュに保存
     this.cache.set(cacheKey, {
       url: response.data.previewUrl,
       expiresAt: new Date(response.data.expiresAt),
-    });
+    })
 
-    return response.data.previewUrl;
+    return response.data.previewUrl
   }
 
   /**
    * 期限切れのキャッシュをクリア
    */
   clearExpired(): void {
-    const now = new Date();
+    const now = new Date()
 
     for (const [key, value] of this.cache.entries()) {
       if (value.expiresAt < now) {
-        this.cache.delete(key);
+        this.cache.delete(key)
       }
     }
   }
@@ -262,18 +251,21 @@ export class PreviewUrlCache {
    * 全キャッシュをクリア
    */
   clearAll(): void {
-    this.cache.clear();
+    this.cache.clear()
   }
 }
 
 /**
  * グローバルなプレビューURLキャッシュインスタンス
  */
-export const previewUrlCache = new PreviewUrlCache();
+export const previewUrlCache = new PreviewUrlCache()
 
 // 定期的に期限切れキャッシュをクリア（5分ごと）
 if (typeof window !== 'undefined') {
-  setInterval(() => {
-    previewUrlCache.clearExpired();
-  }, 5 * 60 * 1000);
+  setInterval(
+    () => {
+      previewUrlCache.clearExpired()
+    },
+    5 * 60 * 1000
+  )
 }

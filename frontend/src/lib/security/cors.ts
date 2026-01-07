@@ -3,31 +3,31 @@
  * オリジン検証、セキュリティヘッダーの設定
  */
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 
 /**
  * 許可されるオリジンのリスト
  * 環境変数から取得、またはデフォルト値
  */
 function getAllowedOrigins(): string[] {
-  const envOrigins = process.env.ALLOWED_ORIGINS;
+  const envOrigins = process.env.ALLOWED_ORIGINS
 
   if (envOrigins) {
-    return envOrigins.split(',').map((origin) => origin.trim());
+    return envOrigins.split(',').map((origin) => origin.trim())
   }
 
   // デフォルト: 本番環境のドメイン
   const defaultOrigins = [
     'https://cis-filesearch.example.com',
     'https://app.cis-filesearch.example.com',
-  ];
+  ]
 
   // 開発環境の場合は localhost を追加
   if (process.env.NODE_ENV === 'development') {
-    defaultOrigins.push('http://localhost:3000', 'http://localhost:3001');
+    defaultOrigins.push('http://localhost:3000', 'http://localhost:3001')
   }
 
-  return defaultOrigins;
+  return defaultOrigins
 }
 
 /**
@@ -35,21 +35,21 @@ function getAllowedOrigins(): string[] {
  */
 export function isOriginAllowed(origin: string | null): boolean {
   if (!origin) {
-    return false;
+    return false
   }
 
-  const allowedOrigins = getAllowedOrigins();
-  return allowedOrigins.includes(origin);
+  const allowedOrigins = getAllowedOrigins()
+  return allowedOrigins.includes(origin)
 }
 
 /**
  * セキュリティヘッダーを取得
  */
 export function getSecurityHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigins = getAllowedOrigins();
+  const allowedOrigins = getAllowedOrigins()
 
   // オリジンが許可されている場合はそのまま、そうでなければデフォルトのオリジンを使用
-  const allowedOrigin = origin && isOriginAllowed(origin) ? origin : allowedOrigins[0];
+  const allowedOrigin = origin && isOriginAllowed(origin) ? origin : allowedOrigins[0]
 
   return {
     // ✅ CORS設定
@@ -79,7 +79,7 @@ export function getSecurityHeaders(origin: string | null): Record<string, string
       "base-uri 'self'",
       "form-action 'self'",
     ].join('; '),
-  };
+  }
 }
 
 /**
@@ -94,24 +94,24 @@ export function createCorsResponse(
   const headers = {
     ...getSecurityHeaders(origin),
     ...additionalHeaders,
-  };
+  }
 
   return NextResponse.json(data, {
     status,
     headers,
-  });
+  })
 }
 
 /**
  * OPTIONSリクエスト（プリフライト）のレスポンスを生成
  */
 export function createOptionsResponse(origin: string | null): NextResponse {
-  const headers = getSecurityHeaders(origin);
+  const headers = getSecurityHeaders(origin)
 
   return new NextResponse(null, {
     status: 204, // No Content
     headers,
-  });
+  })
 }
 
 /**
@@ -130,5 +130,5 @@ export function createOriginErrorResponse(origin: string | null): NextResponse {
         'X-Content-Type-Options': 'nosniff',
       },
     }
-  );
+  )
 }

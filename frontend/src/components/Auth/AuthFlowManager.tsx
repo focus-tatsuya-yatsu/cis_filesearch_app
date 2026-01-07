@@ -8,10 +8,10 @@
 
 import { FC, useState } from 'react'
 
-import { LoginForm } from './LoginForm'
 import { ForgotPasswordForm } from './ForgotPasswordForm'
-import { ResetPasswordForm } from './ResetPasswordForm'
+import { LoginForm } from './LoginForm'
 import { NewPasswordForm } from './NewPasswordForm'
+import { ResetPasswordForm } from './ResetPasswordForm'
 
 // ========================================
 // Types

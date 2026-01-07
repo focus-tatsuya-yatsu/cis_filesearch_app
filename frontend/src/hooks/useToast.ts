@@ -59,10 +59,7 @@ const DEFAULT_DURATIONS: Record<ToastType, number> = {
 /**
  * Create toast with consistent configuration
  */
-const createToast = (
-  type: ToastType,
-  config: ToastConfig
-) => {
+const createToast = (type: ToastType, config: ToastConfig) => {
   const { message, description, duration, action, cancel } = config
 
   const options: ExternalToast = {
@@ -107,55 +104,53 @@ const createToast = (
  * toast.info('Processing...', { description: 'This may take a while' })
  * ```
  */
-export const useToast = () => {
-  return {
-    /**
-     * Show success toast (green, auto-dismiss after 3s)
-     */
-    success: (message: string, options?: Omit<ToastConfig, 'message'>) =>
-      createToast('success', { message, ...options }),
+export const useToast = () => ({
+  /**
+   * Show success toast (green, auto-dismiss after 3s)
+   */
+  success: (message: string, options?: Omit<ToastConfig, 'message'>) =>
+    createToast('success', { message, ...options }),
 
-    /**
-     * Show error toast (red, manual dismiss required)
-     */
-    error: (message: string, options?: Omit<ToastConfig, 'message'>) =>
-      createToast('error', { message, ...options }),
+  /**
+   * Show error toast (red, manual dismiss required)
+   */
+  error: (message: string, options?: Omit<ToastConfig, 'message'>) =>
+    createToast('error', { message, ...options }),
 
-    /**
-     * Show warning toast (yellow, auto-dismiss after 5s)
-     */
-    warning: (message: string, options?: Omit<ToastConfig, 'message'>) =>
-      createToast('warning', { message, ...options }),
+  /**
+   * Show warning toast (yellow, auto-dismiss after 5s)
+   */
+  warning: (message: string, options?: Omit<ToastConfig, 'message'>) =>
+    createToast('warning', { message, ...options }),
 
-    /**
-     * Show info toast (blue, auto-dismiss after 3s)
-     */
-    info: (message: string, options?: Omit<ToastConfig, 'message'>) =>
-      createToast('info', { message, ...options }),
+  /**
+   * Show info toast (blue, auto-dismiss after 3s)
+   */
+  info: (message: string, options?: Omit<ToastConfig, 'message'>) =>
+    createToast('info', { message, ...options }),
 
-    /**
-     * Dismiss a specific toast by ID
-     */
-    dismiss: (toastId?: string | number) => sonnerToast.dismiss(toastId),
+  /**
+   * Dismiss a specific toast by ID
+   */
+  dismiss: (toastId?: string | number) => sonnerToast.dismiss(toastId),
 
-    /**
-     * Show a loading toast
-     */
-    loading: (message: string, options?: Omit<ToastConfig, 'message'>) =>
-      sonnerToast.loading(message, {
-        description: options?.description,
-      }),
+  /**
+   * Show a loading toast
+   */
+  loading: (message: string, options?: Omit<ToastConfig, 'message'>) =>
+    sonnerToast.loading(message, {
+      description: options?.description,
+    }),
 
-    /**
-     * Promise-based toast for async operations
-     */
-    promise: <T>(
-      promise: Promise<T>,
-      messages: {
-        loading: string
-        success: string | ((data: T) => string)
-        error: string | ((error: Error) => string)
-      }
-    ) => sonnerToast.promise(promise, messages),
-  }
-}
+  /**
+   * Promise-based toast for async operations
+   */
+  promise: <T>(
+    promise: Promise<T>,
+    messages: {
+      loading: string
+      success: string | ((data: T) => string)
+      error: string | ((error: Error) => string)
+    }
+  ) => sonnerToast.promise(promise, messages),
+})

@@ -8,28 +8,28 @@
  * - Query optimization patterns
  */
 
-import { Client } from '@opensearch-project/opensearch';
+import { Client } from '@opensearch-project/opensearch'
 
 /**
  * Performance configuration interface
  */
 export interface PerformanceConfig {
-  indexSize: number;
-  targetLatencyMs: number;
-  nodeCount: number;
-  memoryGB: number;
+  indexSize: number
+  targetLatencyMs: number
+  nodeCount: number
+  memoryGB: number
 }
 
 /**
  * Index optimization settings
  */
 export interface OptimizedIndexSettings {
-  shardCount: number;
-  replicaCount: number;
-  efSearch: number;
-  efConstruction: number;
-  m: number;
-  refreshInterval: string;
+  shardCount: number
+  replicaCount: number
+  efSearch: number
+  efConstruction: number
+  m: number
+  refreshInterval: string
 }
 
 /**
@@ -39,31 +39,30 @@ export interface OptimizedIndexSettings {
  * @param targetLatencyMs - Target query latency in milliseconds
  * @returns Optimal ef_search value
  */
-export const calculateOptimalEfSearch = (
-  indexSize: number,
-  targetLatencyMs: number
-): number => {
+export const calculateOptimalEfSearch = (indexSize: number, targetLatencyMs: number): number => {
   // Base ef_search value based on data size
-  let baseEfSearch: number;
+  let baseEfSearch: number
 
   if (indexSize < 100_000) {
-    baseEfSearch = 128; // Small dataset
+    baseEfSearch = 128 // Small dataset
   } else if (indexSize < 1_000_000) {
-    baseEfSearch = 256; // Medium dataset
+    baseEfSearch = 256 // Medium dataset
   } else if (indexSize < 10_000_000) {
-    baseEfSearch = 512; // Large dataset
+    baseEfSearch = 512 // Large dataset
   } else {
-    baseEfSearch = 1024; // Very large dataset
+    baseEfSearch = 1024 // Very large dataset
   }
 
   // Adjust based on latency requirements
   const latencyFactor =
-    targetLatencyMs < 50 ? 0.7 :  // Real-time (< 50ms)
-    targetLatencyMs < 100 ? 1.0 :  // Interactive (< 100ms)
-    1.3;                            // Batch processing (> 100ms)
+    targetLatencyMs < 50
+      ? 0.7 // Real-time (< 50ms)
+      : targetLatencyMs < 100
+        ? 1.0 // Interactive (< 100ms)
+        : 1.3 // Batch processing (> 100ms)
 
-  return Math.round(baseEfSearch * latencyFactor);
-};
+  return Math.round(baseEfSearch * latencyFactor)
+}
 
 /**
  * Calculate optimal shard count
@@ -73,13 +72,10 @@ export const calculateOptimalEfSearch = (
  * @param nodeCount - Number of OpenSearch nodes
  * @returns Optimal shard count
  */
-export const calculateOptimalShardCount = (
-  documentCount: number,
-  nodeCount: number
-): number => {
-  const baseShards = Math.ceil(documentCount / 1_000_000);
-  return Math.max(1, baseShards * nodeCount);
-};
+export const calculateOptimalShardCount = (documentCount: number, nodeCount: number): number => {
+  const baseShards = Math.ceil(documentCount / 1_000_000)
+  return Math.max(1, baseShards * nodeCount)
+}
 
 /**
  * Determine optimal replica count based on availability requirements
@@ -92,17 +88,17 @@ export const calculateOptimalReplicaCount = (
 ): number => {
   switch (environment) {
     case 'development':
-      return 0; // Cost optimization
+      return 0 // Cost optimization
     case 'staging':
-      return 1; // Standard availability
+      return 1 // Standard availability
     case 'production':
-      return 1; // 99.9% SLA
+      return 1 // 99.9% SLA
     case 'critical':
-      return 2; // 99.99% SLA
+      return 2 // 99.99% SLA
     default:
-      return 1;
+      return 1
   }
-};
+}
 
 /**
  * Generate optimized index settings
@@ -110,20 +106,18 @@ export const calculateOptimalReplicaCount = (
  * @param config - Performance configuration
  * @returns Optimized index settings
  */
-export const generateOptimizedSettings = (
-  config: PerformanceConfig
-): OptimizedIndexSettings => {
-  const shardCount = calculateOptimalShardCount(config.indexSize, config.nodeCount);
-  const efSearch = calculateOptimalEfSearch(config.indexSize, config.targetLatencyMs);
+export const generateOptimizedSettings = (config: PerformanceConfig): OptimizedIndexSettings => {
+  const shardCount = calculateOptimalShardCount(config.indexSize, config.nodeCount)
+  const efSearch = calculateOptimalEfSearch(config.indexSize, config.targetLatencyMs)
 
   // ef_construction should be 2-4x ef_search for optimal build quality
-  const efConstruction = Math.min(512, efSearch * 2);
+  const efConstruction = Math.min(512, efSearch * 2)
 
   // m parameter: 16-48 range, higher for larger datasets
-  const m = config.indexSize < 1_000_000 ? 16 : 24;
+  const m = config.indexSize < 1_000_000 ? 16 : 24
 
   // refresh_interval: longer for bulk indexing, shorter for real-time
-  const refreshInterval = config.indexSize > 1_000_000 ? '30s' : '10s';
+  const refreshInterval = config.indexSize > 1_000_000 ? '30s' : '10s'
 
   return {
     shardCount,
@@ -132,8 +126,8 @@ export const generateOptimizedSettings = (
     efConstruction,
     m,
     refreshInterval,
-  };
-};
+  }
+}
 
 /**
  * Create optimized k-NN index configuration
@@ -142,11 +136,8 @@ export const generateOptimizedSettings = (
  * @param config - Performance configuration
  * @returns Index creation body
  */
-export const createOptimizedIndexConfig = (
-  indexName: string,
-  config: PerformanceConfig
-): any => {
-  const settings = generateOptimizedSettings(config);
+export const createOptimizedIndexConfig = (indexName: string, config: PerformanceConfig): any => {
+  const settings = generateOptimizedSettings(config)
 
   return {
     settings: {
@@ -235,8 +226,8 @@ export const createOptimizedIndexConfig = (
         },
       },
     },
-  };
-};
+  }
+}
 
 /**
  * Build optimized k-NN search query with filters
@@ -248,33 +239,33 @@ export const createOptimizedIndexConfig = (
 export const buildOptimizedKNNQuery = (
   vector: number[],
   options: {
-    k?: number;
-    fileType?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    minScore?: number;
+    k?: number
+    fileType?: string
+    dateFrom?: string
+    dateTo?: string
+    minScore?: number
   } = {}
 ): any => {
-  const { k = 50, fileType, dateFrom, dateTo, minScore = 0.7 } = options;
+  const { k = 50, fileType, dateFrom, dateTo, minScore = 0.7 } = options
 
-  const filterClauses: any[] = [];
+  const filterClauses: any[] = []
 
   // File type filter
   if (fileType && fileType !== 'all') {
     filterClauses.push({
       term: { file_type: fileType },
-    });
+    })
   }
 
   // Date range filter
   if (dateFrom || dateTo) {
-    const rangeQuery: any = {};
-    if (dateFrom) rangeQuery.gte = dateFrom;
-    if (dateTo) rangeQuery.lte = dateTo;
+    const rangeQuery: any = {}
+    if (dateFrom) rangeQuery.gte = dateFrom
+    if (dateTo) rangeQuery.lte = dateTo
 
     filterClauses.push({
       range: { processed_at: rangeQuery },
-    });
+    })
   }
 
   // Build query based on whether filters exist
@@ -307,16 +298,9 @@ export const buildOptimizedKNNQuery = (
         },
       },
       size: k,
-      _source: [
-        'file_name',
-        'file_path',
-        'file_type',
-        'file_size',
-        'processed_at',
-        's3_key',
-      ],
+      _source: ['file_name', 'file_path', 'file_type', 'file_size', 'processed_at', 's3_key'],
       track_total_hits: true,
-    };
+    }
   } else {
     // Simple k-NN search without filters
     return {
@@ -330,18 +314,11 @@ export const buildOptimizedKNNQuery = (
       },
       size: k,
       min_score: minScore,
-      _source: [
-        'file_name',
-        'file_path',
-        'file_type',
-        'file_size',
-        'processed_at',
-        's3_key',
-      ],
+      _source: ['file_name', 'file_path', 'file_type', 'file_size', 'processed_at', 's3_key'],
       track_total_hits: true,
-    };
+    }
   }
-};
+}
 
 /**
  * Batch k-NN search for multiple vectors
@@ -359,16 +336,16 @@ export const batchKNNSearch = async (
   indexName: string,
   k: number = 20
 ): Promise<any[]> => {
-  const body: any[] = [];
+  const body: any[] = []
 
   vectors.forEach((vector) => {
-    body.push({ index: indexName });
-    body.push(buildOptimizedKNNQuery(vector, { k }));
-  });
+    body.push({ index: indexName })
+    body.push(buildOptimizedKNNQuery(vector, { k }))
+  })
 
-  const response = await client.msearch({ body });
-  return response.body.responses;
-};
+  const response = await client.msearch({ body })
+  return response.body.responses
+}
 
 /**
  * Search with pagination using search_after
@@ -388,48 +365,47 @@ export const searchWithPagination = async (
   pageSize: number = 20,
   searchAfter?: any[]
 ): Promise<{ results: any[]; nextSearchAfter: any[] | null }> => {
-  const query = buildOptimizedKNNQuery(vector, { k: pageSize });
+  const query = buildOptimizedKNNQuery(vector, { k: pageSize })
 
   // Add sort for search_after
-  query.sort = [{ _score: 'desc' }, { _id: 'asc' }];
+  query.sort = [{ _score: 'desc' }, { _id: 'asc' }]
 
   // Add search_after if provided
   if (searchAfter) {
-    query.search_after = searchAfter;
+    query.search_after = searchAfter
   }
 
   const response = await client.search({
     index: indexName,
     body: query,
-  });
+  })
 
-  const hits = response.body.hits.hits;
-  const nextSearchAfter =
-    hits.length > 0 ? hits[hits.length - 1].sort : null;
+  const { hits } = response.body.hits
+  const nextSearchAfter = hits.length > 0 ? hits[hits.length - 1].sort : null
 
   return {
     results: hits,
     nextSearchAfter,
-  };
-};
+  }
+}
 
 /**
  * Performance metrics interface
  */
 export interface PerformanceMetrics {
   queryLatency: {
-    p50: number;
-    p95: number;
-    p99: number;
-    max: number;
-  };
+    p50: number
+    p95: number
+    p99: number
+    max: number
+  }
   throughput: {
-    queriesPerSecond: number;
-  };
+    queriesPerSecond: number
+  }
   cache: {
-    hitRate: number;
-    missRate: number;
-  };
+    hitRate: number
+    missRate: number
+  }
 }
 
 /**
@@ -445,8 +421,8 @@ export const calculatePerformanceMetrics = (
   cacheHits: number,
   cacheMisses: number
 ): PerformanceMetrics => {
-  const sorted = [...queryTimes].sort((a, b) => a - b);
-  const total = cacheHits + cacheMisses;
+  const sorted = [...queryTimes].sort((a, b) => a - b)
+  const total = cacheHits + cacheMisses
 
   return {
     queryLatency: {
@@ -462,8 +438,8 @@ export const calculatePerformanceMetrics = (
       hitRate: total > 0 ? cacheHits / total : 0,
       missRate: total > 0 ? cacheMisses / total : 0,
     },
-  };
-};
+  }
+}
 
 /**
  * Estimate memory requirements for k-NN index
@@ -479,10 +455,10 @@ export const estimateMemoryRequirements = (
   dimension: number = 1024,
   m: number = 24
 ): number => {
-  const bytes = documentCount * dimension * 4 * (1 + m / 8);
-  const gb = bytes / (1024 * 1024 * 1024);
-  return Math.ceil(gb * 1.2); // Add 20% buffer
-};
+  const bytes = documentCount * dimension * 4 * (1 + m / 8)
+  const gb = bytes / (1024 * 1024 * 1024)
+  return Math.ceil(gb * 1.2) // Add 20% buffer
+}
 
 /**
  * Recommend instance type based on workload
@@ -490,20 +466,18 @@ export const estimateMemoryRequirements = (
  * @param config - Performance configuration
  * @returns Recommended AWS OpenSearch instance type
  */
-export const recommendInstanceType = (
-  config: PerformanceConfig
-): string => {
-  const requiredMemoryGB = estimateMemoryRequirements(config.indexSize);
+export const recommendInstanceType = (config: PerformanceConfig): string => {
+  const requiredMemoryGB = estimateMemoryRequirements(config.indexSize)
 
   if (requiredMemoryGB < 8) {
-    return 't3.medium.search'; // 4 GB, cost-effective for small datasets
+    return 't3.medium.search' // 4 GB, cost-effective for small datasets
   } else if (requiredMemoryGB < 16) {
-    return 'r6g.large.search'; // 16 GB, good for medium datasets
+    return 'r6g.large.search' // 16 GB, good for medium datasets
   } else if (requiredMemoryGB < 32) {
-    return 'r6g.xlarge.search'; // 32 GB, standard production
+    return 'r6g.xlarge.search' // 32 GB, standard production
   } else if (requiredMemoryGB < 64) {
-    return 'r6g.2xlarge.search'; // 64 GB, large datasets
+    return 'r6g.2xlarge.search' // 64 GB, large datasets
   } else {
-    return 'r6g.4xlarge.search'; // 128 GB, very large datasets
+    return 'r6g.4xlarge.search' // 128 GB, very large datasets
   }
-};
+}

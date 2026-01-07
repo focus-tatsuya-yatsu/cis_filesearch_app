@@ -3,36 +3,37 @@
  * 本番環境では詳細なエラー情報を露出しない
  */
 
-import { NextResponse } from 'next/server';
-import { createCorsResponse } from './cors';
+import { NextResponse } from 'next/server'
+
+import { createCorsResponse } from './cors'
 
 /**
  * エラーレスポンスの型定義
  */
 export interface ErrorResponse {
-  error: string;
-  code: string;
-  errorId: string;
-  details?: any; // 開発環境のみ
-  timestamp: string;
+  error: string
+  code: string
+  errorId: string
+  details?: any // 開発環境のみ
+  timestamp: string
 }
 
 /**
  * エラーID生成
  */
 export function generateErrorId(): string {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 9).toUpperCase();
-  return `ERR-${timestamp}-${random}`;
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 9).toUpperCase()
+  return `ERR-${timestamp}-${random}`
 }
 
 /**
  * エラータイプの判定と公開エラーメッセージの生成
  */
 function classifyError(error: any): {
-  statusCode: number;
-  publicError: string;
-  errorCode: string;
+  statusCode: number
+  publicError: string
+  errorCode: string
 } {
   // AWS認証エラー
   if (
@@ -44,7 +45,7 @@ function classifyError(error: any): {
       statusCode: 401,
       publicError: 'Authentication failed',
       errorCode: 'AUTHENTICATION_ERROR',
-    };
+    }
   }
 
   // AWS Bedrockアクセス拒否
@@ -53,7 +54,7 @@ function classifyError(error: any): {
       statusCode: 403,
       publicError: 'Access denied',
       errorCode: 'ACCESS_DENIED',
-    };
+    }
   }
 
   // バリデーションエラー
@@ -66,7 +67,7 @@ function classifyError(error: any): {
       statusCode: 400,
       publicError: 'Invalid request',
       errorCode: 'VALIDATION_ERROR',
-    };
+    }
   }
 
   // レート制限エラー
@@ -75,7 +76,7 @@ function classifyError(error: any): {
       statusCode: 429,
       publicError: 'Too many requests',
       errorCode: 'RATE_LIMIT_EXCEEDED',
-    };
+    }
   }
 
   // サービス利用不可
@@ -88,7 +89,7 @@ function classifyError(error: any): {
       statusCode: 503,
       publicError: 'Service temporarily unavailable',
       errorCode: 'SERVICE_UNAVAILABLE',
-    };
+    }
   }
 
   // タイムアウト
@@ -97,7 +98,7 @@ function classifyError(error: any): {
       statusCode: 504,
       publicError: 'Request timeout',
       errorCode: 'REQUEST_TIMEOUT',
-    };
+    }
   }
 
   // 認証トークンエラー
@@ -106,7 +107,7 @@ function classifyError(error: any): {
       statusCode: 401,
       publicError: 'Invalid or expired token',
       errorCode: 'INVALID_TOKEN',
-    };
+    }
   }
 
   // デフォルト: 内部サーバーエラー
@@ -114,7 +115,7 @@ function classifyError(error: any): {
     statusCode: 500,
     publicError: 'Internal server error',
     errorCode: 'INTERNAL_ERROR',
-  };
+  }
 }
 
 /**
@@ -122,8 +123,8 @@ function classifyError(error: any): {
  * 本番環境では詳細なエラー情報を隠蔽
  */
 export function createSecureErrorResponse(error: any, origin: string | null): NextResponse {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const errorId = generateErrorId();
+  const isDevelopment = process.env.NODE_ENV === 'development'
+  const errorId = generateErrorId()
 
   // エラー詳細をCloudWatchに記録（本番環境でも）
   console.error('[Security] Error occurred:', {
@@ -134,10 +135,10 @@ export function createSecureErrorResponse(error: any, origin: string | null): Ne
     errorMessage: error.message,
     // スタックトレースは開発環境のみ
     ...(isDevelopment && { stack: error.stack }),
-  });
+  })
 
   // エラータイプの分類
-  const { statusCode, publicError, errorCode } = classifyError(error);
+  const { statusCode, publicError, errorCode } = classifyError(error)
 
   // レスポンスボディ
   const responseBody: ErrorResponse = {
@@ -145,7 +146,7 @@ export function createSecureErrorResponse(error: any, origin: string | null): Ne
     code: errorCode,
     errorId, // サポート問い合わせ用のID
     timestamp: new Date().toISOString(),
-  };
+  }
 
   // 開発環境のみ詳細を追加
   if (isDevelopment) {
@@ -156,10 +157,10 @@ export function createSecureErrorResponse(error: any, origin: string | null): Ne
       // 特定のエラーの追加情報
       ...(error.statusCode && { statusCode: error.statusCode }),
       ...(error.$metadata && { metadata: error.$metadata }),
-    };
+    }
   }
 
-  return createCorsResponse(responseBody, statusCode, origin);
+  return createCorsResponse(responseBody, statusCode, origin)
 }
 
 /**
@@ -170,7 +171,7 @@ export function createRateLimitErrorResponse(
   reset: number,
   origin: string | null
 ): NextResponse {
-  const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+  const retryAfter = Math.ceil((reset - Date.now()) / 1000)
 
   return createCorsResponse(
     {
@@ -188,7 +189,7 @@ export function createRateLimitErrorResponse(
       'X-RateLimit-Remaining': '0',
       'X-RateLimit-Reset': new Date(reset).toISOString(),
     }
-  );
+  )
 }
 
 /**
@@ -208,7 +209,7 @@ export function createValidationErrorResponse(
     },
     400,
     origin
-  );
+  )
 }
 
 /**
@@ -224,5 +225,5 @@ export function createAuthErrorResponse(message: string, origin: string | null):
     },
     401,
     origin
-  );
+  )
 }

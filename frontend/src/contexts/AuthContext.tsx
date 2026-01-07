@@ -19,6 +19,7 @@ import {
   confirmResetPassword,
 } from 'aws-amplify/auth'
 import type { AuthUser } from 'aws-amplify/auth'
+
 import { configureAmplify, validateAmplifyConfig } from '@/lib/amplify'
 
 // ========================================

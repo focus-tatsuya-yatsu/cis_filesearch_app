@@ -6,24 +6,23 @@
 import type { ImageEmbeddingResponse, ImageEmbeddingError } from '@/types'
 
 // API Gateway URL (Lambda)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || '/api/search';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || '/api/search'
 
 /**
  * 画像をBase64に変換
  */
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
     reader.onload = () => {
-      const result = reader.result as string;
+      const result = reader.result as string
       // data:image/jpeg;base64, の部分を除去
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+      const base64 = result.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 
 /**
  * 画像をアップロードしてベクトル化
@@ -42,8 +41,8 @@ export const uploadImageForEmbedding = async (
     })
 
     // 画像をBase64に変換
-    const imageBase64 = await fileToBase64(imageFile);
-    console.log('[Image Search API] Image converted to base64, length:', imageBase64.length);
+    const imageBase64 = await fileToBase64(imageFile)
+    console.log('[Image Search API] Image converted to base64, length:', imageBase64.length)
 
     // Lambda APIを直接呼び出し（embedding生成）
     const response = await fetch(API_BASE_URL, {
@@ -53,7 +52,7 @@ export const uploadImageForEmbedding = async (
       },
       body: JSON.stringify({
         action: 'generate-embedding',
-        image: imageBase64
+        image: imageBase64,
       }),
     })
 
@@ -72,14 +71,14 @@ export const uploadImageForEmbedding = async (
     }
 
     console.log('[Image Search API] Upload successful, embedding dimensions:', data.data.dimensions)
-    
+
     // レスポンス形式を統一
     return {
       success: true,
       data: {
         embedding: data.data.embedding,
-        dimensions: data.data.dimensions
-      }
+        dimensions: data.data.dimensions,
+      },
     } as ImageEmbeddingResponse
   } catch (error: any) {
     console.error('[Image Search API] Network error:', error)
@@ -110,7 +109,7 @@ export const searchByImageEmbedding = async (
       body: JSON.stringify({
         imageVector: embedding,
         searchType: 'image',
-        limit: 20
+        limit: 20,
       }),
     })
 
@@ -145,9 +144,7 @@ export const validateFileType = (file: File): boolean => {
 /**
  * 画像ファイルの総合バリデーション
  */
-export const validateImageFile = (
-  file: File
-): { isValid: boolean; error?: string } => {
+export const validateImageFile = (file: File): { isValid: boolean; error?: string } => {
   if (!validateFileSize(file, 5)) {
     return {
       isValid: false,
@@ -168,9 +165,7 @@ export const validateImageFile = (
 /**
  * 画像ファイルのプレビューURLを生成
  */
-export const createImagePreviewUrl = (file: File): string => {
-  return URL.createObjectURL(file)
-}
+export const createImagePreviewUrl = (file: File): string => URL.createObjectURL(file)
 
 /**
  * プレビューURLをクリーンアップ

@@ -3,23 +3,24 @@
  * PDFファイルのプレビューとキーワードハイライト機能を提供
  */
 
-'use client';
+'use client'
 
-import { useState, useEffect, FC } from 'react';
+import { useState, useEffect, FC } from 'react'
+
 import {
   getPreviewUrl,
   getPdfPages,
   getKeywordHighlights,
   type PdfPagesResponse,
   type KeywordHighlightResponse,
-} from '@/services/preview-service';
+} from '@/services/preview-service'
 
 interface PdfPreviewProps {
-  bucket: string;
-  s3Key: string;
-  keywords?: string[];
-  initialPage?: number;
-  className?: string;
+  bucket: string
+  s3Key: string
+  keywords?: string[]
+  initialPage?: number
+  className?: string
 }
 
 export const PdfPreview: FC<PdfPreviewProps> = ({
@@ -29,21 +30,19 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
   initialPage = 1,
   className = '',
 }) => {
-  const [pdfData, setPdfData] = useState<PdfPagesResponse['data'] | null>(null);
-  const [highlightData, setHighlightData] = useState<KeywordHighlightResponse['data'] | null>(
-    null
-  );
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<PdfPagesResponse['data'] | null>(null)
+  const [highlightData, setHighlightData] = useState<KeywordHighlightResponse['data'] | null>(null)
+  const [currentPage, setCurrentPage] = useState(initialPage)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadPdfData();
-  }, [bucket, s3Key, keywords]);
+    loadPdfData()
+  }, [bucket, s3Key, keywords])
 
   const loadPdfData = async () => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true)
+    setError(null)
 
     try {
       // PDFページデータを取得
@@ -53,99 +52,95 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
         undefined, // startPage
         undefined, // endPage
         keywords.length > 0 ? keywords : undefined
-      );
+      )
 
-      setPdfData(pagesResponse.data);
+      setPdfData(pagesResponse.data)
 
       // キーワードが指定されている場合、ハイライト情報を取得
       if (keywords.length > 0) {
         try {
-          const highlightsResponse = await getKeywordHighlights(
-            bucket,
-            s3Key,
-            keywords
-          );
-          setHighlightData(highlightsResponse.data);
+          const highlightsResponse = await getKeywordHighlights(bucket, s3Key, keywords)
+          setHighlightData(highlightsResponse.data)
 
           // 最初にキーワードが見つかったページにジャンプ
           if (highlightsResponse.data.pages.length > 0) {
-            setCurrentPage(highlightsResponse.data.pages[0].pageNumber);
+            setCurrentPage(highlightsResponse.data.pages[0].pageNumber)
           }
         } catch (highlightError) {
-          console.warn('Failed to load highlights:', highlightError);
+          console.warn('Failed to load highlights:', highlightError)
           // ハイライト取得失敗は致命的ではない
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load PDF');
+      setError(err.message || 'Failed to load PDF')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const goToPage = (pageNumber: number) => {
     if (pdfData && pageNumber >= 1 && pageNumber <= pdfData.metadata.totalPages) {
-      setCurrentPage(pageNumber);
+      setCurrentPage(pageNumber)
     }
-  };
+  }
 
   const goToNextPage = () => {
     if (pdfData && currentPage < pdfData.metadata.totalPages) {
-      setCurrentPage(currentPage + 1);
+      setCurrentPage(currentPage + 1)
     }
-  };
+  }
 
   const goToPreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      setCurrentPage(currentPage - 1)
     }
-  };
+  }
 
   const goToNextKeyword = () => {
-    if (!highlightData) return;
+    if (!highlightData) return
 
     // 現在のページより後のページでキーワードが見つかっているページを探す
-    const nextPage = highlightData.pages.find((p) => p.pageNumber > currentPage);
+    const nextPage = highlightData.pages.find((p) => p.pageNumber > currentPage)
 
     if (nextPage) {
-      setCurrentPage(nextPage.pageNumber);
+      setCurrentPage(nextPage.pageNumber)
     } else {
       // 見つからない場合は最初のページに戻る
       if (highlightData.pages.length > 0) {
-        setCurrentPage(highlightData.pages[0].pageNumber);
+        setCurrentPage(highlightData.pages[0].pageNumber)
       }
     }
-  };
+  }
 
   const goToPreviousKeyword = () => {
-    if (!highlightData) return;
+    if (!highlightData) return
 
     // 現在のページより前のページでキーワードが見つかっているページを探す
-    const previousPages = highlightData.pages.filter((p) => p.pageNumber < currentPage);
+    const previousPages = highlightData.pages.filter((p) => p.pageNumber < currentPage)
 
     if (previousPages.length > 0) {
-      setCurrentPage(previousPages[previousPages.length - 1].pageNumber);
+      setCurrentPage(previousPages[previousPages.length - 1].pageNumber)
     } else {
       // 見つからない場合は最後のページに移動
       if (highlightData.pages.length > 0) {
-        const lastPage = highlightData.pages[highlightData.pages.length - 1];
-        setCurrentPage(lastPage.pageNumber);
+        const lastPage = highlightData.pages[highlightData.pages.length - 1]
+        setCurrentPage(lastPage.pageNumber)
       }
     }
-  };
+  }
 
   const getCurrentPageUrl = () => {
-    if (!pdfData) return null;
+    if (!pdfData) return null
 
-    const pageData = pdfData.pages.find((p) => p.pageNumber === currentPage);
-    return pageData?.previewUrl || null;
-  };
+    const pageData = pdfData.pages.find((p) => p.pageNumber === currentPage)
+    return pageData?.previewUrl || null
+  }
 
   const getCurrentPageHighlights = () => {
-    if (!highlightData) return null;
+    if (!highlightData) return null
 
-    return highlightData.pages.find((p) => p.pageNumber === currentPage) || null;
-  };
+    return highlightData.pages.find((p) => p.pageNumber === currentPage) || null
+  }
 
   if (isLoading) {
     return (
@@ -155,7 +150,7 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
           <p className="text-gray-600">PDFを読み込んでいます...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -179,15 +174,15 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
           <p className="text-sm">{error}</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!pdfData) {
-    return null;
+    return null
   }
 
-  const currentPageUrl = getCurrentPageUrl();
-  const currentHighlights = getCurrentPageHighlights();
+  const currentPageUrl = getCurrentPageUrl()
+  const currentHighlights = getCurrentPageHighlights()
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -200,9 +195,7 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
           </span>
           <span>サイズ: {formatFileSize(pdfData.metadata.fileSize)}</span>
           {highlightData && (
-            <span className="text-blue-600">
-              キーワード: {highlightData.totalMatches}件マッチ
-            </span>
+            <span className="text-blue-600">キーワード: {highlightData.totalMatches}件マッチ</span>
           )}
         </div>
       </div>
@@ -230,9 +223,9 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
             type="number"
             value={currentPage}
             onChange={(e) => {
-              const page = parseInt(e.target.value);
+              const page = parseInt(e.target.value)
               if (!isNaN(page)) {
-                goToPage(page);
+                goToPage(page)
               }
             }}
             min={1}
@@ -249,12 +242,7 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
             aria-label="次のページ"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
@@ -315,26 +303,26 @@ export const PdfPreview: FC<PdfPreviewProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
 /**
  * ファイルサイズを読みやすい形式にフォーマット
  */
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return '0 Bytes'
 
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
 /**
  * テキスト内のキーワードをハイライト
  */
 function highlightText(text: string, keyword: string): string {
-  const regex = new RegExp(`(${keyword})`, 'gi');
-  return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+  const regex = new RegExp(`(${keyword})`, 'gi')
+  return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>')
 }

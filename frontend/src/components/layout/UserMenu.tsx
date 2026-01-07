@@ -9,8 +9,9 @@
 'use client'
 
 import { FC, useState, useRef, useEffect } from 'react'
-import { User, Settings as SettingsIcon, LogOut, ChevronDown } from 'lucide-react'
+
 import { AuthUser } from 'aws-amplify/auth'
+import { User, Settings as SettingsIcon, LogOut, ChevronDown } from 'lucide-react'
 
 // ========================================
 // Types

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+
 import { Toaster } from 'sonner'
+
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext' // layout.tsx から移動
 

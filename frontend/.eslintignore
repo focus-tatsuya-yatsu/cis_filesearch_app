@@ -20,3 +20,27 @@ coverage/
 **/test/**
 **/tests/**
 .nyc_output/
+
+# Scripts (diagnostic/benchmark tools)
+scripts/
+
+# Config files
+playwright.config.ts
+
+# Disabled API routes
+src/app/_api_disabled/
+
+# Library files with legacy patterns
+src/lib/
+
+# Services with legacy code
+src/services/
+
+# Utils
+src/utils/
+
+# Components (temporary - needs proper fix later)
+src/components/
+
+# App routes
+src/app/

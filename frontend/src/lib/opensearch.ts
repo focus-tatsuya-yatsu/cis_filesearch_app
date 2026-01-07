@@ -10,89 +10,89 @@
  * - Comprehensive error handling
  */
 
-import { Client } from '@opensearch-project/opensearch';
-import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
-import { defaultProvider } from '@aws-sdk/credential-provider-node';
+import { defaultProvider } from '@aws-sdk/credential-provider-node'
+import { Client } from '@opensearch-project/opensearch'
+import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws'
 
 export interface SearchQuery {
-  query: string;
-  searchMode?: 'and' | 'or'; // AND検索 or OR検索
-  imageEmbedding?: number[]; // 画像検索用のベクトル（1024次元）
-  fileType?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  size?: number;
-  from?: number;
-  sortBy?: 'relevance' | 'date' | 'name' | 'size';
-  sortOrder?: 'asc' | 'desc';
+  query: string
+  searchMode?: 'and' | 'or' // AND検索 or OR検索
+  imageEmbedding?: number[] // 画像検索用のベクトル（1024次元）
+  fileType?: string
+  dateFrom?: string
+  dateTo?: string
+  size?: number
+  from?: number
+  sortBy?: 'relevance' | 'date' | 'name' | 'size'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface SearchResult {
-  id: string;
-  fileName: string;
-  filePath: string;
-  fileType: string;
-  fileSize: number;
-  modifiedDate: string;
-  snippet: string;
-  relevanceScore: number;
+  id: string
+  fileName: string
+  filePath: string
+  fileType: string
+  fileSize: number
+  modifiedDate: string
+  snippet: string
+  relevanceScore: number
   highlights?: {
-    fileName?: string[];
-    filePath?: string[];
-    extractedText?: string[];
-  };
+    fileName?: string[]
+    filePath?: string[]
+    extractedText?: string[]
+  }
 }
 
 export interface SearchResponse {
-  results: SearchResult[];
-  total: number;
-  took: number;
-  error?: string; // エラーメッセージ
+  results: SearchResult[]
+  total: number
+  took: number
+  error?: string // エラーメッセージ
 }
 
 /**
  * OpenSearch クライアントのシングルトンインスタンス
  */
-let opensearchClient: Client | null = null;
-let connectionHealthy: boolean | null = null;
-let lastHealthCheck: number = 0;
-const HEALTH_CHECK_INTERVAL = 60000; // 60秒
+let opensearchClient: Client | null = null
+let connectionHealthy: boolean | null = null
+let lastHealthCheck: number = 0
+const HEALTH_CHECK_INTERVAL = 60000 // 60秒
 
 /**
  * 検索パフォーマンス設定
  */
-const SEARCH_TIMEOUT = parseInt(process.env.OPENSEARCH_REQUEST_TIMEOUT || '30000', 10);
-const MAX_RETRIES = parseInt(process.env.OPENSEARCH_MAX_RETRIES || '3', 10);
-const BATCH_SIZE = parseInt(process.env.OPENSEARCH_BATCH_SIZE || '100', 10);
+const SEARCH_TIMEOUT = parseInt(process.env.OPENSEARCH_REQUEST_TIMEOUT || '30000', 10)
+const MAX_RETRIES = parseInt(process.env.OPENSEARCH_MAX_RETRIES || '3', 10)
+const BATCH_SIZE = parseInt(process.env.OPENSEARCH_BATCH_SIZE || '100', 10)
 
 /**
  * 環境判定: VPCエンドポイントかどうか
  */
 function isVpcEndpoint(endpoint: string): boolean {
-  return endpoint.includes('vpc-') && endpoint.includes('.es.amazonaws.com');
+  return endpoint.includes('vpc-') && endpoint.includes('.es.amazonaws.com')
 }
 
 /**
  * OpenSearch接続のヘルスチェック
  */
 async function checkOpenSearchHealth(client: Client): Promise<boolean> {
-  const now = Date.now();
+  const now = Date.now()
 
   // キャッシュされた結果を返す
   if (connectionHealthy !== null && now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
-    return connectionHealthy;
+    return connectionHealthy
   }
 
   try {
-    await client.ping({ requestTimeout: 5000 });
-    connectionHealthy = true;
-    lastHealthCheck = now;
-    return true;
+    await client.ping({ requestTimeout: 5000 })
+    connectionHealthy = true
+    lastHealthCheck = now
+    return true
   } catch (error) {
-    connectionHealthy = false;
-    lastHealthCheck = now;
-    console.warn('OpenSearch health check failed:', error);
-    return false;
+    connectionHealthy = false
+    lastHealthCheck = now
+    console.warn('OpenSearch health check failed:', error)
+    return false
   }
 }
 
@@ -101,16 +101,16 @@ async function checkOpenSearchHealth(client: Client): Promise<boolean> {
  */
 export async function getOpenSearchClient(): Promise<Client | null> {
   if (opensearchClient) {
-    return opensearchClient;
+    return opensearchClient
   }
 
-  const endpoint = process.env.OPENSEARCH_ENDPOINT;
+  const endpoint = process.env.OPENSEARCH_ENDPOINT
   if (!endpoint) {
-    console.warn('OPENSEARCH_ENDPOINT environment variable is not set');
-    return null;
+    console.warn('OPENSEARCH_ENDPOINT environment variable is not set')
+    return null
   }
 
-  const region = process.env.AWS_REGION || 'ap-northeast-1';
+  const region = process.env.AWS_REGION || 'ap-northeast-1'
 
   try {
     opensearchClient = new Client({
@@ -120,8 +120,8 @@ export async function getOpenSearchClient(): Promise<Client | null> {
         getCredentials: () => {
           const credentialsProvider = defaultProvider({
             timeout: 5000, // 認証タイムアウト
-          });
-          return credentialsProvider();
+          })
+          return credentialsProvider()
         },
       }),
       node: endpoint,
@@ -133,22 +133,22 @@ export async function getOpenSearchClient(): Promise<Client | null> {
       ssl: {
         rejectUnauthorized: true,
       },
-    });
+    })
 
     // Test connection
-    const isHealthy = await checkOpenSearchHealth(opensearchClient);
+    const isHealthy = await checkOpenSearchHealth(opensearchClient)
     if (!isHealthy) {
-      console.warn('OpenSearch connection is not healthy');
-      opensearchClient = null;
-      return null;
+      console.warn('OpenSearch connection is not healthy')
+      opensearchClient = null
+      return null
     }
 
-    console.info('OpenSearch client initialized successfully');
-    return opensearchClient;
+    console.info('OpenSearch client initialized successfully')
+    return opensearchClient
   } catch (error) {
-    console.error('Failed to initialize OpenSearch client:', error);
-    opensearchClient = null;
-    return null;
+    console.error('Failed to initialize OpenSearch client:', error)
+    opensearchClient = null
+    return null
   }
 }
 
@@ -169,80 +169,78 @@ async function searchViaApiGateway(
     from = 0,
     sortBy = 'relevance',
     sortOrder = 'desc',
-  } = searchQuery;
+  } = searchQuery
 
   // ページ番号を計算
-  const page = Math.floor(from / size) + 1;
+  const page = Math.floor(from / size) + 1
 
   // クエリパラメータを構築
-  const params = new URLSearchParams();
-  if (query) params.append('q', query);
-  params.append('searchMode', searchMode);
-  if (fileType) params.append('fileType', fileType);
-  if (dateFrom) params.append('dateFrom', dateFrom);
-  if (dateTo) params.append('dateTo', dateTo);
-  params.append('page', page.toString());
-  params.append('limit', size.toString());
-  params.append('sortBy', sortBy);
-  params.append('sortOrder', sortOrder);
+  const params = new URLSearchParams()
+  if (query) params.append('q', query)
+  params.append('searchMode', searchMode)
+  if (fileType) params.append('fileType', fileType)
+  if (dateFrom) params.append('dateFrom', dateFrom)
+  if (dateTo) params.append('dateTo', dateTo)
+  params.append('page', page.toString())
+  params.append('limit', size.toString())
+  params.append('sortBy', sortBy)
+  params.append('sortOrder', sortOrder)
 
-  const url = `${apiGatewayUrl}?${params.toString()}`;
+  const url = `${apiGatewayUrl}?${params.toString()}`
 
-  console.info(`[API Gateway] Searching via Lambda: ${url}`);
+  console.info(`[API Gateway] Searching via Lambda: ${url}`)
 
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       // Cognitoトークンがあれば追加
-      ...(typeof window !== 'undefined' && window.localStorage?.getItem('cognitoToken') && {
-        'Authorization': `Bearer ${window.localStorage.getItem('cognitoToken')}`
-      }),
+      ...(typeof window !== 'undefined' &&
+        window.localStorage?.getItem('cognitoToken') && {
+          Authorization: `Bearer ${window.localStorage.getItem('cognitoToken')}`,
+        }),
     },
-  });
+  })
 
   if (!response.ok) {
-    throw new Error(`API Gateway error: ${response.status} ${response.statusText}`);
+    throw new Error(`API Gateway error: ${response.status} ${response.statusText}`)
   }
 
-  const data = await response.json();
+  const data = await response.json()
 
   // Lambda response structure: { success: true, data: { results, total, page, limit, ... } }
   // Extract the data object from Lambda's response
-  const lambdaData = data.data || data;
+  const lambdaData = data.data || data
 
   // API Gatewayレスポンスをアプリケーション形式に変換
   return {
     results: lambdaData.results || [],
     total: lambdaData.total || 0,
     took: lambdaData.took || 0,
-  };
+  }
 }
-
 
 /**
  * ドキュメントを検索
  * API Gateway経由でLambda関数を呼び出す
  */
-export async function searchDocuments(
-  searchQuery: SearchQuery
-): Promise<SearchResponse> {
+export async function searchDocuments(searchQuery: SearchQuery): Promise<SearchResponse> {
   // API Gateway URLを取得
-  const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+  const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
   // API Gatewayが設定されている場合は、Lambda経由で検索
   if (apiGatewayUrl) {
-    return searchViaApiGateway(searchQuery, apiGatewayUrl);
+    return searchViaApiGateway(searchQuery, apiGatewayUrl)
   }
 
   // API Gatewayが設定されていない場合は、従来のOpenSearch直接接続を試みる
-  const client = await getOpenSearchClient();
+  const client = await getOpenSearchClient()
 
   // OpenSearchクライアントが利用できない場合はエラーを返す
   if (!client) {
-    throw new Error('OpenSearch client is not available. Please check your configuration.');
+    throw new Error('OpenSearch client is not available. Please check your configuration.')
   }
-  const indexName = process.env.OPENSEARCH_INDEX || 'file-index';
+  const indexName = process.env.OPENSEARCH_INDEX || 'file-index'
 
   const {
     query,
@@ -255,16 +253,16 @@ export async function searchDocuments(
     from = 0,
     sortBy = 'relevance',
     sortOrder = 'desc',
-  } = searchQuery;
+  } = searchQuery
 
   // ハイブリッド検索の判定
-  const hasTextQuery = query && query.trim();
-  const hasImageQuery = imageEmbedding && imageEmbedding.length > 0;
+  const hasTextQuery = query && query.trim()
+  const hasImageQuery = imageEmbedding && imageEmbedding.length > 0
 
   // クエリを構築
-  const mustClauses: any[] = [];
-  const shouldClauses: any[] = [];
-  const filterClauses: any[] = [];
+  const mustClauses: any[] = []
+  const shouldClauses: any[] = []
+  const filterClauses: any[] = []
 
   // テキスト検索クエリ
   if (hasTextQuery) {
@@ -272,21 +270,21 @@ export async function searchDocuments(
       multi_match: {
         query: query.trim(),
         fields: [
-          'file_name^3',    // ファイル名を最重視
-          'file_path^2',    // パスを次に重視
-          'extracted_text'  // 本文
+          'file_name^3', // ファイル名を最重視
+          'file_path^2', // パスを次に重視
+          'extracted_text', // 本文
         ],
         type: 'best_fields',
         operator: searchMode, // 'and' または 'or'
         fuzziness: searchMode === 'or' ? 'AUTO' : '0', // AND検索では曖昧検索無効
       },
-    };
+    }
 
     // ハイブリッド検索の場合はshouldに、そうでない場合はmustに
     if (hasImageQuery) {
-      shouldClauses.push(textQuery);
+      shouldClauses.push(textQuery)
     } else {
-      mustClauses.push(textQuery);
+      mustClauses.push(textQuery)
     }
   }
 
@@ -299,46 +297,46 @@ export async function searchDocuments(
       script_score: {
         query: { match_all: {} },
         script: {
-          source: "knn_score",
-          lang: "knn",
+          source: 'knn_score',
+          lang: 'knn',
           params: {
-            field: "image_embedding",
+            field: 'image_embedding',
             query_value: imageEmbedding,
-            space_type: "innerproduct" // 正規化済みベクトルに最適
-          }
-        }
-      }
-    });
+            space_type: 'innerproduct', // 正規化済みベクトルに最適
+          },
+        },
+      },
+    })
   }
 
   // ファイルタイプフィルター
   if (fileType && fileType !== 'all') {
     filterClauses.push({
-      term: { file_type: fileType }
-    });
+      term: { file_type: fileType },
+    })
   }
 
   // 日付範囲フィルター
   if (dateFrom || dateTo) {
-    const rangeQuery: any = {};
-    if (dateFrom) rangeQuery.gte = dateFrom;
-    if (dateTo) rangeQuery.lte = dateTo;
+    const rangeQuery: any = {}
+    if (dateFrom) rangeQuery.gte = dateFrom
+    if (dateTo) rangeQuery.lte = dateTo
 
     filterClauses.push({
-      range: { processed_at: rangeQuery }
-    });
+      range: { processed_at: rangeQuery },
+    })
   }
 
   // ソート設定
-  const sort: any[] = [];
+  const sort: any[] = []
   if (sortBy === 'relevance') {
-    sort.push('_score');
+    sort.push('_score')
   } else if (sortBy === 'date') {
-    sort.push({ processed_at: { order: sortOrder } });
+    sort.push({ processed_at: { order: sortOrder } })
   } else if (sortBy === 'name') {
-    sort.push({ 'file_name.keyword': { order: sortOrder } });
+    sort.push({ 'file_name.keyword': { order: sortOrder } })
   } else if (sortBy === 'size') {
-    sort.push({ file_size: { order: sortOrder } });
+    sort.push({ file_size: { order: sortOrder } })
   }
 
   // 検索リクエストボディ
@@ -368,24 +366,24 @@ export async function searchDocuments(
     from,
     sort,
     track_total_hits: true,
-  };
+  }
 
   const response = await client.search({
     index: indexName,
     body: searchBody,
-  });
+  })
 
   // 結果を変換
   const results: SearchResult[] = response.body.hits.hits.map((hit: any) => {
-    const source = hit._source;
-    const highlights = hit.highlight || {};
+    const source = hit._source
+    const highlights = hit.highlight || {}
 
     // ハイライトまたはスニペットを生成
-    let snippet = '';
+    let snippet = ''
     if (highlights.extracted_text && highlights.extracted_text.length > 0) {
-      snippet = highlights.extracted_text.join(' ... ');
+      snippet = highlights.extracted_text.join(' ... ')
     } else if (source.extracted_text) {
-      snippet = source.extracted_text.substring(0, 200) + '...';
+      snippet = source.extracted_text.substring(0, 200) + '...'
     }
 
     return {
@@ -402,40 +400,38 @@ export async function searchDocuments(
         filePath: highlights.file_path,
         extractedText: highlights.extracted_text,
       },
-    };
-  });
+    }
+  })
 
   // 型処理: totalは number または { value: number } の可能性がある
-  const totalHits = response.body.hits?.total;
-  const totalValue = typeof totalHits === 'number'
-    ? totalHits
-    : (totalHits?.value || 0);
+  const totalHits = response.body.hits?.total
+  const totalValue = typeof totalHits === 'number' ? totalHits : totalHits?.value || 0
 
   return {
     results,
     total: totalValue,
     took: response.body.took || 0,
-  };
+  }
 }
 
 /**
  * インデックスの統計を取得
  */
 export async function getIndexStats(): Promise<any> {
-  const client = await getOpenSearchClient();
+  const client = await getOpenSearchClient()
 
   // OpenSearchクライアントが利用できない場合はエラーを投げる
   if (!client) {
-    throw new Error('OpenSearch client is not available. Please check your configuration.');
+    throw new Error('OpenSearch client is not available. Please check your configuration.')
   }
 
-  const indexName = process.env.OPENSEARCH_INDEX || 'file-index';
+  const indexName = process.env.OPENSEARCH_INDEX || 'file-index'
 
   const stats = await client.indices.stats({
     index: indexName,
-  });
+  })
 
-  return stats.body;
+  return stats.body
 }
 
 /**
@@ -451,10 +447,10 @@ export async function updateDocumentImageEmbedding(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // API Gateway経由でLambda関数を呼び出す
-    const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+    const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
     if (!apiGatewayUrl) {
-      throw new Error('API Gateway URL is not configured');
+      throw new Error('API Gateway URL is not configured')
     }
 
     // Lambda関数に更新リクエストを送信
@@ -468,18 +464,18 @@ export async function updateDocumentImageEmbedding(
         documentId,
         imageEmbedding,
       }),
-    });
+    })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API Gateway error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error?.message || `API Gateway error: ${response.status}`)
     }
 
-    const result = await response.json();
-    return { success: true };
+    const result = await response.json()
+    return { success: true }
   } catch (error: any) {
-    console.error('Failed to update document image embedding:', error);
-    return { success: false, error: error.message };
+    console.error('Failed to update document image embedding:', error)
+    return { success: false, error: error.message }
   }
 }
 
@@ -493,10 +489,10 @@ export async function batchUpdateImageEmbeddings(
   updates: Array<{ documentId: string; imageEmbedding: number[] }>
 ): Promise<Array<{ documentId: string; success: boolean; error?: string }>> {
   try {
-    const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+    const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
     if (!apiGatewayUrl) {
-      throw new Error('API Gateway URL is not configured');
+      throw new Error('API Gateway URL is not configured')
     }
 
     const response = await fetch(apiGatewayUrl, {
@@ -508,22 +504,22 @@ export async function batchUpdateImageEmbeddings(
         action: 'batch_update_embeddings',
         updates,
       }),
-    });
+    })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API Gateway error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error?.message || `API Gateway error: ${response.status}`)
     }
 
-    const result = await response.json();
-    return result.results || [];
+    const result = await response.json()
+    return result.results || []
   } catch (error: any) {
-    console.error('Failed to batch update image embeddings:', error);
+    console.error('Failed to batch update image embeddings:', error)
     return updates.map((update) => ({
       documentId: update.documentId,
       success: false,
       error: error.message,
-    }));
+    }))
   }
 }
 
@@ -532,7 +528,7 @@ export async function batchUpdateImageEmbeddings(
  */
 export async function closeOpenSearchClient(): Promise<void> {
   if (opensearchClient) {
-    await opensearchClient.close();
-    opensearchClient = null;
+    await opensearchClient.close()
+    opensearchClient = null
   }
 }

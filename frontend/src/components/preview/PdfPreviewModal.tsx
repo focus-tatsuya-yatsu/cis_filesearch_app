@@ -10,6 +10,7 @@
 'use client'
 
 import { FC, useState, useEffect, useCallback } from 'react'
+
 import {
   XMarkIcon,
   ChevronLeftIcon,
@@ -22,7 +23,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 
 // API Gateway URL
-const API_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://5xbn3ng31f.execute-api.ap-northeast-1.amazonaws.com/default/search'
+const API_URL =
+  process.env.NEXT_PUBLIC_API_GATEWAY_URL ||
+  'https://5xbn3ng31f.execute-api.ap-northeast-1.amazonaws.com/default/search'
 
 interface PreviewPage {
   pageNumber: number
@@ -104,19 +107,22 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
    * 現在のページのURL取得
    */
   const getCurrentPageUrl = useCallback(() => {
-    const page = allPages.find(p => p.pageNumber === currentPage)
+    const page = allPages.find((p) => p.pageNumber === currentPage)
     return page?.url || null
   }, [allPages, currentPage])
 
   /**
    * ページ変更処理
    */
-  const handlePageChange = useCallback((newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) {
-      return
-    }
-    setCurrentPage(newPage)
-  }, [totalPages])
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      if (newPage < 1 || newPage > totalPages) {
+        return
+      }
+      setCurrentPage(newPage)
+    },
+    [totalPages]
+  )
 
   /**
    * ズーム処理
@@ -312,9 +318,7 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-[#6E6E73] dark:text-[#8E8E93]">
-                    プレビューがありません
-                  </p>
+                  <p className="text-[#6E6E73] dark:text-[#8E8E93]">プレビューがありません</p>
                 </div>
               )}
             </div>
@@ -340,9 +344,7 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
                     max={totalPages}
                     className="w-16 px-2 py-1 text-center bg-[#F2F2F7] dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-[#3A3A3C] rounded-lg text-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
-                  <span className="text-sm text-[#6E6E73] dark:text-[#8E8E93]">
-                    / {totalPages}
-                  </span>
+                  <span className="text-sm text-[#6E6E73] dark:text-[#8E8E93]">/ {totalPages}</span>
                 </div>
 
                 <button

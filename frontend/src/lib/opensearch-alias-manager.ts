@@ -14,50 +14,51 @@
  * - Traffic routing control
  */
 
-import { Client } from '@opensearch-project/opensearch';
-import { Logger } from './logger';
+import { Client } from '@opensearch-project/opensearch'
 
-const logger = new Logger('AliasManager');
+import { Logger } from './logger'
+
+const logger = new Logger('AliasManager')
 
 /**
  * Alias Configuration
  */
 export interface AliasConfig {
-  name: string;
-  isWriteIndex?: boolean; // For write operations
-  routing?: string; // Custom routing
-  filter?: any; // Filtered alias
+  name: string
+  isWriteIndex?: boolean // For write operations
+  routing?: string // Custom routing
+  filter?: any // Filtered alias
 }
 
 /**
  * Index Alias Mapping
  */
 export interface IndexAliasMapping {
-  indexName: string;
-  aliases: AliasConfig[];
+  indexName: string
+  aliases: AliasConfig[]
 }
 
 /**
  * Alias Switch History
  */
 export interface AliasSwitchHistory {
-  timestamp: Date;
-  aliasName: string;
-  fromIndex: string;
-  toIndex: string;
-  success: boolean;
-  error?: string;
+  timestamp: Date
+  aliasName: string
+  fromIndex: string
+  toIndex: string
+  success: boolean
+  error?: string
 }
 
 /**
  * OpenSearch Alias Manager
  */
 export class OpenSearchAliasManager {
-  private client: Client;
-  private history: AliasSwitchHistory[] = [];
+  private client: Client
+  private history: AliasSwitchHistory[] = []
 
   constructor(client: Client) {
-    this.client = client;
+    this.client = client
   }
 
   /**
@@ -65,33 +66,33 @@ export class OpenSearchAliasManager {
    */
   async getAliases(aliasName?: string): Promise<Map<string, string[]>> {
     try {
-      const params = aliasName ? { name: aliasName } : {};
+      const params = aliasName ? { name: aliasName } : {}
       const response = await this.client.cat.aliases({
         ...params,
         format: 'json',
-      });
+      })
 
-      const aliasMap = new Map<string, string[]>();
+      const aliasMap = new Map<string, string[]>()
 
       for (const alias of response.body) {
-        const indexName = alias.index;
-        const aliasNameStr = alias.alias;
+        const indexName = alias.index
+        const aliasNameStr = alias.alias
 
         if (!aliasMap.has(aliasNameStr)) {
-          aliasMap.set(aliasNameStr, []);
+          aliasMap.set(aliasNameStr, [])
         }
 
-        aliasMap.get(aliasNameStr)!.push(indexName);
+        aliasMap.get(aliasNameStr)!.push(indexName)
       }
 
       logger.info('Retrieved alias mappings', {
         aliases: Object.fromEntries(aliasMap),
-      });
+      })
 
-      return aliasMap;
+      return aliasMap
     } catch (error: any) {
-      logger.error('Failed to get aliases', { error: error.message });
-      throw error;
+      logger.error('Failed to get aliases', { error: error.message })
+      throw error
     }
   }
 
@@ -112,18 +113,18 @@ export class OpenSearchAliasManager {
     toIndex: string,
     validate = true
   ): Promise<boolean> {
-    const startTime = Date.now();
+    const startTime = Date.now()
 
     try {
       logger.info('Starting alias switch', {
         alias: aliasName,
         from: fromIndex,
         to: toIndex,
-      });
+      })
 
       // Validation phase
       if (validate) {
-        await this.validateAliasSwitch(aliasName, fromIndex, toIndex);
+        await this.validateAliasSwitch(aliasName, fromIndex, toIndex)
       }
 
       // Atomic update using updateAliases API
@@ -142,20 +143,20 @@ export class OpenSearchAliasManager {
             alias: aliasName,
           },
         },
-      ];
+      ]
 
       await this.client.indices.updateAliases({
         body: { actions },
-      });
+      })
 
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime
 
       logger.info('Alias switched successfully', {
         alias: aliasName,
         from: fromIndex,
         to: toIndex,
         duration,
-      });
+      })
 
       // Record in history
       this.history.push({
@@ -164,14 +165,14 @@ export class OpenSearchAliasManager {
         fromIndex,
         toIndex,
         success: true,
-      });
+      })
 
-      return true;
+      return true
     } catch (error: any) {
       logger.error('Alias switch failed', {
         alias: aliasName,
         error: error.message,
-      });
+      })
 
       // Record failure in history
       this.history.push({
@@ -181,9 +182,9 @@ export class OpenSearchAliasManager {
         toIndex,
         success: false,
         error: error.message,
-      });
+      })
 
-      throw error;
+      throw error
     }
   }
 
@@ -198,36 +199,36 @@ export class OpenSearchAliasManager {
     // Check if fromIndex exists
     const fromExists = await this.client.indices.exists({
       index: fromIndex,
-    });
+    })
 
     if (!fromExists.body) {
-      throw new Error(`Source index '${fromIndex}' does not exist`);
+      throw new Error(`Source index '${fromIndex}' does not exist`)
     }
 
     // Check if toIndex exists
     const toExists = await this.client.indices.exists({
       index: toIndex,
-    });
+    })
 
     if (!toExists.body) {
-      throw new Error(`Target index '${toIndex}' does not exist`);
+      throw new Error(`Target index '${toIndex}' does not exist`)
     }
 
     // Check if alias currently points to fromIndex
     const aliases = await this.client.indices.getAlias({
       index: fromIndex,
       name: aliasName,
-    });
+    })
 
     if (!aliases.body[fromIndex]?.aliases?.[aliasName]) {
       logger.warn('Alias not found on source index', {
         alias: aliasName,
         index: fromIndex,
-      });
+      })
       // Note: This is a warning, not an error - alias might not exist yet
     }
 
-    logger.info('Alias switch validation passed');
+    logger.info('Alias switch validation passed')
   }
 
   /**
@@ -238,10 +239,7 @@ export class OpenSearchAliasManager {
    * - file-index-read -> file-index-v2 (for search queries)
    * - file-index-write -> file-index-v2 (for indexing)
    */
-  async createAliases(
-    indexName: string,
-    aliases: AliasConfig[]
-  ): Promise<boolean> {
+  async createAliases(indexName: string, aliases: AliasConfig[]): Promise<boolean> {
     try {
       const actions = aliases.map((alias) => ({
         add: {
@@ -251,21 +249,21 @@ export class OpenSearchAliasManager {
           routing: alias.routing,
           filter: alias.filter,
         },
-      }));
+      }))
 
       await this.client.indices.updateAliases({
         body: { actions },
-      });
+      })
 
       logger.info('Created aliases', {
         index: indexName,
         aliases: aliases.map((a) => a.name),
-      });
+      })
 
-      return true;
+      return true
     } catch (error: any) {
-      logger.error('Failed to create aliases', { error: error.message });
-      throw error;
+      logger.error('Failed to create aliases', { error: error.message })
+      throw error
     }
   }
 
@@ -277,17 +275,17 @@ export class OpenSearchAliasManager {
       await this.client.indices.deleteAlias({
         index: indexName,
         name: aliasName,
-      });
+      })
 
       logger.info('Removed alias', {
         index: indexName,
         alias: aliasName,
-      });
+      })
 
-      return true;
+      return true
     } catch (error: any) {
-      logger.error('Failed to remove alias', { error: error.message });
-      throw error;
+      logger.error('Failed to remove alias', { error: error.message })
+      throw error
     }
   }
 
@@ -310,7 +308,7 @@ export class OpenSearchAliasManager {
     greenPercentage: number
   ): Promise<boolean> {
     if (greenPercentage < 0 || greenPercentage > 100) {
-      throw new Error('Percentage must be between 0 and 100');
+      throw new Error('Percentage must be between 0 and 100')
     }
 
     try {
@@ -319,7 +317,7 @@ export class OpenSearchAliasManager {
         blue: blueIndex,
         green: greenIndex,
         greenPercentage,
-      });
+      })
 
       // Remove existing alias
       await this.client.indices.updateAliases({
@@ -339,10 +337,10 @@ export class OpenSearchAliasManager {
             },
           ],
         },
-      });
+      })
 
       // Add filtered aliases based on percentage
-      const actions: any[] = [];
+      const actions: any[] = []
 
       if (greenPercentage === 100) {
         // Full cutover to green
@@ -351,7 +349,7 @@ export class OpenSearchAliasManager {
             index: greenIndex,
             alias: aliasName,
           },
-        });
+        })
       } else if (greenPercentage === 0) {
         // Full traffic to blue
         actions.push({
@@ -359,10 +357,10 @@ export class OpenSearchAliasManager {
             index: blueIndex,
             alias: aliasName,
           },
-        });
+        })
       } else {
         // Split traffic using modulo on document ID
-        const modulo = Math.round(100 / greenPercentage);
+        const modulo = Math.round(100 / greenPercentage)
 
         actions.push(
           {
@@ -391,21 +389,21 @@ export class OpenSearchAliasManager {
               },
             },
           }
-        );
+        )
       }
 
       await this.client.indices.updateAliases({
         body: { actions },
-      });
+      })
 
       logger.info('Gradual shift completed', {
         greenPercentage,
-      });
+      })
 
-      return true;
+      return true
     } catch (error: any) {
-      logger.error('Gradual shift failed', { error: error.message });
-      throw error;
+      logger.error('Gradual shift failed', { error: error.message })
+      throw error
     }
   }
 
@@ -416,17 +414,17 @@ export class OpenSearchAliasManager {
     // Find last successful switch for this alias
     const lastSwitch = this.history
       .filter((h) => h.aliasName === aliasName && h.success)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0]
 
     if (!lastSwitch) {
-      throw new Error(`No rollback history found for alias '${aliasName}'`);
+      throw new Error(`No rollback history found for alias '${aliasName}'`)
     }
 
     logger.warn('Rolling back alias', {
       alias: aliasName,
       to: lastSwitch.fromIndex,
       from: lastSwitch.toIndex,
-    });
+    })
 
     // Switch back to previous index
     return this.switchAlias(
@@ -434,14 +432,14 @@ export class OpenSearchAliasManager {
       lastSwitch.toIndex,
       lastSwitch.fromIndex,
       false // Skip validation during rollback
-    );
+    )
   }
 
   /**
    * Get switch history
    */
   getHistory(): AliasSwitchHistory[] {
-    return [...this.history];
+    return [...this.history]
   }
 
   /**
@@ -451,10 +449,10 @@ export class OpenSearchAliasManager {
     try {
       const response = await this.client.indices.getAlias({
         index: indexName,
-      });
+      })
 
-      const aliasesObj = response.body[indexName]?.aliases || {};
-      const aliases: AliasConfig[] = [];
+      const aliasesObj = response.body[indexName]?.aliases || {}
+      const aliases: AliasConfig[] = []
 
       for (const [aliasName, config] of Object.entries(aliasesObj)) {
         aliases.push({
@@ -462,13 +460,13 @@ export class OpenSearchAliasManager {
           isWriteIndex: (config as any).is_write_index,
           routing: (config as any).routing,
           filter: (config as any).filter,
-        });
+        })
       }
 
-      return aliases;
+      return aliases
     } catch (error: any) {
-      logger.error('Failed to get index aliases', { error: error.message });
-      throw error;
+      logger.error('Failed to get index aliases', { error: error.message })
+      throw error
     }
   }
 
@@ -477,23 +475,23 @@ export class OpenSearchAliasManager {
    */
   async verifyAlias(aliasName: string, expectedIndex: string): Promise<boolean> {
     try {
-      const aliasMap = await this.getAliases(aliasName);
-      const indices = aliasMap.get(aliasName) || [];
+      const aliasMap = await this.getAliases(aliasName)
+      const indices = aliasMap.get(aliasName) || []
 
-      const isValid = indices.includes(expectedIndex);
+      const isValid = indices.includes(expectedIndex)
 
       if (!isValid) {
         logger.warn('Alias verification failed', {
           alias: aliasName,
           expected: expectedIndex,
           actual: indices,
-        });
+        })
       }
 
-      return isValid;
+      return isValid
     } catch (error: any) {
-      logger.error('Alias verification error', { error: error.message });
-      return false;
+      logger.error('Alias verification error', { error: error.message })
+      return false
     }
   }
 }
@@ -526,7 +524,7 @@ export class AliasStrategyPatterns {
         name: 'file-index', // General purpose
         isWriteIndex: true,
       },
-    ];
+    ]
   }
 
   /**
@@ -574,7 +572,7 @@ export class AliasStrategyPatterns {
           },
         ],
       },
-    ];
+    ]
   }
 
   /**
@@ -583,10 +581,7 @@ export class AliasStrategyPatterns {
    * @description
    * Create filtered aliases per tenant for multi-tenancy.
    */
-  static tenantIsolation(
-    indexName: string,
-    tenantId: string
-  ): AliasConfig[] {
+  static tenantIsolation(indexName: string, tenantId: string): AliasConfig[] {
     return [
       {
         name: `file-index-tenant-${tenantId}`,
@@ -597,6 +592,6 @@ export class AliasStrategyPatterns {
         },
         routing: tenantId, // Route to specific shard
       },
-    ];
+    ]
   }
 }

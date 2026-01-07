@@ -20,6 +20,7 @@
  */
 
 import { FC, useState, useMemo, useCallback, memo } from 'react'
+
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -78,8 +79,7 @@ const SearchResultCard = memo<{
   const formatFileSize = useCallback((bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
   }, [])
 
@@ -109,9 +109,7 @@ const SearchResultCard = memo<{
   /**
    * スコアのパーセンテージを計算
    */
-  const getScorePercentage = useCallback((score: number): number => {
-    return Math.round(score * 100)
-  }, [])
+  const getScorePercentage = useCallback((score: number): number => Math.round(score * 100), [])
 
   return (
     <div
@@ -259,9 +257,7 @@ export const VirtualizedImageSearchResults: FC<VirtualizedImageSearchResultsProp
   }, [results, columnsCount])
 
   // Virtual Scrollerの初期化
-  const parentRef = useMemo(() => {
-    return { current: null as HTMLDivElement | null }
-  }, [])
+  const parentRef = useMemo(() => ({ current: null as HTMLDivElement | null }), [])
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -305,9 +301,7 @@ export const VirtualizedImageSearchResults: FC<VirtualizedImageSearchResultsProp
         {/* Results Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              検索結果
-            </h3>
+            <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">検索結果</h3>
             <p className="text-sm text-[#6E6E73] dark:text-[#98989D]">
               {results.length}件の類似画像が見つかりました（信頼度
               {confidenceThreshold * 100}%以上）
@@ -374,8 +368,8 @@ export const VirtualizedImageSearchResults: FC<VirtualizedImageSearchResultsProp
         {/* Performance Info */}
         <div className="mt-4 p-4 bg-[#F5F5F7]/50 dark:bg-[#2C2C2E]/50 rounded-lg">
           <p className="text-xs text-[#6E6E73] dark:text-[#98989D]">
-            💡 パフォーマンス最適化:
-            表示中の行のみレンダリングすることで、{results.length}件のデータでも滑らかな60fps表示を実現
+            💡 パフォーマンス最適化: 表示中の行のみレンダリングすることで、{results.length}
+            件のデータでも滑らかな60fps表示を実現
           </p>
         </div>
       </motion.div>

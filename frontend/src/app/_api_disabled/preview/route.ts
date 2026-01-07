@@ -20,23 +20,20 @@
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import {
-  generatePreviewUrlByType,
-  generatePdfPreviewUrl,
-  getPdfMetadata,
-} from '@/lib/s3-preview';
+import { NextRequest, NextResponse } from 'next/server'
+
+import { generatePreviewUrlByType, generatePdfPreviewUrl, getPdfMetadata } from '@/lib/s3-preview'
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = request.nextUrl
 
     // クエリパラメータを取得
-    const bucket = searchParams.get('bucket');
-    const key = searchParams.get('key');
-    const fileType = searchParams.get('fileType');
-    const pageNumberStr = searchParams.get('pageNumber');
-    const expiresInStr = searchParams.get('expiresIn');
+    const bucket = searchParams.get('bucket')
+    const key = searchParams.get('key')
+    const fileType = searchParams.get('fileType')
+    const pageNumberStr = searchParams.get('pageNumber')
+    const expiresInStr = searchParams.get('expiresIn')
 
     // バリデーション
     if (!bucket || !key || !fileType) {
@@ -46,10 +43,10 @@ export async function GET(request: NextRequest) {
           code: 'INVALID_PARAMETERS',
         },
         { status: 400 }
-      );
+      )
     }
 
-    const expiresIn = expiresInStr ? parseInt(expiresInStr) : 300;
+    const expiresIn = expiresInStr ? parseInt(expiresInStr) : 300
 
     if (expiresIn < 60 || expiresIn > 3600) {
       return NextResponse.json(
@@ -58,21 +55,21 @@ export async function GET(request: NextRequest) {
           code: 'INVALID_EXPIRES_IN',
         },
         { status: 400 }
-      );
+      )
     }
 
-    let previewUrl: string;
-    let metadata: any = null;
+    let previewUrl: string
+    let metadata: any = null
 
     // PDFの場合、特別な処理
     if (fileType.toLowerCase() === 'pdf') {
-      const pageNumber = pageNumberStr ? parseInt(pageNumberStr) : undefined;
+      const pageNumber = pageNumberStr ? parseInt(pageNumberStr) : undefined
 
       // PDFメタデータを取得
       try {
-        metadata = await getPdfMetadata(bucket, key);
+        metadata = await getPdfMetadata(bucket, key)
       } catch (error) {
-        console.warn('Failed to get PDF metadata:', error);
+        console.warn('Failed to get PDF metadata:', error)
         // メタデータ取得失敗は致命的ではない
       }
 
@@ -82,19 +79,14 @@ export async function GET(request: NextRequest) {
         key,
         pageNumber,
         expiresIn,
-      });
+      })
     } else {
       // PDFでない場合は、ファイルタイプに応じたプレビューURLを生成
-      previewUrl = await generatePreviewUrlByType(
-        bucket,
-        key,
-        fileType,
-        expiresIn
-      );
+      previewUrl = await generatePreviewUrlByType(bucket, key, fileType, expiresIn)
     }
 
     // 有効期限を計算
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
     const response = {
       success: true,
@@ -104,15 +96,15 @@ export async function GET(request: NextRequest) {
         expiresIn,
         metadata,
       },
-    };
+    }
 
     return NextResponse.json(response, {
       headers: {
         'Cache-Control': 'private, max-age=60',
       },
-    });
+    })
   } catch (error: any) {
-    console.error('Preview API error:', error);
+    console.error('Preview API error:', error)
 
     // S3関連エラー
     if (error.name === 'NoSuchKey') {
@@ -122,7 +114,7 @@ export async function GET(request: NextRequest) {
           code: 'FILE_NOT_FOUND',
         },
         { status: 404 }
-      );
+      )
     }
 
     if (error.name === 'AccessDenied') {
@@ -132,7 +124,7 @@ export async function GET(request: NextRequest) {
           code: 'ACCESS_DENIED',
         },
         { status: 403 }
-      );
+      )
     }
 
     return NextResponse.json(
@@ -142,7 +134,7 @@ export async function GET(request: NextRequest) {
         message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -157,5 +149,5 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
-  });
+  })
 }

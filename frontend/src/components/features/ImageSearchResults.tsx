@@ -73,8 +73,7 @@ export const ImageSearchResults: FC<ImageSearchResultsProps> = ({
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
   }
 
@@ -104,9 +103,7 @@ export const ImageSearchResults: FC<ImageSearchResultsProps> = ({
   /**
    * スコアのパーセンテージを計算
    */
-  const getScorePercentage = (score: number): number => {
-    return Math.round(score * 100)
-  }
+  const getScorePercentage = (score: number): number => Math.round(score * 100)
 
   return (
     <>
@@ -120,9 +117,7 @@ export const ImageSearchResults: FC<ImageSearchResultsProps> = ({
         {/* Results Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              検索結果
-            </h3>
+            <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">検索結果</h3>
             <p className="text-sm text-[#6E6E73] dark:text-[#98989D]">
               {results.length}件の類似画像が見つかりました（信頼度
               {confidenceThreshold * 100}%以上）
@@ -168,9 +163,7 @@ export const ImageSearchResults: FC<ImageSearchResultsProps> = ({
                 `}
                 >
                   <TrendingUp className={`h-4 w-4 ${getScoreColor(result.relevanceScore)}`} />
-                  <span
-                    className={`text-xs font-semibold ${getScoreColor(result.relevanceScore)}`}
-                  >
+                  <span className={`text-xs font-semibold ${getScoreColor(result.relevanceScore)}`}>
                     {getScorePercentage(result.relevanceScore)}%
                   </span>
                 </div>

@@ -27,7 +27,7 @@ interface ImageSearchDropdownProps {
   isOpen: boolean
   onClose: () => void
   onImageSelect: (file: File, previewUrl: string) => void
-  onImageRemove?: () => void  // 画像削除時のコールバック
+  onImageRemove?: () => void // 画像削除時のコールバック
   isUploading?: boolean
   error?: string | null
 }

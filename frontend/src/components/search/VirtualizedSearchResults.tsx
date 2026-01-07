@@ -8,7 +8,7 @@
 'use client'
 
 import { FC, useRef, useCallback, useState, useMemo } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+
 import {
   DocumentIcon,
   FolderIcon,
@@ -19,9 +19,11 @@ import {
   PresentationChartBarIcon,
   EyeIcon,
   ArrowDownTrayIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import type { SearchResult } from '@/types'
 
 /**
@@ -121,7 +123,7 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
   onPreview,
   onDownload,
   onResultClick,
-  className = ''
+  className = '',
 }) => {
   // 仮想化のための親要素ref
   const parentRef = useRef<HTMLDivElement>(null)
@@ -153,7 +155,7 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
       return date.toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit'
+        day: '2-digit',
       })
     }
   }, [])
@@ -172,7 +174,7 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
 
   // ファイルアイコン取得（fileTypeまたはfileNameから判定）
   const getFileIcon = useCallback((fileType: string | undefined, fileName?: string) => {
-    const iconClass = "w-6 h-6"
+    const iconClass = 'w-6 h-6'
 
     // fileTypeがない場合、fileNameから拡張子を取得
     let type = fileType?.toLowerCase()
@@ -265,14 +267,15 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
   })
 
   // 仮想アイテムのレンダリング
-  const renderVirtualItem = useCallback((virtualItem: any) => {
-    const result = results[virtualItem.index]
+  const renderVirtualItem = useCallback(
+    (virtualItem: any) => {
+      const result = results[virtualItem.index]
 
-    return (
-      <div
-        key={virtualItem.key}
-        data-index={virtualItem.index}
-        className={`
+      return (
+        <div
+          key={virtualItem.key}
+          data-index={virtualItem.index}
+          className={`
           absolute top-0 left-0 w-full
           px-4 py-3
           border-b border-[#E5E5EA] dark:border-[#3A3A3C]
@@ -280,84 +283,106 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
           transition-colors duration-150
           cursor-pointer
         `}
-        style={{
-          height: `${itemHeight}px`,
-          transform: `translateY(${virtualItem.start}px)`,
-        }}
-        onClick={() => onResultClick?.(result.filePath)}
-      >
-        <div className="flex items-center gap-4">
-          {/* ファイルアイコン */}
-          <div className="flex-shrink-0">
-            {getFileIcon(result.fileType, result.fileName || extractFileNameFromPath(result.filePath))}
-          </div>
+          style={{
+            height: `${itemHeight}px`,
+            transform: `translateY(${virtualItem.start}px)`,
+          }}
+          onClick={() => onResultClick?.(result.filePath)}
+        >
+          <div className="flex items-center gap-4">
+            {/* ファイルアイコン */}
+            <div className="flex-shrink-0">
+              {getFileIcon(
+                result.fileType,
+                result.fileName || extractFileNameFromPath(result.filePath)
+              )}
+            </div>
 
-          {/* ファイル情報 */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
-                  {result.fileName || extractFileNameFromPath(result.filePath)}
-                </h4>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] truncate flex-1">
-                    {truncatePath(result.filePath)}
-                  </p>
-                  <button
-                    onClick={() => copyPath(result.filePath, result.id)}
-                    className="p-1 hover:bg-[#007AFF]/10 rounded transition-colors"
-                    aria-label="パスをコピー"
-                  >
-                    <ClipboardDocumentCheckIcon
-                      className={`w-4 h-4 ${
-                        copiedId === result.id
-                          ? 'text-green-500'
-                          : 'text-[#007AFF] dark:text-[#0A84FF]'
-                      }`}
-                    />
-                  </button>
+            {/* ファイル情報 */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                    {result.fileName || extractFileNameFromPath(result.filePath)}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] truncate flex-1">
+                      {truncatePath(result.filePath)}
+                    </p>
+                    <button
+                      onClick={() => copyPath(result.filePath, result.id)}
+                      className="p-1 hover:bg-[#007AFF]/10 rounded transition-colors"
+                      aria-label="パスをコピー"
+                    >
+                      <ClipboardDocumentCheckIcon
+                        className={`w-4 h-4 ${
+                          copiedId === result.id
+                            ? 'text-green-500'
+                            : 'text-[#007AFF] dark:text-[#0A84FF]'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {result.snippet &&
+                    !isImageFile(
+                      result.fileType,
+                      result.fileName || extractFileNameFromPath(result.filePath)
+                    ) && (
+                      <p
+                        className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-1 line-clamp-1 max-w-[600px]"
+                        dangerouslySetInnerHTML={{ __html: result.snippet.slice(0, 200) }}
+                      />
+                    )}
                 </div>
-                {result.snippet && !isImageFile(result.fileType, result.fileName || extractFileNameFromPath(result.filePath)) && (
-                  <p
-                    className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-1 line-clamp-1 max-w-[600px]"
-                    dangerouslySetInnerHTML={{ __html: result.snippet.slice(0, 200) }}
-                  />
-                )}
-              </div>
 
-              {/* メタ情報とアクション */}
-              <div className="flex items-center gap-4 ml-4">
-                <div className="text-right">
-                  <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
-                    {formatFileSize(result.fileSize)}
-                  </p>
-                  <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-1">
-                    {formatDate(result.modifiedDate)}
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => onPreview(result.id)}
-                    className="p-2 hover:bg-[#007AFF]/10 rounded-lg transition-colors"
-                    aria-label="プレビュー"
-                  >
-                    <EyeIcon className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
-                  </button>
-                  <button
-                    onClick={() => onDownload(result.id)}
-                    className="p-2 hover:bg-[#007AFF]/10 rounded-lg transition-colors"
-                    aria-label="ダウンロード"
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
-                  </button>
+                {/* メタ情報とアクション */}
+                <div className="flex items-center gap-4 ml-4">
+                  <div className="text-right">
+                    <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
+                      {formatFileSize(result.fileSize)}
+                    </p>
+                    <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-1">
+                      {formatDate(result.modifiedDate)}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => onPreview(result.id)}
+                      className="p-2 hover:bg-[#007AFF]/10 rounded-lg transition-colors"
+                      aria-label="プレビュー"
+                    >
+                      <EyeIcon className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
+                    </button>
+                    <button
+                      onClick={() => onDownload(result.id)}
+                      className="p-2 hover:bg-[#007AFF]/10 rounded-lg transition-colors"
+                      aria-label="ダウンロード"
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    )
-  }, [results, copiedId, getFileIcon, isImageFile, formatFileSize, formatDate, truncatePath, copyPath, onPreview, onDownload, onResultClick, itemHeight])
+      )
+    },
+    [
+      results,
+      copiedId,
+      getFileIcon,
+      isImageFile,
+      formatFileSize,
+      formatDate,
+      truncatePath,
+      copyPath,
+      onPreview,
+      onDownload,
+      onResultClick,
+      itemHeight,
+    ]
+  )
 
   // 結果が空の場合
   if (results.length === 0) {
@@ -399,7 +424,6 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
           {virtualizer.getVirtualItems().map(renderVirtualItem)}
         </div>
       </div>
-
     </div>
   )
 }

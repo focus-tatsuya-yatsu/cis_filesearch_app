@@ -28,11 +28,7 @@ interface ImagePreviewModalProps {
 /**
  * ImagePreviewModal Component
  */
-export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({
-  file,
-  isOpen,
-  onClose,
-}) => {
+export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({ file, isOpen, onClose }) => {
   /**
    * ESCキーで閉じる
    */
@@ -60,8 +56,7 @@ export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
   }
 
@@ -92,9 +87,7 @@ export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({
   /**
    * スコアのパーセンテージを計算
    */
-  const getScorePercentage = (score: number): number => {
-    return Math.round(score * 100)
-  }
+  const getScorePercentage = (score: number): number => Math.round(score * 100)
 
   /**
    * ディレクトリパスを取得
@@ -171,13 +164,15 @@ export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Preview Area (Left) */}
                 <div className="lg:col-span-2">
-                  <div className="
+                  <div
+                    className="
                     aspect-video w-full rounded-xl
                     bg-[#F5F5F7] dark:bg-[#2C2C2E]
                     border border-[#D1D1D6]/30 dark:border-[#38383A]/30
                     flex items-center justify-center
                     overflow-hidden
-                  ">
+                  "
+                  >
                     {/* Image Preview Placeholder */}
                     <div className="text-center p-8">
                       <FileText className="h-16 w-16 text-[#6E6E73] dark:text-[#98989D] mx-auto mb-4" />
@@ -273,9 +268,7 @@ export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({
 
                   {/* Full Path */}
                   <div className="bg-[#007AFF]/5 dark:bg-[#0A84FF]/5 rounded-xl p-4">
-                    <div className="text-xs text-[#6E6E73] dark:text-[#98989D] mb-2">
-                      フルパス
-                    </div>
+                    <div className="text-xs text-[#6E6E73] dark:text-[#98989D] mb-2">フルパス</div>
                     <div className="text-xs font-mono text-[#1D1D1F] dark:text-[#F5F5F7] break-all">
                       {file.filePath}
                     </div>
@@ -287,9 +280,7 @@ export const ImagePreviewModal: FC<ImagePreviewModalProps> = ({
             {/* Footer */}
             <div className="px-6 py-4 border-t border-[#D1D1D6]/30 dark:border-[#38383A]/30">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-[#6E6E73] dark:text-[#98989D]">
-                  ESCキーで閉じる
-                </p>
+                <p className="text-xs text-[#6E6E73] dark:text-[#98989D]">ESCキーで閉じる</p>
                 <button
                   onClick={onClose}
                   className="

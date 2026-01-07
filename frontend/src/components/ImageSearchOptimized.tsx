@@ -10,36 +10,37 @@
  * - Lazy loading
  */
 
-'use client';
+'use client'
 
-import { FC, useState, useCallback, useEffect, useRef } from 'react';
-import { optimizeImage, validateImageFormat } from '@/services/image-processing.service';
-import { embeddingCache, calculateImageHash } from '@/services/embedding-cache.service';
-import { performanceMonitor } from '@/services/performance-monitor.service';
+import { FC, useState, useCallback, useEffect, useRef } from 'react'
+
+import { embeddingCache, calculateImageHash } from '@/services/embedding-cache.service'
+import { optimizeImage, validateImageFormat } from '@/services/image-processing.service'
+import { performanceMonitor } from '@/services/performance-monitor.service'
 
 /**
  * Component Props
  */
 interface ImageSearchOptimizedProps {
-  onSearchResults?: (results: any[]) => void;
-  maxImageSize?: number;
+  onSearchResults?: (results: any[]) => void
+  maxImageSize?: number
 }
 
 /**
  * Search State
  */
 interface SearchState {
-  isUploading: boolean;
-  isSearching: boolean;
-  progress: number;
-  error: string | null;
-  results: any[];
+  isUploading: boolean
+  isSearching: boolean
+  progress: number
+  error: string | null
+  results: any[]
   performance: {
-    uploadTime?: number;
-    searchTime?: number;
-    totalTime?: number;
-    cached?: boolean;
-  };
+    uploadTime?: number
+    searchTime?: number
+    totalTime?: number
+    cached?: boolean
+  }
 }
 
 /**
@@ -56,19 +57,19 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
     error: null,
     results: [],
     performance: {},
-  });
+  })
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   /**
    * Handle image file selection
    */
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      const file = event.target.files?.[0]
+      if (!file) return
 
       // Reset state
       setSearchState({
@@ -78,78 +79,78 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
         error: null,
         results: [],
         performance: {},
-      });
+      })
 
       try {
         // Validate file format
         if (!validateImageFormat(file)) {
-          throw new Error('Only JPEG, PNG, and WebP images are supported');
+          throw new Error('Only JPEG, PNG, and WebP images are supported')
         }
 
         // Validate file size
         if (file.size > maxImageSize) {
-          throw new Error(`Image size must be less than ${maxImageSize / 1024 / 1024}MB`);
+          throw new Error(`Image size must be less than ${maxImageSize / 1024 / 1024}MB`)
         }
 
         // Start performance measurement
-        const endMeasurement = performanceMonitor.start('image-search-total');
+        const endMeasurement = performanceMonitor.start('image-search-total')
 
         // Create preview
         const previewBlob = await optimizeImage(file, {
           maxWidth: 300,
           maxHeight: 300,
           quality: 0.7,
-        });
-        const previewUrl = URL.createObjectURL(previewBlob);
-        setPreviewUrl(previewUrl);
+        })
+        const previewUrl = URL.createObjectURL(previewBlob)
+        setPreviewUrl(previewUrl)
 
         // Start upload
-        setSearchState((prev) => ({ ...prev, isUploading: true, progress: 10 }));
+        setSearchState((prev) => ({ ...prev, isUploading: true, progress: 10 }))
 
         // Optimize image for upload
-        const uploadStartTime = performance.now();
+        const uploadStartTime = performance.now()
         const optimizedBlob = await optimizeImage(file, {
           maxWidth: 1024,
           maxHeight: 1024,
           quality: 0.85,
-        });
-        setSearchState((prev) => ({ ...prev, progress: 30 }));
+        })
+        setSearchState((prev) => ({ ...prev, progress: 30 }))
 
         // Calculate image hash for caching
-        const imageHash = await calculateImageHash(file);
+        const imageHash = await calculateImageHash(file)
 
         // Check cache first
-        const cachedEntry = await embeddingCache.get(imageHash);
+        const cachedEntry = await embeddingCache.get(imageHash)
 
-        let embedding: number[];
-        let cached = false;
+        let embedding: number[]
+        let cached = false
 
         if (cachedEntry) {
           // Use cached embedding
-          embedding = cachedEntry.embedding;
-          cached = true;
-          setSearchState((prev) => ({ ...prev, progress: 60 }));
+          embedding = cachedEntry.embedding
+          cached = true
+          setSearchState((prev) => ({ ...prev, progress: 60 }))
         } else {
           // Upload to API
-          const formData = new FormData();
-          formData.append('image', optimizedBlob, file.name);
+          const formData = new FormData()
+          formData.append('image', optimizedBlob, file.name)
 
           // Create abort controller for cancellation
-          abortControllerRef.current = new AbortController();
+          abortControllerRef.current = new AbortController()
 
           const apiResponse = await fetch('/api/image-embedding', {
             method: 'POST',
             body: formData,
             signal: abortControllerRef.current.signal,
-          });
+          })
 
           if (!apiResponse.ok) {
-            const errorData = await apiResponse.json();
-            throw new Error(errorData.error || 'Failed to generate image embedding');
+            const errorData = await apiResponse.json()
+            throw new Error(errorData.error || 'Failed to generate image embedding')
           }
 
-          const data = await apiResponse.json();
-          embedding = data.data.embedding;
+          const data = await apiResponse.json()
+          embedding = data.data.embedding
 
           // Cache the result
           await embeddingCache.set(imageHash, {
@@ -161,31 +162,31 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
               fileSize: file.size,
               dimensions: embedding.length,
             },
-          });
+          })
 
-          setSearchState((prev) => ({ ...prev, progress: 60 }));
+          setSearchState((prev) => ({ ...prev, progress: 60 }))
         }
 
-        const uploadTime = performance.now() - uploadStartTime;
+        const uploadTime = performance.now() - uploadStartTime
 
         // Search with embedding
-        setSearchState((prev) => ({ ...prev, isSearching: true, progress: 70 }));
+        setSearchState((prev) => ({ ...prev, isSearching: true, progress: 70 }))
 
-        const searchStartTime = performance.now();
-        const searchResults = await performImageSearch(embedding);
-        const searchTime = performance.now() - searchStartTime;
+        const searchStartTime = performance.now()
+        const searchResults = await performImageSearch(embedding)
+        const searchTime = performance.now() - searchStartTime
 
-        setSearchState((prev) => ({ ...prev, progress: 100 }));
+        setSearchState((prev) => ({ ...prev, progress: 100 }))
 
         // Complete measurement
-        const totalTime = performance.now() - uploadStartTime;
+        const totalTime = performance.now() - uploadStartTime
         endMeasurement({
           uploadTime,
           searchTime,
           totalTime,
           cached,
           resultCount: searchResults.length,
-        });
+        })
 
         // Update state
         setSearchState({
@@ -200,36 +201,36 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
             totalTime,
             cached,
           },
-        });
+        })
 
         // Callback
         if (onSearchResults) {
-          onSearchResults(searchResults);
+          onSearchResults(searchResults)
         }
       } catch (error: any) {
-        console.error('[ImageSearch] Error:', error);
+        console.error('[ImageSearch] Error:', error)
 
-        performanceMonitor.recordError('image-search-total', error);
+        performanceMonitor.recordError('image-search-total', error)
 
         setSearchState((prev) => ({
           ...prev,
           isUploading: false,
           isSearching: false,
           error: error.message,
-        }));
+        }))
       }
     },
     [maxImageSize, onSearchResults]
-  );
+  )
 
   /**
    * Perform image search with embedding
    */
   const performImageSearch = async (embedding: number[]): Promise<any[]> => {
-    const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+    const apiGatewayUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
     if (!apiGatewayUrl) {
-      throw new Error('API Gateway URL not configured');
+      throw new Error('API Gateway URL not configured')
     }
 
     // Create search query
@@ -237,30 +238,30 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
       imageEmbedding: JSON.stringify(embedding),
       size: '20',
       sortBy: 'relevance',
-    });
+    })
 
     const response = await fetch(`${apiGatewayUrl}?${params.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-    });
+    })
 
     if (!response.ok) {
-      throw new Error('Image search failed');
+      throw new Error('Image search failed')
     }
 
-    const data = await response.json();
-    return data.results || [];
-  };
+    const data = await response.json()
+    return data.results || []
+  }
 
   /**
    * Handle cancel
    */
   const handleCancel = useCallback(() => {
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
     }
 
     setSearchState({
@@ -270,21 +271,29 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
       error: null,
       results: [],
       performance: {},
-    });
-  }, []);
+    })
+  }, [])
 
   /**
    * Cleanup preview URL
    */
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+        URL.revokeObjectURL(previewUrl)
       }
-    };
-  }, [previewUrl]);
+    },
+    [previewUrl]
+  )
 
-  const { isUploading, isSearching, progress, error, results, performance: perfMetrics } = searchState;
+  const {
+    isUploading,
+    isSearching,
+    progress,
+    error,
+    results,
+    performance: perfMetrics,
+  } = searchState
 
   return (
     <div className="image-search-optimized">
@@ -318,10 +327,7 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
       {(isUploading || isSearching) && (
         <div className="progress-section">
           <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
           </div>
           <p className="progress-text">
             {isUploading && progress < 60 ? 'Uploading and processing image...' : ''}
@@ -368,9 +374,7 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
               <div key={index} className="result-item">
                 <p className="result-filename">{result.fileName}</p>
                 <p className="result-path">{result.filePath}</p>
-                <p className="result-score">
-                  Score: {result.relevanceScore?.toFixed(2)}
-                </p>
+                <p className="result-score">Score: {result.relevanceScore?.toFixed(2)}</p>
               </div>
             ))}
           </div>
@@ -511,5 +515,5 @@ export const ImageSearchOptimized: FC<ImageSearchOptimizedProps> = ({
         }
       `}</style>
     </div>
-  );
-};
+  )
+}

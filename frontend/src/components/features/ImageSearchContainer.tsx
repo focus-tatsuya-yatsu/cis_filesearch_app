@@ -16,14 +16,11 @@ import { FC, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, AlertCircle } from 'lucide-react'
 
-import { ImageSearchDropdown } from '@/components/search/ImageSearchDropdown'
 import { ImageSearchResults } from '@/components/features/ImageSearchResults'
 import { SearchProgress } from '@/components/features/SearchProgress'
-import {
-  uploadImageForEmbedding,
-  searchByImageEmbedding,
-} from '@/lib/api/imageSearch'
+import { ImageSearchDropdown } from '@/components/search/ImageSearchDropdown'
 import { useToast } from '@/hooks/useToast'
+import { uploadImageForEmbedding, searchByImageEmbedding } from '@/lib/api/imageSearch'
 import type { SearchResult, ImageSearchState } from '@/types'
 
 interface ImageSearchContainerProps {
@@ -109,8 +106,7 @@ export const ImageSearchContainer: FC<ImageSearchContainerProps> = ({
         // 自動的に検索を実行
         await executeSearch(response.data.embedding)
       } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : '画像の処理に失敗しました'
+        const errorMessage = error instanceof Error ? error.message : '画像の処理に失敗しました'
 
         setImageState((prev) => ({
           ...prev,
@@ -161,8 +157,7 @@ export const ImageSearchContainer: FC<ImageSearchContainerProps> = ({
         })
       }
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : '検索に失敗しました'
+      const errorMessage = error instanceof Error ? error.message : '検索に失敗しました'
 
       toast.error('検索エラー', {
         description: errorMessage,
@@ -221,9 +216,7 @@ export const ImageSearchContainer: FC<ImageSearchContainerProps> = ({
           aria-label="画像で検索"
         >
           <Search className="h-5 w-5 text-[#007AFF] dark:text-[#0A84FF]" />
-          <span className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
-            画像で検索
-          </span>
+          <span className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">画像で検索</span>
         </motion.button>
       )}
 
@@ -255,33 +248,31 @@ export const ImageSearchContainer: FC<ImageSearchContainerProps> = ({
       </AnimatePresence>
 
       {/* Empty State */}
-      {!isSearching &&
-        searchResults.length === 0 &&
-        imageState.embedding !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="mt-6 p-8 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#D1D1D6]/30 dark:border-[#38383A]/30"
-          >
-            <div className="flex flex-col items-center justify-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-[#6E6E73] dark:text-[#98989D]" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-                  結果が見つかりませんでした
-                </h3>
-                <p className="text-sm text-[#6E6E73] dark:text-[#98989D]">
-                  信頼度{confidenceThreshold * 100}
-                  %以上の類似画像が見つかりませんでした。
-                  <br />
-                  別の画像で試してみてください。
-                </p>
-              </div>
+      {!isSearching && searchResults.length === 0 && imageState.embedding !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          className="mt-6 p-8 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#D1D1D6]/30 dark:border-[#38383A]/30"
+        >
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-[#6E6E73] dark:text-[#98989D]" />
             </div>
-          </motion.div>
-        )}
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                結果が見つかりませんでした
+              </h3>
+              <p className="text-sm text-[#6E6E73] dark:text-[#98989D]">
+                信頼度{confidenceThreshold * 100}
+                %以上の類似画像が見つかりませんでした。
+                <br />
+                別の画像で試してみてください。
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }

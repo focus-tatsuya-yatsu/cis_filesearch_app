@@ -7,6 +7,7 @@
 'use client'
 
 import { FC, useMemo } from 'react'
+
 import { useFilterStore } from '@/stores/useFilterStore'
 
 interface ServerSelectorProps {
@@ -21,13 +22,8 @@ interface ServerSelectorProps {
  * - 全サーバー選択: serverId を指定しない
  */
 export const ServerSelector: FC<ServerSelectorProps> = ({ serverId }) => {
-  const {
-    servers,
-    selectedServerIds,
-    toggleServer,
-    selectAllServers,
-    deselectAllServers
-  } = useFilterStore()
+  const { servers, selectedServerIds, toggleServer, selectAllServers, deselectAllServers } =
+    useFilterStore()
 
   // 全選択/個別選択の状態を計算
   const { isChecked, isIndeterminate } = useMemo(() => {
@@ -35,7 +31,7 @@ export const ServerSelector: FC<ServerSelectorProps> = ({ serverId }) => {
       // 個別サーバーの場合
       return {
         isChecked: selectedServerIds.includes(serverId),
-        isIndeterminate: false
+        isIndeterminate: false,
       }
     } else {
       // 全サーバー選択の場合
@@ -44,7 +40,7 @@ export const ServerSelector: FC<ServerSelectorProps> = ({ serverId }) => {
 
       return {
         isChecked: allSelected,
-        isIndeterminate: someSelected
+        isIndeterminate: someSelected,
       }
     }
   }, [serverId, servers, selectedServerIds])
@@ -65,14 +61,14 @@ export const ServerSelector: FC<ServerSelectorProps> = ({ serverId }) => {
   }
 
   // サーバー情報取得
-  const server = serverId ? servers.find(s => s.id === serverId) : null
+  const server = serverId ? servers.find((s) => s.id === serverId) : null
 
   return (
     <label className="inline-flex items-center cursor-pointer group">
       <input
         type="checkbox"
         checked={isChecked}
-        ref={input => {
+        ref={(input) => {
           if (input) {
             input.indeterminate = isIndeterminate
           }
@@ -87,11 +83,7 @@ export const ServerSelector: FC<ServerSelectorProps> = ({ serverId }) => {
           focus:ring-2 focus:ring-[#007AFF] focus:ring-offset-0
           transition-colors
         "
-        aria-label={
-          serverId
-            ? `${server?.name || 'サーバー'}を選択`
-            : '全サーバーを選択'
-        }
+        aria-label={serverId ? `${server?.name || 'サーバー'}を選択` : '全サーバーを選択'}
       />
       {!serverId && (
         <span className="ml-2 text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] select-none">

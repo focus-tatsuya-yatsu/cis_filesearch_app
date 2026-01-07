@@ -34,32 +34,33 @@
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getS3Client } from '@/lib/s3-preview';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { NextRequest, NextResponse } from 'next/server'
+
+import { getS3Client } from '@/lib/s3-preview'
 
 interface KeywordMatch {
-  pageNumber: number;
-  keywords: string[];
+  pageNumber: number
+  keywords: string[]
   snippets: Array<{
-    text: string;
-    keyword: string;
+    text: string
+    keyword: string
     position?: {
-      x: number;
-      y: number;
-    };
-  }>;
-  matchCount: number;
+      x: number
+      y: number
+    }
+  }>
+  matchCount: number
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = request.nextUrl
 
     // クエリパラメータを取得
-    const bucket = searchParams.get('bucket');
-    const key = searchParams.get('key');
-    const keywordsStr = searchParams.get('keywords');
+    const bucket = searchParams.get('bucket')
+    const key = searchParams.get('key')
+    const keywordsStr = searchParams.get('keywords')
 
     // バリデーション
     if (!bucket || !key || !keywordsStr) {
@@ -69,14 +70,14 @@ export async function GET(request: NextRequest) {
           code: 'INVALID_PARAMETERS',
         },
         { status: 400 }
-      );
+      )
     }
 
     // キーワードを解析
     const keywords = keywordsStr
       .split(',')
       .map((k) => k.trim())
-      .filter((k) => k.length > 0);
+      .filter((k) => k.length > 0)
 
     if (keywords.length === 0) {
       return NextResponse.json(
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
           code: 'NO_KEYWORDS',
         },
         { status: 400 }
-      );
+      )
     }
 
     // 最大10キーワードまでの制限
@@ -100,34 +101,34 @@ export async function GET(request: NextRequest) {
           },
         },
         { status: 400 }
-      );
+      )
     }
 
     // S3からPDFのテキスト抽出結果を取得
     // 処理時に各ページのテキストとページ番号が保存されている想定
-    const client = getS3Client();
+    const client = getS3Client()
 
     // テキスト抽出結果のキーを構築
     // 例: processed/document.pdf -> processed/document.pdf.text.json
-    const textKey = `${key}.text.json`;
+    const textKey = `${key}.text.json`
 
-    let pdfTextData: any;
+    let pdfTextData: any
 
     try {
       const command = new GetObjectCommand({
         Bucket: bucket,
         Key: textKey,
-      });
+      })
 
-      const response = await client.send(command);
+      const response = await client.send(command)
 
       if (!response.Body) {
-        throw new Error('Text extraction data is empty');
+        throw new Error('Text extraction data is empty')
       }
 
       // ストリームを文字列に変換
-      const bodyContents = await streamToString(response.Body);
-      pdfTextData = JSON.parse(bodyContents);
+      const bodyContents = await streamToString(response.Body)
+      pdfTextData = JSON.parse(bodyContents)
     } catch (error: any) {
       if (error.name === 'NoSuchKey') {
         return NextResponse.json(
@@ -136,9 +137,9 @@ export async function GET(request: NextRequest) {
             code: 'TEXT_DATA_NOT_FOUND',
           },
           { status: 404 }
-        );
+        )
       }
-      throw error;
+      throw error
     }
 
     // ページごとのテキストデータ
@@ -156,75 +157,75 @@ export async function GET(request: NextRequest) {
     //   ]
     // }
 
-    const pages: KeywordMatch[] = [];
-    let totalMatches = 0;
+    const pages: KeywordMatch[] = []
+    let totalMatches = 0
 
     // 各ページでキーワードを検索
     for (const pageData of pdfTextData.pages || []) {
-      const pageNumber = pageData.page_number;
-      const pageText = pageData.text || '';
-      const words = pageData.words || [];
+      const pageNumber = pageData.page_number
+      const pageText = pageData.text || ''
+      const words = pageData.words || []
 
-      const matchedKeywords: string[] = [];
-      const snippets: any[] = [];
-      let pageMatchCount = 0;
+      const matchedKeywords: string[] = []
+      const snippets: any[] = []
+      let pageMatchCount = 0
 
       // 各キーワードを検索
       for (const keyword of keywords) {
-        const lowerKeyword = keyword.toLowerCase();
-        const lowerPageText = pageText.toLowerCase();
+        const lowerKeyword = keyword.toLowerCase()
+        const lowerPageText = pageText.toLowerCase()
 
         // キーワードが含まれているか確認
         if (!lowerPageText.includes(lowerKeyword)) {
-          continue;
+          continue
         }
 
-        matchedKeywords.push(keyword);
+        matchedKeywords.push(keyword)
 
         // キーワードの出現位置を全て検索
-        let startIndex = 0;
+        let startIndex = 0
         while (true) {
-          const index = lowerPageText.indexOf(lowerKeyword, startIndex);
-          if (index === -1) break;
+          const index = lowerPageText.indexOf(lowerKeyword, startIndex)
+          if (index === -1) break
 
-          pageMatchCount++;
-          totalMatches++;
+          pageMatchCount++
+          totalMatches++
 
           // スニペットを生成（前後100文字）
-          const snippetStart = Math.max(0, index - 100);
-          const snippetEnd = Math.min(pageText.length, index + keyword.length + 100);
-          let snippetText = pageText.substring(snippetStart, snippetEnd);
+          const snippetStart = Math.max(0, index - 100)
+          const snippetEnd = Math.min(pageText.length, index + keyword.length + 100)
+          let snippetText = pageText.substring(snippetStart, snippetEnd)
 
           // 前後に省略記号を追加
-          if (snippetStart > 0) snippetText = '...' + snippetText;
-          if (snippetEnd < pageText.length) snippetText = snippetText + '...';
+          if (snippetStart > 0) snippetText = '...' + snippetText
+          if (snippetEnd < pageText.length) snippetText = snippetText + '...'
 
           // 位置情報を検索（words配列から）
-          let position: { x: number; y: number } | undefined = undefined;
+          let position: { x: number; y: number } | undefined = undefined
 
           // キーワードに対応する単語を探す
           const matchingWord = words.find((word: any) => {
-            const wordText = (word.text || '').toLowerCase();
-            return wordText === lowerKeyword;
-          });
+            const wordText = (word.text || '').toLowerCase()
+            return wordText === lowerKeyword
+          })
 
           if (matchingWord) {
             position = {
               x: matchingWord.x || 0,
               y: matchingWord.y || 0,
-            };
+            }
           }
 
           snippets.push({
             text: snippetText,
             keyword,
             position,
-          });
+          })
 
-          startIndex = index + keyword.length;
+          startIndex = index + keyword.length
 
           // 最大5スニペットまで
-          if (snippets.length >= 5) break;
+          if (snippets.length >= 5) break
         }
       }
 
@@ -235,7 +236,7 @@ export async function GET(request: NextRequest) {
           keywords: matchedKeywords,
           snippets,
           matchCount: pageMatchCount,
-        });
+        })
       }
     }
 
@@ -246,15 +247,15 @@ export async function GET(request: NextRequest) {
         totalMatches,
         keywords,
       },
-    };
+    }
 
     return NextResponse.json(response, {
       headers: {
         'Cache-Control': 'private, max-age=300',
       },
-    });
+    })
   } catch (error: any) {
-    console.error('Keyword Highlight API error:', error);
+    console.error('Keyword Highlight API error:', error)
 
     // S3関連エラー
     if (error.name === 'NoSuchKey') {
@@ -264,7 +265,7 @@ export async function GET(request: NextRequest) {
           code: 'FILE_NOT_FOUND',
         },
         { status: 404 }
-      );
+      )
     }
 
     if (error.name === 'AccessDenied') {
@@ -274,7 +275,7 @@ export async function GET(request: NextRequest) {
           code: 'ACCESS_DENIED',
         },
         { status: 403 }
-      );
+      )
     }
 
     return NextResponse.json(
@@ -284,7 +285,7 @@ export async function GET(request: NextRequest) {
         message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -292,13 +293,13 @@ export async function GET(request: NextRequest) {
  * ReadableStreamを文字列に変換
  */
 async function streamToString(stream: any): Promise<string> {
-  const chunks: Uint8Array[] = [];
+  const chunks: Uint8Array[] = []
 
   for await (const chunk of stream) {
-    chunks.push(chunk);
+    chunks.push(chunk)
   }
 
-  return Buffer.concat(chunks).toString('utf-8');
+  return Buffer.concat(chunks).toString('utf-8')
 }
 
 /**
@@ -312,5 +313,5 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
-  });
+  })
 }

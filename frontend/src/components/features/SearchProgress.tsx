@@ -38,11 +38,7 @@ interface SearchProgressProps {
  *
  * 検索の進捗状況を視覚的に表示
  */
-export const SearchProgress: FC<SearchProgressProps> = ({
-  progress,
-  message,
-  className = '',
-}) => {
+export const SearchProgress: FC<SearchProgressProps> = ({ progress, message, className = '' }) => {
   /**
    * 進捗に応じたステータスメッセージを取得
    */
@@ -119,18 +115,12 @@ export const SearchProgress: FC<SearchProgressProps> = ({
 
       {/* Progress Steps */}
       <div className="mt-3 flex items-center justify-between text-xs text-[#86868B] dark:text-[#86868B]">
-        <span className={progress >= 30 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>
-          処理開始
-        </span>
+        <span className={progress >= 30 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>処理開始</span>
         <span className={progress >= 60 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>
           ベクトル化
         </span>
-        <span className={progress >= 90 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>
-          検索実行
-        </span>
-        <span className={progress >= 100 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>
-          完了
-        </span>
+        <span className={progress >= 90 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>検索実行</span>
+        <span className={progress >= 100 ? 'text-[#007AFF] dark:text-[#0A84FF]' : ''}>完了</span>
       </div>
     </motion.div>
   )

@@ -82,10 +82,7 @@ export const FILE_OPERATION_MESSAGES = {
 /**
  * Get localized error message with fallback
  */
-export const getErrorMessage = (
-  error: unknown,
-  fallback = 'エラーが発生しました'
-): string => {
+export const getErrorMessage = (error: unknown, fallback = 'エラーが発生しました'): string => {
   if (error instanceof Error) {
     return error.message
   }

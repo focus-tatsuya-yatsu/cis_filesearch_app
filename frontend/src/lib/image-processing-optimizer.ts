@@ -14,36 +14,36 @@
  * Image processing options
  */
 export interface ImageProcessingOptions {
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number; // 0-1 for JPEG quality
-  format?: 'jpeg' | 'png' | 'webp';
-  maxSizeMB?: number;
+  maxWidth?: number
+  maxHeight?: number
+  quality?: number // 0-1 for JPEG quality
+  format?: 'jpeg' | 'png' | 'webp'
+  maxSizeMB?: number
 }
 
 /**
  * Processed image result
  */
 export interface ProcessedImage {
-  file: File;
-  originalSize: number;
-  compressedSize: number;
-  compressionRatio: number;
-  width: number;
-  height: number;
-  processingTime: number;
+  file: File
+  originalSize: number
+  compressedSize: number
+  compressionRatio: number
+  width: number
+  height: number
+  processingTime: number
 }
 
 /**
  * Batch processing result
  */
 export interface BatchProcessingResult {
-  processed: ProcessedImage[];
-  failed: Array<{ file: File; error: string }>;
-  totalTime: number;
-  totalOriginalSize: number;
-  totalCompressedSize: number;
-  averageCompressionRatio: number;
+  processed: ProcessedImage[]
+  failed: Array<{ file: File; error: string }>
+  totalTime: number
+  totalOriginalSize: number
+  totalCompressedSize: number
+  averageCompressionRatio: number
 }
 
 /**
@@ -55,7 +55,7 @@ const DEFAULT_OPTIONS: ImageProcessingOptions = {
   quality: 0.85,
   format: 'jpeg',
   maxSizeMB: 5,
-};
+}
 
 /**
  * Check if image needs compression
@@ -64,13 +64,10 @@ const DEFAULT_OPTIONS: ImageProcessingOptions = {
  * @param maxSizeMB - Maximum file size in MB
  * @returns True if compression is needed
  */
-export const needsCompression = (
-  file: File,
-  maxSizeMB: number = 5
-): boolean => {
-  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-  return file.size > maxSizeBytes;
-};
+export const needsCompression = (file: File, maxSizeMB: number = 5): boolean => {
+  const maxSizeBytes = maxSizeMB * 1024 * 1024
+  return file.size > maxSizeBytes
+}
 
 /**
  * Load image from File object
@@ -78,24 +75,23 @@ export const needsCompression = (
  * @param file - Image file
  * @returns Promise that resolves to HTMLImageElement
  */
-const loadImage = (file: File): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
+const loadImage = (file: File): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
 
     img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
+      URL.revokeObjectURL(url)
+      resolve(img)
+    }
 
     img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
-    };
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image'))
+    }
 
-    img.src = url;
-  });
-};
+    img.src = url
+  })
 
 /**
  * Calculate optimal dimensions while maintaining aspect ratio
@@ -113,16 +109,16 @@ const calculateOptimalDimensions = (
   maxHeight: number
 ): { width: number; height: number } => {
   if (originalWidth <= maxWidth && originalHeight <= maxHeight) {
-    return { width: originalWidth, height: originalHeight };
+    return { width: originalWidth, height: originalHeight }
   }
 
-  const ratio = Math.min(maxWidth / originalWidth, maxHeight / originalHeight);
+  const ratio = Math.min(maxWidth / originalWidth, maxHeight / originalHeight)
 
   return {
     width: Math.round(originalWidth * ratio),
     height: Math.round(originalHeight * ratio),
-  };
-};
+  }
+}
 
 /**
  * Compress and resize image
@@ -135,13 +131,13 @@ export const compressImage = async (
   file: File,
   options: ImageProcessingOptions = {}
 ): Promise<ProcessedImage> => {
-  const startTime = performance.now();
+  const startTime = performance.now()
 
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const opts = { ...DEFAULT_OPTIONS, ...options }
 
   try {
     // Load image
-    const img = await loadImage(file);
+    const img = await loadImage(file)
 
     // Calculate optimal dimensions
     const { width, height } = calculateOptimalDimensions(
@@ -149,48 +145,46 @@ export const compressImage = async (
       img.naturalHeight,
       opts.maxWidth!,
       opts.maxHeight!
-    );
+    )
 
     // Create canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d')
     if (!ctx) {
-      throw new Error('Failed to get canvas context');
+      throw new Error('Failed to get canvas context')
     }
 
     // Enable image smoothing for better quality
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
 
     // Draw resized image
-    ctx.drawImage(img, 0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height)
 
     // Convert to blob
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (result) => {
           if (result) {
-            resolve(result);
+            resolve(result)
           } else {
-            reject(new Error('Failed to convert canvas to blob'));
+            reject(new Error('Failed to convert canvas to blob'))
           }
         },
         `image/${opts.format}`,
         opts.quality
-      );
-    });
+      )
+    })
 
     // Create new File object
-    const compressedFile = new File(
-      [blob],
-      file.name.replace(/\.[^.]+$/, `.${opts.format}`),
-      { type: blob.type }
-    );
+    const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, `.${opts.format}`), {
+      type: blob.type,
+    })
 
-    const processingTime = performance.now() - startTime;
+    const processingTime = performance.now() - startTime
 
     return {
       file: compressedFile,
@@ -200,13 +194,13 @@ export const compressImage = async (
       width,
       height,
       processingTime,
-    };
+    }
   } catch (error) {
     throw new Error(
       `Image compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    )
   }
-};
+}
 
 /**
  * Process multiple images in batch
@@ -221,34 +215,34 @@ export const batchProcessImages = async (
   options: ImageProcessingOptions = {},
   onProgress?: (processed: number, total: number) => void
 ): Promise<BatchProcessingResult> => {
-  const startTime = performance.now();
+  const startTime = performance.now()
 
-  const processed: ProcessedImage[] = [];
-  const failed: Array<{ file: File; error: string }> = [];
+  const processed: ProcessedImage[] = []
+  const failed: Array<{ file: File; error: string }> = []
 
   for (let i = 0; i < files.length; i++) {
     try {
-      const result = await compressImage(files[i], options);
-      processed.push(result);
+      const result = await compressImage(files[i], options)
+      processed.push(result)
     } catch (error) {
       failed.push({
         file: files[i],
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      })
     }
 
     if (onProgress) {
-      onProgress(i + 1, files.length);
+      onProgress(i + 1, files.length)
     }
   }
 
-  const totalTime = performance.now() - startTime;
-  const totalOriginalSize = processed.reduce((sum, p) => sum + p.originalSize, 0);
-  const totalCompressedSize = processed.reduce((sum, p) => sum + p.compressedSize, 0);
+  const totalTime = performance.now() - startTime
+  const totalOriginalSize = processed.reduce((sum, p) => sum + p.originalSize, 0)
+  const totalCompressedSize = processed.reduce((sum, p) => sum + p.compressedSize, 0)
   const averageCompressionRatio =
     processed.length > 0
       ? processed.reduce((sum, p) => sum + p.compressionRatio, 0) / processed.length
-      : 0;
+      : 0
 
   return {
     processed,
@@ -257,8 +251,8 @@ export const batchProcessImages = async (
     totalOriginalSize,
     totalCompressedSize,
     averageCompressionRatio,
-  };
-};
+  }
+}
 
 /**
  * Convert image to WebP format for better compression
@@ -267,17 +261,13 @@ export const batchProcessImages = async (
  * @param quality - WebP quality (0-1)
  * @returns Promise that resolves to WebP file
  */
-export const convertToWebP = async (
-  file: File,
-  quality: number = 0.85
-): Promise<File> => {
-  return compressImage(file, {
+export const convertToWebP = async (file: File, quality: number = 0.85): Promise<File> =>
+  compressImage(file, {
     format: 'webp',
     quality,
     maxWidth: 2048,
     maxHeight: 2048,
-  }).then((result) => result.file);
-};
+  }).then((result) => result.file)
 
 /**
  * Get image dimensions without loading full image
@@ -288,12 +278,12 @@ export const convertToWebP = async (
 export const getImageDimensions = async (
   file: File
 ): Promise<{ width: number; height: number }> => {
-  const img = await loadImage(file);
+  const img = await loadImage(file)
   return {
     width: img.naturalWidth,
     height: img.naturalHeight,
-  };
-};
+  }
+}
 
 /**
  * Validate image file
@@ -301,29 +291,27 @@ export const getImageDimensions = async (
  * @param file - File to validate
  * @returns Validation result
  */
-export const validateImageFile = (
-  file: File
-): { isValid: boolean; error?: string } => {
+export const validateImageFile = (file: File): { isValid: boolean; error?: string } => {
   // Check file type
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
     return {
       isValid: false,
       error: 'JPEG、PNG、WebP形式の画像のみサポートされています',
-    };
+    }
   }
 
   // Check file size (max 10MB before compression)
-  const maxSizeBytes = 10 * 1024 * 1024;
+  const maxSizeBytes = 10 * 1024 * 1024
   if (file.size > maxSizeBytes) {
     return {
       isValid: false,
       error: 'ファイルサイズは10MB以下にしてください',
-    };
+    }
   }
 
-  return { isValid: true };
-};
+  return { isValid: true }
+}
 
 /**
  * Format file size for display
@@ -333,13 +321,13 @@ export const validateImageFile = (
  */
 export const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) {
-    return `${bytes} B`;
+    return `${bytes} B`
   } else if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / 1024).toFixed(2)} KB`
   } else {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
   }
-};
+}
 
 /**
  * Calculate estimated compression time
@@ -349,6 +337,6 @@ export const formatFileSize = (bytes: number): string => {
  */
 export const estimateCompressionTime = (fileSize: number): number => {
   // Empirical formula: ~100ms per MB
-  const sizeMB = fileSize / (1024 * 1024);
-  return Math.round(sizeMB * 100);
-};
+  const sizeMB = fileSize / (1024 * 1024)
+  return Math.round(sizeMB * 100)
+}

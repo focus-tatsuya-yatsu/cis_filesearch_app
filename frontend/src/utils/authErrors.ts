@@ -86,14 +86,11 @@ export const getCognitoErrorMessage = (error: unknown): string => {
  * @param error - エラーオブジェクト
  * @returns Cognitoエラーの場合true
  */
-export const isCognitoError = (error: unknown): error is CognitoError => {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    typeof (error as CognitoError).name === 'string'
-  )
-}
+export const isCognitoError = (error: unknown): error is CognitoError =>
+  typeof error === 'object' &&
+  error !== null &&
+  'name' in error &&
+  typeof (error as CognitoError).name === 'string'
 
 /**
  * パスワードリセット関連のエラーかどうかを判定
@@ -104,7 +101,11 @@ export const isCognitoError = (error: unknown): error is CognitoError => {
 export const isPasswordResetError = (error: unknown): boolean => {
   if (!isCognitoError(error)) return false
 
-  const resetErrorNames = ['CodeMismatchException', 'ExpiredCodeException', 'LimitExceededException']
+  const resetErrorNames = [
+    'CodeMismatchException',
+    'ExpiredCodeException',
+    'LimitExceededException',
+  ]
 
   return resetErrorNames.includes(error.name)
 }

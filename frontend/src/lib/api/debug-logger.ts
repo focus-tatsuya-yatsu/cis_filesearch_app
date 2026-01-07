@@ -224,9 +224,7 @@ export class ImageSearchDebugLogger {
     if (!this.isEnabled) return
 
     const duration = performance.now() - startTime
-    console.log(
-      `${this.PREFIX} ⏱️ Performance: ${label} completed in ${duration.toFixed(2)}ms`
-    )
+    console.log(`${this.PREFIX} ⏱️ Performance: ${label} completed in ${duration.toFixed(2)}ms`)
 
     // パフォーマンス警告（500ms以上かかった場合）
     if (duration > 500) {
@@ -248,9 +246,7 @@ export class ImageSearchDebugLogger {
 
     const isEqual = JSON.stringify(expected) === JSON.stringify(actual)
 
-    console.group(
-      `${this.PREFIX} ${isEqual ? '✅' : '❌'} Comparison: ${label}`
-    )
+    console.group(`${this.PREFIX} ${isEqual ? '✅' : '❌'} Comparison: ${label}`)
     console.log('📊 Expected:', expected)
     console.log('📊 Actual:', actual)
     console.log('🔍 Match:', isEqual)
@@ -299,11 +295,7 @@ export class ImageSearchDebugLogger {
  * ```
  */
 export function measurePerformance(label: string) {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value
 
     descriptor.value = async function (...args: any[]) {

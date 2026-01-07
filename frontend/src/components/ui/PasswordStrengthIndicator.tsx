@@ -11,6 +11,7 @@
 'use client'
 
 import { FC, useMemo } from 'react'
+
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ========================================
@@ -43,8 +44,8 @@ export const PasswordStrengthIndicator: FC<PasswordStrengthIndicatorProps> = ({
   /**
    * パスワード要件チェック
    */
-  const requirements = useMemo<PasswordRequirement[]>(() => {
-    return [
+  const requirements = useMemo<PasswordRequirement[]>(
+    () => [
       {
         label: '8文字以上',
         test: (pwd) => pwd.length >= 8,
@@ -70,8 +71,9 @@ export const PasswordStrengthIndicator: FC<PasswordStrengthIndicatorProps> = ({
         test: (pwd) => /[^a-zA-Z0-9]/.test(pwd),
         met: /[^a-zA-Z0-9]/.test(password),
       },
-    ]
-  }, [password])
+    ],
+    [password]
+  )
 
   /**
    * パスワード強度の計算（より洗練されたアルゴリズム）
@@ -197,9 +199,7 @@ export const PasswordStrengthIndicator: FC<PasswordStrengthIndicatorProps> = ({
 
       {/* 要件チェックリスト */}
       <div className="bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-xl p-4 space-y-2">
-        <p className="text-xs font-medium text-[#6E6E73] dark:text-[#98989D]">
-          パスワードの要件
-        </p>
+        <p className="text-xs font-medium text-[#6E6E73] dark:text-[#98989D]">パスワードの要件</p>
         <div className="space-y-1.5">
           {requirements.map((requirement, index) => (
             <motion.div

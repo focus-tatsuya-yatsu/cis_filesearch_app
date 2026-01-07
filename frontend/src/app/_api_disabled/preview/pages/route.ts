@@ -35,24 +35,22 @@
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import {
-  generateMultiplePageUrls,
-  getPdfMetadata,
-} from '@/lib/s3-preview';
-import { searchDocuments } from '@/lib/opensearch';
+import { NextRequest, NextResponse } from 'next/server'
+
+import { searchDocuments } from '@/lib/opensearch'
+import { generateMultiplePageUrls, getPdfMetadata } from '@/lib/s3-preview'
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = request.nextUrl
 
     // クエリパラメータを取得
-    const bucket = searchParams.get('bucket');
-    const key = searchParams.get('key');
-    const startPageStr = searchParams.get('startPage');
-    const endPageStr = searchParams.get('endPage');
-    const keywordsStr = searchParams.get('keywords');
-    const expiresInStr = searchParams.get('expiresIn');
+    const bucket = searchParams.get('bucket')
+    const key = searchParams.get('key')
+    const startPageStr = searchParams.get('startPage')
+    const endPageStr = searchParams.get('endPage')
+    const keywordsStr = searchParams.get('keywords')
+    const expiresInStr = searchParams.get('expiresIn')
 
     // バリデーション
     if (!bucket || !key) {
@@ -62,10 +60,10 @@ export async function GET(request: NextRequest) {
           code: 'INVALID_PARAMETERS',
         },
         { status: 400 }
-      );
+      )
     }
 
-    const expiresIn = expiresInStr ? parseInt(expiresInStr) : 300;
+    const expiresIn = expiresInStr ? parseInt(expiresInStr) : 300
 
     if (expiresIn < 60 || expiresIn > 3600) {
       return NextResponse.json(
@@ -74,16 +72,16 @@ export async function GET(request: NextRequest) {
           code: 'INVALID_EXPIRES_IN',
         },
         { status: 400 }
-      );
+      )
     }
 
     // PDFメタデータを取得
-    const metadata = await getPdfMetadata(bucket, key);
+    const metadata = await getPdfMetadata(bucket, key)
 
-    const startPage = startPageStr ? parseInt(startPageStr) : 1;
+    const startPage = startPageStr ? parseInt(startPageStr) : 1
     const endPage = endPageStr
       ? Math.min(parseInt(endPageStr), metadata.totalPages)
-      : metadata.totalPages;
+      : metadata.totalPages
 
     if (startPage < 1 || endPage < startPage || endPage > metadata.totalPages) {
       return NextResponse.json(
@@ -97,13 +95,13 @@ export async function GET(request: NextRequest) {
           },
         },
         { status: 400 }
-      );
+      )
     }
 
     // ページ番号の配列を生成
-    const pageNumbers: number[] = [];
+    const pageNumbers: number[] = []
     for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
+      pageNumbers.push(i)
     }
 
     // 最大50ページまでの制限
@@ -118,17 +116,20 @@ export async function GET(request: NextRequest) {
           },
         },
         { status: 400 }
-      );
+      )
     }
 
     // キーワードを解析
     const keywords = keywordsStr
-      ? keywordsStr.split(',').map((k) => k.trim()).filter((k) => k.length > 0)
-      : [];
+      ? keywordsStr
+          .split(',')
+          .map((k) => k.trim())
+          .filter((k) => k.length > 0)
+      : []
 
     // キーワードを含むページを検索（OpenSearchから取得）
-    let pagesWithKeywords: Set<number> = new Set();
-    let keywordsByPage: Map<number, string[]> = new Map();
+    const pagesWithKeywords: Set<number> = new Set()
+    const keywordsByPage: Map<number, string[]> = new Map()
 
     if (keywords.length > 0) {
       try {
@@ -136,36 +137,31 @@ export async function GET(request: NextRequest) {
         const searchResult = await searchDocuments({
           query: keywords.join(' OR '),
           size: 1,
-        });
+        })
 
         // ページごとのキーワード情報を取得
         // 実際の実装では、OpenSearchのページごとのハイライト情報を使用
         // ここでは簡略化のため、全ページに対してキーワードが含まれると仮定
         if (searchResult.results.length > 0) {
-          const result = searchResult.results[0];
+          const result = searchResult.results[0]
 
           // ハイライト情報からページ番号を抽出
           // 実装: extracted_textのハイライトにページ番号情報が含まれている想定
           if (result.highlights?.extractedText) {
             pageNumbers.forEach((pageNum) => {
-              pagesWithKeywords.add(pageNum);
-              keywordsByPage.set(pageNum, keywords);
-            });
+              pagesWithKeywords.add(pageNum)
+              keywordsByPage.set(pageNum, keywords)
+            })
           }
         }
       } catch (error) {
-        console.warn('Failed to search for keywords:', error);
+        console.warn('Failed to search for keywords:', error)
         // キーワード検索失敗は致命的ではない
       }
     }
 
     // 複数ページのプレビューURLを生成
-    const urlMap = await generateMultiplePageUrls(
-      bucket,
-      key,
-      pageNumbers,
-      expiresIn
-    );
+    const urlMap = await generateMultiplePageUrls(bucket, key, pageNumbers, expiresIn)
 
     // レスポンスを構築
     const pages = Array.from(urlMap.entries()).map(([pageNumber, url]) => ({
@@ -173,12 +169,12 @@ export async function GET(request: NextRequest) {
       previewUrl: url,
       hasKeywords: pagesWithKeywords.has(pageNumber),
       keywords: keywordsByPage.get(pageNumber) || [],
-    }));
+    }))
 
     // ページ番号順にソート
-    pages.sort((a, b) => a.pageNumber - b.pageNumber);
+    pages.sort((a, b) => a.pageNumber - b.pageNumber)
 
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
     const response = {
       success: true,
@@ -191,15 +187,15 @@ export async function GET(request: NextRequest) {
         },
         expiresAt,
       },
-    };
+    }
 
     return NextResponse.json(response, {
       headers: {
         'Cache-Control': 'private, max-age=60',
       },
-    });
+    })
   } catch (error: any) {
-    console.error('PDF Pages Preview API error:', error);
+    console.error('PDF Pages Preview API error:', error)
 
     // S3関連エラー
     if (error.name === 'NoSuchKey') {
@@ -209,7 +205,7 @@ export async function GET(request: NextRequest) {
           code: 'FILE_NOT_FOUND',
         },
         { status: 404 }
-      );
+      )
     }
 
     if (error.name === 'AccessDenied') {
@@ -219,7 +215,7 @@ export async function GET(request: NextRequest) {
           code: 'ACCESS_DENIED',
         },
         { status: 403 }
-      );
+      )
     }
 
     return NextResponse.json(
@@ -229,7 +225,7 @@ export async function GET(request: NextRequest) {
         message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -244,5 +240,5 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
-  });
+  })
 }

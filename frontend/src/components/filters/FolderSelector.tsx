@@ -7,7 +7,9 @@
 'use client'
 
 import { FC } from 'react'
+
 import { FolderIcon, FolderOpenIcon } from '@heroicons/react/24/outline'
+
 import { useFilterStore, Folder } from '@/stores/useFilterStore'
 
 interface FolderSelectorProps {
@@ -24,15 +26,11 @@ interface FolderSelectorProps {
  * - 全選択/全解除機能
  */
 export const FolderSelector: FC<FolderSelectorProps> = ({ serverId, folders }) => {
-  const {
-    selectedFolderIds,
-    toggleFolder,
-    selectAllFoldersInServer,
-    deselectAllFoldersInServer
-  } = useFilterStore()
+  const { selectedFolderIds, toggleFolder, selectAllFoldersInServer, deselectAllFoldersInServer } =
+    useFilterStore()
 
   // 全選択/一部選択の状態を判定
-  const selectedCount = folders.filter(f => selectedFolderIds.includes(f.id)).length
+  const selectedCount = folders.filter((f) => selectedFolderIds.includes(f.id)).length
   const allSelected = selectedCount === folders.length && folders.length > 0
   const someSelected = selectedCount > 0 && selectedCount < folders.length
 
@@ -46,8 +44,8 @@ export const FolderSelector: FC<FolderSelectorProps> = ({ serverId, folders }) =
   }
 
   // フォルダグループ化（年度系とその他で分ける）
-  const jobFolders = folders.filter(f => f.name.includes('_JOB'))
-  const otherFolders = folders.filter(f => !f.name.includes('_JOB'))
+  const jobFolders = folders.filter((f) => f.name.includes('_JOB'))
+  const otherFolders = folders.filter((f) => !f.name.includes('_JOB'))
 
   // ファイル数のフォーマット
   const formatFileCount = (count?: number) => {
@@ -96,13 +94,16 @@ export const FolderSelector: FC<FolderSelectorProps> = ({ serverId, folders }) =
             ) : (
               <FolderIcon className="w-5 h-5 text-[#6E6E73] dark:text-[#8E8E93]" />
             )}
-            <span className={`
+            <span
+              className={`
               text-sm font-medium
-              ${isSelected
-                ? 'text-[#007AFF] dark:text-[#0A84FF]'
-                : 'text-[#1D1D1F] dark:text-[#F5F5F7]'
+              ${
+                isSelected
+                  ? 'text-[#007AFF] dark:text-[#0A84FF]'
+                  : 'text-[#1D1D1F] dark:text-[#F5F5F7]'
               }
-            `}>
+            `}
+            >
               {folder.name}
             </span>
           </div>
@@ -125,7 +126,7 @@ export const FolderSelector: FC<FolderSelectorProps> = ({ serverId, folders }) =
           <input
             type="checkbox"
             checked={allSelected}
-            ref={input => {
+            ref={(input) => {
               if (input) {
                 input.indeterminate = someSelected
               }
@@ -154,11 +155,7 @@ export const FolderSelector: FC<FolderSelectorProps> = ({ serverId, folders }) =
       {/* フォルダリスト */}
       <div className="divide-y divide-[#E5E5EA] dark:divide-[#3A3A3C]">
         {/* 年度フォルダ（H22_JOB～H31_JOB） */}
-        {jobFolders.length > 0 && (
-          <div>
-            {jobFolders.map(folder => renderFolder(folder))}
-          </div>
-        )}
+        {jobFolders.length > 0 && <div>{jobFolders.map((folder) => renderFolder(folder))}</div>}
 
         {/* その他のフォルダ */}
         {otherFolders.length > 0 && (
@@ -170,7 +167,7 @@ export const FolderSelector: FC<FolderSelectorProps> = ({ serverId, folders }) =
                 </span>
               </div>
             )}
-            {otherFolders.map(folder => renderFolder(folder))}
+            {otherFolders.map((folder) => renderFolder(folder))}
           </div>
         )}
       </div>

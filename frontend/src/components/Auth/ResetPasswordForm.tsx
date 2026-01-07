@@ -12,7 +12,11 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/contexts/AuthContext'
 import { getCognitoErrorMessage } from '@/utils/authErrors'
-import { validatePassword, validatePasswordConfirmation, validateVerificationCode } from '@/utils/validation'
+import {
+  validatePassword,
+  validatePasswordConfirmation,
+  validateVerificationCode,
+} from '@/utils/validation'
 
 // ========================================
 // Types
@@ -214,9 +218,7 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ username, onSucc
 
         {/* Password Requirements */}
         <div className="bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-xl p-3">
-          <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mb-2">
-            パスワードの要件:
-          </p>
+          <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mb-2">パスワードの要件:</p>
           <ul className="text-xs text-[#6E6E73] dark:text-[#98989D] space-y-1">
             <li>• 8文字以上</li>
             <li>• 小文字を含む</li>

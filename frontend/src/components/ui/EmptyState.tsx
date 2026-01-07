@@ -5,15 +5,16 @@
  * アイコン、タイトル、説明、アクションボタンをサポート
  */
 
-import { FC, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { FC, ReactNode } from 'react'
+
+import { motion } from 'framer-motion'
 
 interface EmptyStateProps {
-  icon?: ReactNode;
-  title: string;
-  description?: string;
-  action?: ReactNode;
-  className?: string;
+  icon?: ReactNode
+  title: string
+  description?: string
+  action?: ReactNode
+  className?: string
 }
 
 /**
@@ -37,39 +38,25 @@ export const EmptyState: FC<EmptyStateProps> = ({
   description,
   action,
   className = '',
-}) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className={`flex flex-col items-center justify-center py-16 px-4 ${className}`}
-    >
-      {/* Icon */}
-      {icon && (
-        <div className="mb-4 text-[#6E6E73] dark:text-[#8E8E93]">
-          {icon}
-        </div>
-      )}
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4 }}
+    className={`flex flex-col items-center justify-center py-16 px-4 ${className}`}
+  >
+    {/* Icon */}
+    {icon && <div className="mb-4 text-[#6E6E73] dark:text-[#8E8E93]">{icon}</div>}
 
-      {/* Title */}
-      <h3 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-        {title}
-      </h3>
+    {/* Title */}
+    <h3 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{title}</h3>
 
-      {/* Description */}
-      {description && (
-        <p className="text-[#6E6E73] dark:text-[#8E8E93] text-center max-w-md mb-6">
-          {description}
-        </p>
-      )}
+    {/* Description */}
+    {description && (
+      <p className="text-[#6E6E73] dark:text-[#8E8E93] text-center max-w-md mb-6">{description}</p>
+    )}
 
-      {/* Action */}
-      {action && (
-        <div>
-          {action}
-        </div>
-      )}
-    </motion.div>
-  );
-};
+    {/* Action */}
+    {action && <div>{action}</div>}
+  </motion.div>
+)

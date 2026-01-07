@@ -7,7 +7,9 @@
 'use client'
 
 import { FC, useState } from 'react'
+
 import { CalendarIcon } from '@heroicons/react/24/outline'
+
 import { useFilterStore } from '@/stores/useFilterStore'
 
 /**
@@ -29,7 +31,7 @@ export const DateRangeFilter: FC = () => {
     return date.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit'
+      day: '2-digit',
     })
   }
 
@@ -42,9 +44,9 @@ export const DateRangeFilter: FC = () => {
         setDateRange({
           ...dateRange,
           startDate: today,
-          endDate: today
+          endDate: today,
         })
-      }
+      },
     },
     {
       label: '今週',
@@ -59,9 +61,9 @@ export const DateRangeFilter: FC = () => {
         setDateRange({
           ...dateRange,
           startDate: monday.toISOString().split('T')[0],
-          endDate: sunday.toISOString().split('T')[0]
+          endDate: sunday.toISOString().split('T')[0],
         })
-      }
+      },
     },
     {
       label: '今月',
@@ -73,9 +75,9 @@ export const DateRangeFilter: FC = () => {
         setDateRange({
           ...dateRange,
           startDate: firstDay.toISOString().split('T')[0],
-          endDate: lastDay.toISOString().split('T')[0]
+          endDate: lastDay.toISOString().split('T')[0],
         })
-      }
+      },
     },
     {
       label: '今年',
@@ -87,9 +89,9 @@ export const DateRangeFilter: FC = () => {
         setDateRange({
           ...dateRange,
           startDate: firstDay.toISOString().split('T')[0],
-          endDate: lastDay.toISOString().split('T')[0]
+          endDate: lastDay.toISOString().split('T')[0],
         })
-      }
+      },
     },
     {
       label: '過去3ヶ月',
@@ -101,9 +103,9 @@ export const DateRangeFilter: FC = () => {
         setDateRange({
           ...dateRange,
           startDate: threeMonthsAgo.toISOString().split('T')[0],
-          endDate: now.toISOString().split('T')[0]
+          endDate: now.toISOString().split('T')[0],
         })
-      }
+      },
     },
     {
       label: '過去1年',
@@ -115,10 +117,10 @@ export const DateRangeFilter: FC = () => {
         setDateRange({
           ...dateRange,
           startDate: oneYearAgo.toISOString().split('T')[0],
-          endDate: now.toISOString().split('T')[0]
+          endDate: now.toISOString().split('T')[0],
         })
-      }
-    }
+      },
+    },
   ]
 
   // 日付リセット
@@ -126,7 +128,7 @@ export const DateRangeFilter: FC = () => {
     setDateRange({
       ...dateRange,
       startDate: null,
-      endDate: null
+      endDate: null,
     })
   }
 
@@ -136,9 +138,7 @@ export const DateRangeFilter: FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-base font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
-          日付フィルター
-        </h4>
+        <h4 className="text-base font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">日付フィルター</h4>
         {hasDateRange && (
           <button
             onClick={clearDateRange}
@@ -155,9 +155,10 @@ export const DateRangeFilter: FC = () => {
           onClick={() => setDateRange({ ...dateRange, filterType: 'creation' })}
           className={`
             flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors
-            ${dateRange.filterType === 'creation'
-              ? 'bg-[#007AFF] text-white'
-              : 'bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C]'
+            ${
+              dateRange.filterType === 'creation'
+                ? 'bg-[#007AFF] text-white'
+                : 'bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C]'
             }
           `}
         >
@@ -167,9 +168,10 @@ export const DateRangeFilter: FC = () => {
           onClick={() => setDateRange({ ...dateRange, filterType: 'modification' })}
           className={`
             flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors
-            ${dateRange.filterType === 'modification'
-              ? 'bg-[#007AFF] text-white'
-              : 'bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C]'
+            ${
+              dateRange.filterType === 'modification'
+                ? 'bg-[#007AFF] text-white'
+                : 'bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C]'
             }
           `}
         >

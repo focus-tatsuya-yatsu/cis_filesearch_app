@@ -3,7 +3,7 @@ export interface SearchResult {
   id: string
   fileName: string
   filePath: string
-  fileType?: string  // Optional: may be undefined for some results
+  fileType?: string // Optional: may be undefined for some results
   fileSize: number
   modifiedDate: string
   snippet: string

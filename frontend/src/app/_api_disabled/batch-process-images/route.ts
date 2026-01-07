@@ -14,8 +14,9 @@
  * - stats: BatchProcessingStats
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { batchProcessImages } from '@/services/batch-process-images';
+import { NextRequest, NextResponse } from 'next/server'
+
+import { batchProcessImages } from '@/services/batch-process-images'
 
 /**
  * CORSヘッダーを含むJSONレスポンスを生成
@@ -28,7 +29,7 @@ function createCorsResponse(data: any, status: number): NextResponse {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
-  });
+  })
 }
 
 /**
@@ -37,37 +38,37 @@ function createCorsResponse(data: any, status: number): NextResponse {
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('[Batch Process API] Starting batch processing request');
+    console.log('[Batch Process API] Starting batch processing request')
 
     // リクエストボディを取得（オプション設定）
-    const body = await request.json().catch(() => ({}));
-    const { maxFiles, batchSize, prefix } = body;
+    const body = await request.json().catch(() => ({}))
+    const { maxFiles, batchSize, prefix } = body
 
     console.log('[Batch Process API] Configuration:', {
       maxFiles: maxFiles || 'default',
       batchSize: batchSize || 'default',
       prefix: prefix || 'default',
-    });
+    })
 
     // 環境変数を一時的に上書き（設定がある場合）
     if (maxFiles) {
-      process.env.BATCH_MAX_FILES = maxFiles.toString();
+      process.env.BATCH_MAX_FILES = maxFiles.toString()
     }
     if (batchSize) {
-      process.env.BATCH_SIZE = batchSize.toString();
+      process.env.BATCH_SIZE = batchSize.toString()
     }
     if (prefix) {
-      process.env.BATCH_S3_PREFIX = prefix;
+      process.env.BATCH_S3_PREFIX = prefix
     }
 
     // バッチ処理を実行
-    const stats = await batchProcessImages();
+    const stats = await batchProcessImages()
 
     console.log('[Batch Process API] Batch processing completed:', {
       total: stats.total,
       successful: stats.successful,
       failed: stats.failed,
-    });
+    })
 
     return createCorsResponse(
       {
@@ -78,17 +79,16 @@ export async function POST(request: NextRequest) {
           processed: stats.processed,
           successful: stats.successful,
           failed: stats.failed,
-          successRate: stats.total > 0
-            ? `${((stats.successful / stats.total) * 100).toFixed(2)}%`
-            : '0%',
+          successRate:
+            stats.total > 0 ? `${((stats.successful / stats.total) * 100).toFixed(2)}%` : '0%',
           errors: stats.errors.slice(0, 10), // 最初の10件のエラーのみ返す
         },
       },
       200
-    );
+    )
   } catch (error: any) {
-    console.error('[Batch Process API] Error occurred:', error);
-    console.error('[Batch Process API] Error stack:', error.stack);
+    console.error('[Batch Process API] Error occurred:', error)
+    console.error('[Batch Process API] Error stack:', error.stack)
 
     return createCorsResponse(
       {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         message: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred',
       },
       500
-    );
+    )
   }
 }
 
@@ -113,5 +113,5 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
-  });
+  })
 }

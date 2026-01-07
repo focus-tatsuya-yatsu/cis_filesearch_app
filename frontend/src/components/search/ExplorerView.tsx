@@ -3,11 +3,13 @@
 import { FC, useState, useMemo, useCallback } from 'react'
 
 import { ChevronRight } from 'lucide-react'
+
 import { Pagination } from '@/components/ui'
 import { useSidebarState } from '@/hooks'
 import type { SearchResult, TreeNode } from '@/types'
 
 import { FolderTree } from '../features/FolderTree'
+
 import { VirtualizedSearchResults } from './VirtualizedSearchResults'
 
 /**
@@ -87,45 +89,45 @@ const buildFolderTreeFromResults = (results: SearchResult[]): TreeNode[] => {
   results
     .filter((result) => !result.fileName.endsWith('.meta'))
     .forEach((result) => {
-    // S3パスをNAS構造に変換
-    const nasPath = convertS3PathToNASPath(result.filePath)
+      // S3パスをNAS構造に変換
+      const nasPath = convertS3PathToNASPath(result.filePath)
 
-    const pathParts = nasPath.split('/').filter(Boolean)
-    if (pathParts.length === 0) return
+      const pathParts = nasPath.split('/').filter(Boolean)
+      if (pathParts.length === 0) return
 
-    // ルートレベルから階層を構築
-    let currentMap = root
-    for (let i = 0; i < pathParts.length; i++) {
-      const node = getOrCreateNode(currentMap, pathParts, i, nasPath)
+      // ルートレベルから階層を構築
+      let currentMap = root
+      for (let i = 0; i < pathParts.length; i++) {
+        const node = getOrCreateNode(currentMap, pathParts, i, nasPath)
 
-      if (i < pathParts.length - 1 && node.children) {
-        // 次の階層のためのMapを作成
-        const childMap = new Map<string, TreeNode>()
-        node.children.forEach(child => childMap.set(child.name, child))
+        if (i < pathParts.length - 1 && node.children) {
+          // 次の階層のためのMapを作成
+          const childMap = new Map<string, TreeNode>()
+          node.children.forEach((child) => childMap.set(child.name, child))
 
-        // 次のノードを取得/作成
-        const nextName = pathParts[i + 1]
-        if (!childMap.has(nextName)) {
-          const isLastFile = i + 1 === pathParts.length - 1
-          const childNode: TreeNode = {
-            id: `node-${nodeId++}`,
-            name: nextName,
-            type: isLastFile ? 'file' : 'folder',
-            path: '/' + pathParts.slice(0, i + 2).join('/'),
-            children: isLastFile ? undefined : [],
+          // 次のノードを取得/作成
+          const nextName = pathParts[i + 1]
+          if (!childMap.has(nextName)) {
+            const isLastFile = i + 1 === pathParts.length - 1
+            const childNode: TreeNode = {
+              id: `node-${nodeId++}`,
+              name: nextName,
+              type: isLastFile ? 'file' : 'folder',
+              path: '/' + pathParts.slice(0, i + 2).join('/'),
+              children: isLastFile ? undefined : [],
+            }
+            node.children.push(childNode)
+            childMap.set(nextName, childNode)
           }
-          node.children.push(childNode)
-          childMap.set(nextName, childNode)
+          currentMap = childMap
         }
-        currentMap = childMap
       }
-    }
-  })
+    })
 
   // Mapから配列に変換してソート（フォルダ優先、名前順）
-  const sortNodes = (nodes: TreeNode[]): TreeNode[] => {
-    return nodes
-      .map(node => ({
+  const sortNodes = (nodes: TreeNode[]): TreeNode[] =>
+    nodes
+      .map((node) => ({
         ...node,
         children: node.children ? sortNodes(node.children) : undefined,
       }))
@@ -135,7 +137,6 @@ const buildFolderTreeFromResults = (results: SearchResult[]): TreeNode[] => {
         }
         return a.name.localeCompare(b.name, 'ja')
       })
-  }
 
   return sortNodes(Array.from(root.values()))
 }
@@ -178,35 +179,36 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
   const totalPages = Math.ceil(displayTotal / itemsPerPage)
 
   // 検索結果からフォルダツリーを動的に構築
-  const folderTreeData = useMemo(() => {
-    return buildFolderTreeFromResults(searchResults)
-  }, [searchResults])
+  const folderTreeData = useMemo(() => buildFolderTreeFromResults(searchResults), [searchResults])
 
   // フォルダ選択時のハンドラ
   const handleFolderSelect = useCallback((path: string) => {
-    setSelectedFolder(prev => prev === path ? '' : path)
+    setSelectedFolder((prev) => (prev === path ? '' : path))
   }, [])
 
   // 検索結果クリック時のハンドラ（ツリー内のファイルをハイライト）
-  const handleResultClick = useCallback((filePath: string) => {
-    // S3パスをNASパスに変換
-    const nasPath = '/' + convertS3PathToNASPath(filePath)
-    setHighlightedFilePath(nasPath)
-    // 再ハイライト用のキーをインクリメント（同じファイルを再クリックした時も動作するように）
-    setHighlightKey(prev => prev + 1)
-    // フォルダ選択をクリア（フィルタリングを解除）
-    setSelectedFolder('')
-    // サイドバーが閉じている場合は開く
-    if (isCollapsed) {
-      toggleCollapse()
-    }
-  }, [isCollapsed, toggleCollapse])
+  const handleResultClick = useCallback(
+    (filePath: string) => {
+      // S3パスをNASパスに変換
+      const nasPath = '/' + convertS3PathToNASPath(filePath)
+      setHighlightedFilePath(nasPath)
+      // 再ハイライト用のキーをインクリメント（同じファイルを再クリックした時も動作するように）
+      setHighlightKey((prev) => prev + 1)
+      // フォルダ選択をクリア（フィルタリングを解除）
+      setSelectedFolder('')
+      // サイドバーが閉じている場合は開く
+      if (isCollapsed) {
+        toggleCollapse()
+      }
+    },
+    [isCollapsed, toggleCollapse]
+  )
 
   // 選択されたフォルダでフィルタリングした検索結果
   const filteredResults = useMemo(() => {
     if (!selectedFolder) return searchResults
 
-    return searchResults.filter(result => {
+    return searchResults.filter((result) => {
       // S3パスをNASパスに変換してから比較
       const nasPath = '/' + convertS3PathToNASPath(result.filePath)
       const normalizedNasPath = nasPath.toLowerCase()
@@ -216,11 +218,14 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
   }, [searchResults, selectedFolder])
 
   // ページ変更ハンドラ
-  const handlePageChange = useCallback((page: number) => {
-    if (onPageChange) {
-      onPageChange(page)
-    }
-  }, [onPageChange])
+  const handlePageChange = useCallback(
+    (page: number) => {
+      if (onPageChange) {
+        onPageChange(page)
+      }
+    },
+    [onPageChange]
+  )
 
   return (
     <div className="h-[700px] bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl border border-[#D1D1D6]/30 dark:border-[#38383A]/30 rounded-2xl overflow-hidden shadow-sm flex flex-col">
@@ -241,7 +246,9 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
               aria-label="フォルダ構造を開く"
             >
               <ChevronRight className="w-4 h-4 text-[#6E6E73] dark:text-[#8E8E93]" />
-              <span className="text-xs text-[#6E6E73] dark:text-[#8E8E93] [writing-mode:vertical-rl]">フォルダ</span>
+              <span className="text-xs text-[#6E6E73] dark:text-[#8E8E93] [writing-mode:vertical-rl]">
+                フォルダ
+              </span>
             </button>
           ) : (
             /* 展開時のサイドバー */
@@ -268,9 +275,7 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
                     highlightedFilePath={highlightedFilePath}
                   />
                 ) : (
-                  <p className="text-xs text-[#8E8E93] px-2">
-                    検索結果がありません
-                  </p>
+                  <p className="text-xs text-[#8E8E93] px-2">検索結果がありません</p>
                 )}
               </div>
             </div>
@@ -294,8 +299,7 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
             <span className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
               {selectedFolder
                 ? `${filteredResults.length.toLocaleString()}件 / ${displayTotal.toLocaleString()}件中`
-                : `${displayTotal.toLocaleString()}件`
-              }
+                : `${displayTotal.toLocaleString()}件`}
             </span>
           </div>
 

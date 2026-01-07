@@ -6,61 +6,62 @@
  * このページは画像アップロード機能のデバッグ用です
  */
 
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { ImageUpload, ImageUploadResult, ImageUploadError } from '@/components/features/ImageUpload';
+import { useState } from 'react'
+
+import { ImageUpload, ImageUploadResult, ImageUploadError } from '@/components/features/ImageUpload'
 
 export default function TestUploadPage() {
-  const [result, setResult] = useState<ImageUploadResult | null>(null);
-  const [error, setError] = useState<ImageUploadError | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [result, setResult] = useState<ImageUploadResult | null>(null)
+  const [error, setError] = useState<ImageUploadError | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [logs, setLogs] = useState<string[]>([])
 
   // ログを追加
   const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs((prev) => [...prev, `[${timestamp}] ${message}`]);
-  };
+    const timestamp = new Date().toLocaleTimeString()
+    setLogs((prev) => [...prev, `[${timestamp}] ${message}`])
+  }
 
   // アップロード成功時
   const handleUploadSuccess = (data: ImageUploadResult) => {
-    setResult(data);
-    setError(null);
-    addLog('✓ アップロード成功');
-    addLog(`  ファイル名: ${data.fileName}`);
-    addLog(`  次元数: ${data.dimensions}`);
-    addLog(`  ベクトル長: ${data.embedding.length}`);
-  };
+    setResult(data)
+    setError(null)
+    addLog('✓ アップロード成功')
+    addLog(`  ファイル名: ${data.fileName}`)
+    addLog(`  次元数: ${data.dimensions}`)
+    addLog(`  ベクトル長: ${data.embedding.length}`)
+  }
 
   // アップロード失敗時
   const handleUploadError = (err: ImageUploadError) => {
-    setError(err);
-    setResult(null);
-    addLog('✗ アップロード失敗');
-    addLog(`  エラー: ${err.error}`);
-    addLog(`  コード: ${err.code}`);
+    setError(err)
+    setResult(null)
+    addLog('✗ アップロード失敗')
+    addLog(`  エラー: ${err.error}`)
+    addLog(`  コード: ${err.code}`)
     if (err.message) {
-      addLog(`  詳細: ${err.message}`);
+      addLog(`  詳細: ${err.message}`)
     }
-  };
+  }
 
   // アップロード状態変更時
   const handleUploadingChange = (uploading: boolean) => {
-    setIsUploading(uploading);
+    setIsUploading(uploading)
     if (uploading) {
-      addLog('アップロード開始...');
+      addLog('アップロード開始...')
     } else {
-      addLog('アップロード完了');
+      addLog('アップロード完了')
     }
-  };
+  }
 
   // ログをクリア
   const clearLogs = () => {
-    setLogs([]);
-    setResult(null);
-    setError(null);
-  };
+    setLogs([])
+    setResult(null)
+    setError(null)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -68,12 +69,8 @@ export default function TestUploadPage() {
         <div className="bg-white rounded-lg shadow-lg p-8">
           {/* ヘッダー */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              画像アップロード機能テスト
-            </h1>
-            <p className="text-gray-600">
-              このページは画像アップロード機能のデバッグ用です
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">画像アップロード機能テスト</h1>
+            <p className="text-gray-600">このページは画像アップロード機能のデバッグ用です</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -90,25 +87,20 @@ export default function TestUploadPage() {
               {/* 結果表示 */}
               {result && (
                 <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h3 className="text-lg font-semibold text-green-800 mb-3">
-                    ✓ アップロード成功
-                  </h3>
+                  <h3 className="text-lg font-semibold text-green-800 mb-3">✓ アップロード成功</h3>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">ファイル名:</span>{' '}
-                      {result.fileName}
+                      <span className="font-medium">ファイル名:</span> {result.fileName}
                     </div>
                     <div>
                       <span className="font-medium">サイズ:</span>{' '}
                       {(result.fileSize / 1024).toFixed(2)} KB
                     </div>
                     <div>
-                      <span className="font-medium">タイプ:</span>{' '}
-                      {result.fileType}
+                      <span className="font-medium">タイプ:</span> {result.fileType}
                     </div>
                     <div>
-                      <span className="font-medium">ベクトル次元:</span>{' '}
-                      {result.dimensions}
+                      <span className="font-medium">ベクトル次元:</span> {result.dimensions}
                     </div>
                     <div>
                       <span className="font-medium">ベクトル（最初の10要素）:</span>
@@ -123,22 +115,17 @@ export default function TestUploadPage() {
               {/* エラー表示 */}
               {error && (
                 <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h3 className="text-lg font-semibold text-red-800 mb-3">
-                    ✗ エラー
-                  </h3>
+                  <h3 className="text-lg font-semibold text-red-800 mb-3">✗ エラー</h3>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">エラーメッセージ:</span>{' '}
-                      {error.error}
+                      <span className="font-medium">エラーメッセージ:</span> {error.error}
                     </div>
                     <div>
-                      <span className="font-medium">エラーコード:</span>{' '}
-                      {error.code}
+                      <span className="font-medium">エラーコード:</span> {error.code}
                     </div>
                     {error.message && (
                       <div>
-                        <span className="font-medium">詳細:</span>{' '}
-                        {error.message}
+                        <span className="font-medium">詳細:</span> {error.message}
                       </div>
                     )}
                   </div>
@@ -210,8 +197,7 @@ export default function TestUploadPage() {
                     {process.env.NODE_ENV || 'undefined'}
                   </div>
                   <div>
-                    <span className="font-mono">API Endpoint:</span>{' '}
-                    /api/image-embedding
+                    <span className="font-mono">API Endpoint:</span> /api/image-embedding
                   </div>
                 </div>
               </div>
@@ -241,5 +227,5 @@ export default function TestUploadPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

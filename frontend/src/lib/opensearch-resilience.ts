@@ -15,10 +15,11 @@
  * - Rate Limiting: Prevent overload
  */
 
-import { Client } from '@opensearch-project/opensearch';
-import { Logger } from './logger';
+import { Client } from '@opensearch-project/opensearch'
 
-const logger = new Logger('Resilience');
+import { Logger } from './logger'
+
+const logger = new Logger('Resilience')
 
 /**
  * Circuit Breaker States
@@ -33,58 +34,58 @@ export enum CircuitState {
  * Circuit Breaker Configuration
  */
 export interface CircuitBreakerConfig {
-  failureThreshold: number; // Failures before opening
-  successThreshold: number; // Successes to close from half-open
-  timeout: number; // Time in OPEN state before trying HALF_OPEN (ms)
-  monitoringPeriod: number; // Time window for failure counting (ms)
-  name: string;
+  failureThreshold: number // Failures before opening
+  successThreshold: number // Successes to close from half-open
+  timeout: number // Time in OPEN state before trying HALF_OPEN (ms)
+  monitoringPeriod: number // Time window for failure counting (ms)
+  name: string
 }
 
 /**
  * Retry Configuration
  */
 export interface RetryConfig {
-  maxAttempts: number;
-  initialDelay: number; // ms
-  maxDelay: number; // ms
-  backoffMultiplier: number;
-  retryableErrors: string[]; // Error codes/messages to retry
+  maxAttempts: number
+  initialDelay: number // ms
+  maxDelay: number // ms
+  backoffMultiplier: number
+  retryableErrors: string[] // Error codes/messages to retry
 }
 
 /**
  * Bulkhead Configuration
  */
 export interface BulkheadConfig {
-  maxConcurrentCalls: number;
-  maxQueueSize: number;
-  queueTimeout: number; // ms
+  maxConcurrentCalls: number
+  maxQueueSize: number
+  queueTimeout: number // ms
 }
 
 /**
  * Operation Result
  */
 export interface OperationResult<T> {
-  success: boolean;
-  data?: T;
-  error?: Error;
-  attempts: number;
-  duration: number;
-  circuitBreakerState?: CircuitState;
+  success: boolean
+  data?: T
+  error?: Error
+  attempts: number
+  duration: number
+  circuitBreakerState?: CircuitState
 }
 
 /**
  * Advanced Circuit Breaker Implementation
  */
 export class CircuitBreaker {
-  private config: CircuitBreakerConfig;
-  private state: CircuitState = CircuitState.CLOSED;
-  private failures: number = 0;
-  private successes: number = 0;
-  private nextRetryTime: number = 0;
-  private failureTimestamps: number[] = [];
+  private config: CircuitBreakerConfig
+  private state: CircuitState = CircuitState.CLOSED
+  private failures: number = 0
+  private successes: number = 0
+  private nextRetryTime: number = 0
+  private failureTimestamps: number[] = []
 
   constructor(config: CircuitBreakerConfig) {
-    this.config = config;
+    this.config = config
   }
 
   /**
@@ -97,23 +98,23 @@ export class CircuitBreaker {
         throw new CircuitBreakerOpenError(
           `Circuit breaker '${this.config.name}' is OPEN`,
           this.nextRetryTime
-        );
+        )
       }
 
       // Transition to HALF_OPEN
-      this.state = CircuitState.HALF_OPEN;
+      this.state = CircuitState.HALF_OPEN
       logger.info('Circuit breaker transitioning to HALF_OPEN', {
         name: this.config.name,
-      });
+      })
     }
 
     try {
-      const result = await operation();
-      this.onSuccess();
-      return result;
+      const result = await operation()
+      this.onSuccess()
+      return result
     } catch (error) {
-      this.onFailure();
-      throw error;
+      this.onFailure()
+      throw error
     }
   }
 
@@ -121,23 +122,23 @@ export class CircuitBreaker {
    * Handle successful operation
    */
   private onSuccess(): void {
-    this.failures = 0;
+    this.failures = 0
 
     if (this.state === CircuitState.HALF_OPEN) {
-      this.successes++;
+      this.successes++
 
       logger.info('Circuit breaker half-open success', {
         name: this.config.name,
         successes: this.successes,
         threshold: this.config.successThreshold,
-      });
+      })
 
       if (this.successes >= this.config.successThreshold) {
-        this.state = CircuitState.CLOSED;
-        this.successes = 0;
+        this.state = CircuitState.CLOSED
+        this.successes = 0
         logger.info('Circuit breaker CLOSED', {
           name: this.config.name,
-        });
+        })
       }
     }
   }
@@ -146,30 +147,30 @@ export class CircuitBreaker {
    * Handle failed operation
    */
   private onFailure(): void {
-    const now = Date.now();
+    const now = Date.now()
 
     // Add failure timestamp
-    this.failureTimestamps.push(now);
+    this.failureTimestamps.push(now)
 
     // Remove old failures outside monitoring period
     this.failureTimestamps = this.failureTimestamps.filter(
       (timestamp) => now - timestamp < this.config.monitoringPeriod
-    );
+    )
 
-    this.failures = this.failureTimestamps.length;
+    this.failures = this.failureTimestamps.length
 
     logger.warn('Circuit breaker failure', {
       name: this.config.name,
       failures: this.failures,
       threshold: this.config.failureThreshold,
       state: this.state,
-    });
+    })
 
     if (this.state === CircuitState.HALF_OPEN) {
       // Immediate open on failure in half-open
-      this.openCircuit();
+      this.openCircuit()
     } else if (this.failures >= this.config.failureThreshold) {
-      this.openCircuit();
+      this.openCircuit()
     }
   }
 
@@ -177,53 +178,50 @@ export class CircuitBreaker {
    * Open the circuit
    */
   private openCircuit(): void {
-    this.state = CircuitState.OPEN;
-    this.successes = 0;
-    this.nextRetryTime = Date.now() + this.config.timeout;
+    this.state = CircuitState.OPEN
+    this.successes = 0
+    this.nextRetryTime = Date.now() + this.config.timeout
 
     logger.error('Circuit breaker OPENED', {
       name: this.config.name,
       failures: this.failures,
       retryAt: new Date(this.nextRetryTime).toISOString(),
-    });
+    })
   }
 
   /**
    * Get current state
    */
   getState(): CircuitState {
-    return this.state;
+    return this.state
   }
 
   /**
    * Get metrics
    */
   getMetrics(): {
-    state: CircuitState;
-    failures: number;
-    successes: number;
-    nextRetryTime?: Date;
+    state: CircuitState
+    failures: number
+    successes: number
+    nextRetryTime?: Date
   } {
     return {
       state: this.state,
       failures: this.failures,
       successes: this.successes,
-      nextRetryTime:
-        this.state === CircuitState.OPEN
-          ? new Date(this.nextRetryTime)
-          : undefined,
-    };
+      nextRetryTime: this.state === CircuitState.OPEN ? new Date(this.nextRetryTime) : undefined,
+    }
   }
 
   /**
    * Reset circuit breaker (for testing)
    */
   reset(): void {
-    this.state = CircuitState.CLOSED;
-    this.failures = 0;
-    this.successes = 0;
-    this.failureTimestamps = [];
-    this.nextRetryTime = 0;
+    this.state = CircuitState.CLOSED
+    this.failures = 0
+    this.successes = 0
+    this.failureTimestamps = []
+    this.nextRetryTime = 0
   }
 }
 
@@ -231,45 +229,45 @@ export class CircuitBreaker {
  * Retry Mechanism with Exponential Backoff
  */
 export class RetryMechanism {
-  private config: RetryConfig;
+  private config: RetryConfig
 
   constructor(config: RetryConfig) {
-    this.config = config;
+    this.config = config
   }
 
   /**
    * Execute operation with retry logic
    */
   async execute<T>(operation: () => Promise<T>): Promise<OperationResult<T>> {
-    const startTime = Date.now();
-    let lastError: Error | undefined;
+    const startTime = Date.now()
+    let lastError: Error | undefined
 
     for (let attempt = 1; attempt <= this.config.maxAttempts; attempt++) {
       try {
-        const data = await operation();
+        const data = await operation()
 
         return {
           success: true,
           data,
           attempts: attempt,
           duration: Date.now() - startTime,
-        };
+        }
       } catch (error: any) {
-        lastError = error;
+        lastError = error
 
         // Check if error is retryable
         if (!this.isRetryableError(error)) {
           logger.warn('Non-retryable error, failing immediately', {
             error: error.message,
             attempt,
-          });
+          })
 
           return {
             success: false,
             error,
             attempts: attempt,
             duration: Date.now() - startTime,
-          };
+          }
         }
 
         // Don't retry on last attempt
@@ -277,27 +275,27 @@ export class RetryMechanism {
           logger.error('Max retry attempts reached', {
             attempts: attempt,
             error: error.message,
-          });
+          })
 
           return {
             success: false,
             error,
             attempts: attempt,
             duration: Date.now() - startTime,
-          };
+          }
         }
 
         // Calculate delay with exponential backoff
-        const delay = this.calculateDelay(attempt);
+        const delay = this.calculateDelay(attempt)
 
         logger.warn('Retrying operation', {
           attempt,
           maxAttempts: this.config.maxAttempts,
           delay,
           error: error.message,
-        });
+        })
 
-        await this.sleep(delay);
+        await this.sleep(delay)
       }
     }
 
@@ -306,7 +304,7 @@ export class RetryMechanism {
       error: lastError,
       attempts: this.config.maxAttempts,
       duration: Date.now() - startTime,
-    };
+    }
   }
 
   /**
@@ -315,32 +313,25 @@ export class RetryMechanism {
   private isRetryableError(error: any): boolean {
     // Check HTTP status codes
     if (error.statusCode) {
-      const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
+      const retryableStatusCodes = [408, 429, 500, 502, 503, 504]
       if (retryableStatusCodes.includes(error.statusCode)) {
-        return true;
+        return true
       }
     }
 
     // Check error messages
     for (const retryableError of this.config.retryableErrors) {
-      if (
-        error.message &&
-        error.message.toLowerCase().includes(retryableError.toLowerCase())
-      ) {
-        return true;
+      if (error.message && error.message.toLowerCase().includes(retryableError.toLowerCase())) {
+        return true
       }
     }
 
     // Network errors
-    if (
-      error.code === 'ECONNRESET' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ENOTFOUND'
-    ) {
-      return true;
+    if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+      return true
     }
 
-    return false;
+    return false
   }
 
   /**
@@ -349,23 +340,22 @@ export class RetryMechanism {
   private calculateDelay(attempt: number): number {
     // Exponential backoff: initialDelay * (backoffMultiplier ^ (attempt - 1))
     const exponentialDelay =
-      this.config.initialDelay *
-      Math.pow(this.config.backoffMultiplier, attempt - 1);
+      this.config.initialDelay * Math.pow(this.config.backoffMultiplier, attempt - 1)
 
     // Cap at maxDelay
-    const cappedDelay = Math.min(exponentialDelay, this.config.maxDelay);
+    const cappedDelay = Math.min(exponentialDelay, this.config.maxDelay)
 
     // Add jitter (random 0-25% variation)
-    const jitter = cappedDelay * 0.25 * Math.random();
+    const jitter = cappedDelay * 0.25 * Math.random()
 
-    return Math.floor(cappedDelay + jitter);
+    return Math.floor(cappedDelay + jitter)
   }
 
   /**
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 }
 
@@ -373,17 +363,17 @@ export class RetryMechanism {
  * Bulkhead Pattern for Resource Isolation
  */
 export class Bulkhead {
-  private config: BulkheadConfig;
-  private activeCalls: number = 0;
+  private config: BulkheadConfig
+  private activeCalls: number = 0
   private queue: Array<{
-    operation: () => Promise<any>;
-    resolve: (value: any) => void;
-    reject: (error: any) => void;
-    timestamp: number;
-  }> = [];
+    operation: () => Promise<any>
+    resolve: (value: any) => void
+    reject: (error: any) => void
+    timestamp: number
+  }> = []
 
   constructor(config: BulkheadConfig) {
-    this.config = config;
+    this.config = config
   }
 
   /**
@@ -392,14 +382,12 @@ export class Bulkhead {
   async execute<T>(operation: () => Promise<T>): Promise<T> {
     // Check if we can execute immediately
     if (this.activeCalls < this.config.maxConcurrentCalls) {
-      return this.executeOperation(operation);
+      return this.executeOperation(operation)
     }
 
     // Check if queue is full
     if (this.queue.length >= this.config.maxQueueSize) {
-      throw new BulkheadRejectionError(
-        'Bulkhead queue is full, request rejected'
-      );
+      throw new BulkheadRejectionError('Bulkhead queue is full, request rejected')
     }
 
     // Add to queue
@@ -409,38 +397,38 @@ export class Bulkhead {
         resolve,
         reject,
         timestamp: Date.now(),
-      };
+      }
 
-      this.queue.push(queueItem);
+      this.queue.push(queueItem)
 
       logger.info('Operation queued', {
         queueSize: this.queue.length,
         activeCalls: this.activeCalls,
-      });
+      })
 
       // Set timeout
       setTimeout(() => {
-        const index = this.queue.indexOf(queueItem);
+        const index = this.queue.indexOf(queueItem)
         if (index !== -1) {
-          this.queue.splice(index, 1);
-          reject(new BulkheadTimeoutError('Operation timed out in queue'));
+          this.queue.splice(index, 1)
+          reject(new BulkheadTimeoutError('Operation timed out in queue'))
         }
-      }, this.config.queueTimeout);
-    });
+      }, this.config.queueTimeout)
+    })
   }
 
   /**
    * Execute operation and manage active calls
    */
   private async executeOperation<T>(operation: () => Promise<T>): Promise<T> {
-    this.activeCalls++;
+    this.activeCalls++
 
     try {
-      const result = await operation();
-      return result;
+      const result = await operation()
+      return result
     } finally {
-      this.activeCalls--;
-      this.processQueue();
+      this.activeCalls--
+      this.processQueue()
     }
   }
 
@@ -448,15 +436,10 @@ export class Bulkhead {
    * Process queued operations
    */
   private processQueue(): void {
-    while (
-      this.queue.length > 0 &&
-      this.activeCalls < this.config.maxConcurrentCalls
-    ) {
-      const queueItem = this.queue.shift();
+    while (this.queue.length > 0 && this.activeCalls < this.config.maxConcurrentCalls) {
+      const queueItem = this.queue.shift()
       if (queueItem) {
-        this.executeOperation(queueItem.operation)
-          .then(queueItem.resolve)
-          .catch(queueItem.reject);
+        this.executeOperation(queueItem.operation).then(queueItem.resolve).catch(queueItem.reject)
       }
     }
   }
@@ -465,15 +448,15 @@ export class Bulkhead {
    * Get metrics
    */
   getMetrics(): {
-    activeCalls: number;
-    queueSize: number;
-    maxConcurrentCalls: number;
+    activeCalls: number
+    queueSize: number
+    maxConcurrentCalls: number
   } {
     return {
       activeCalls: this.activeCalls,
       queueSize: this.queue.length,
       maxConcurrentCalls: this.config.maxConcurrentCalls,
-    };
+    }
   }
 }
 
@@ -481,10 +464,10 @@ export class Bulkhead {
  * Resilient OpenSearch Client Wrapper
  */
 export class ResilientOpenSearchClient {
-  private client: Client;
-  private circuitBreaker: CircuitBreaker;
-  private retryMechanism: RetryMechanism;
-  private bulkhead: Bulkhead;
+  private client: Client
+  private circuitBreaker: CircuitBreaker
+  private retryMechanism: RetryMechanism
+  private bulkhead: Bulkhead
 
   constructor(
     client: Client,
@@ -492,7 +475,7 @@ export class ResilientOpenSearchClient {
     retryConfig?: Partial<RetryConfig>,
     bulkheadConfig?: Partial<BulkheadConfig>
   ) {
-    this.client = client;
+    this.client = client
 
     // Initialize circuit breaker
     this.circuitBreaker = new CircuitBreaker({
@@ -502,7 +485,7 @@ export class ResilientOpenSearchClient {
       monitoringPeriod: 120000, // 2 minutes
       name: 'OpenSearchClient',
       ...circuitBreakerConfig,
-    });
+    })
 
     // Initialize retry mechanism
     this.retryMechanism = new RetryMechanism({
@@ -510,14 +493,9 @@ export class ResilientOpenSearchClient {
       initialDelay: 1000, // 1 second
       maxDelay: 10000, // 10 seconds
       backoffMultiplier: 2,
-      retryableErrors: [
-        'timeout',
-        'connection',
-        'unavailable',
-        'too many requests',
-      ],
+      retryableErrors: ['timeout', 'connection', 'unavailable', 'too many requests'],
       ...retryConfig,
-    });
+    })
 
     // Initialize bulkhead
     this.bulkhead = new Bulkhead({
@@ -525,34 +503,28 @@ export class ResilientOpenSearchClient {
       maxQueueSize: 100,
       queueTimeout: 30000, // 30 seconds
       ...bulkheadConfig,
-    });
+    })
   }
 
   /**
    * Resilient search operation
    */
   async search(params: any): Promise<any> {
-    return this.executeResilient(async () => {
-      return await this.client.search(params);
-    }, 'search');
+    return this.executeResilient(async () => await this.client.search(params), 'search')
   }
 
   /**
    * Resilient index operation
    */
   async index(params: any): Promise<any> {
-    return this.executeResilient(async () => {
-      return await this.client.index(params);
-    }, 'index');
+    return this.executeResilient(async () => await this.client.index(params), 'index')
   }
 
   /**
    * Resilient bulk operation
    */
   async bulk(params: any): Promise<any> {
-    return this.executeResilient(async () => {
-      return await this.client.bulk(params);
-    }, 'bulk');
+    return this.executeResilient(async () => await this.client.bulk(params), 'bulk')
   }
 
   /**
@@ -562,44 +534,45 @@ export class ResilientOpenSearchClient {
     operation: () => Promise<T>,
     operationName: string
   ): Promise<T> {
-    const startTime = Date.now();
+    const startTime = Date.now()
 
     try {
       // 1. Bulkhead (resource isolation)
-      const result = await this.bulkhead.execute(async () => {
-        // 2. Circuit Breaker (fail fast)
-        return await this.circuitBreaker.execute(async () => {
-          // 3. Retry with exponential backoff
-          const retryResult = await this.retryMechanism.execute(operation);
+      const result = await this.bulkhead.execute(
+        async () =>
+          // 2. Circuit Breaker (fail fast)
+          await this.circuitBreaker.execute(async () => {
+            // 3. Retry with exponential backoff
+            const retryResult = await this.retryMechanism.execute(operation)
 
-          if (!retryResult.success) {
-            throw retryResult.error || new Error('Operation failed');
-          }
+            if (!retryResult.success) {
+              throw retryResult.error || new Error('Operation failed')
+            }
 
-          return retryResult.data!;
-        });
-      });
+            return retryResult.data!
+          })
+      )
 
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime
 
       logger.info('Resilient operation succeeded', {
         operation: operationName,
         duration,
         circuitState: this.circuitBreaker.getState(),
-      });
+      })
 
-      return result;
+      return result
     } catch (error: any) {
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime
 
       logger.error('Resilient operation failed', {
         operation: operationName,
         duration,
         error: error.message,
         circuitState: this.circuitBreaker.getState(),
-      });
+      })
 
-      throw error;
+      throw error
     }
   }
 
@@ -607,20 +580,20 @@ export class ResilientOpenSearchClient {
    * Get health metrics
    */
   getMetrics(): {
-    circuitBreaker: any;
-    bulkhead: any;
+    circuitBreaker: any
+    bulkhead: any
   } {
     return {
       circuitBreaker: this.circuitBreaker.getMetrics(),
       bulkhead: this.bulkhead.getMetrics(),
-    };
+    }
   }
 
   /**
    * Reset all resilience mechanisms (for testing)
    */
   reset(): void {
-    this.circuitBreaker.reset();
+    this.circuitBreaker.reset()
   }
 }
 
@@ -632,22 +605,22 @@ export class CircuitBreakerOpenError extends Error {
     message: string,
     public nextRetryTime: number
   ) {
-    super(message);
-    this.name = 'CircuitBreakerOpenError';
+    super(message)
+    this.name = 'CircuitBreakerOpenError'
   }
 }
 
 export class BulkheadRejectionError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'BulkheadRejectionError';
+    super(message)
+    this.name = 'BulkheadRejectionError'
   }
 }
 
 export class BulkheadTimeoutError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'BulkheadTimeoutError';
+    super(message)
+    this.name = 'BulkheadTimeoutError'
   }
 }
 
@@ -664,17 +637,17 @@ export class FallbackStrategy {
     fallbackCondition: (error: any) => boolean = () => true
   ): Promise<T> {
     try {
-      return await primary();
+      return await primary()
     } catch (error: any) {
       if (fallbackCondition(error)) {
         logger.warn('Primary operation failed, using fallback', {
           error: error.message,
-        });
+        })
 
-        return await fallback();
+        return await fallback()
       }
 
-      throw error;
+      throw error
     }
   }
 
@@ -685,33 +658,33 @@ export class FallbackStrategy {
     cache: Map<string, T>,
     ttl: number = 300000
   ): (cacheKey: string, operation: () => Promise<T>) => Promise<T> {
-    const cacheTimestamps = new Map<string, number>();
+    const cacheTimestamps = new Map<string, number>()
 
     return async (cacheKey: string, operation: () => Promise<T>): Promise<T> => {
       try {
-        const result = await operation();
+        const result = await operation()
 
         // Update cache
-        cache.set(cacheKey, result);
-        cacheTimestamps.set(cacheKey, Date.now());
+        cache.set(cacheKey, result)
+        cacheTimestamps.set(cacheKey, Date.now())
 
-        return result;
+        return result
       } catch (error: any) {
         // Check if we have cached data
-        const cachedData = cache.get(cacheKey);
-        const cacheTime = cacheTimestamps.get(cacheKey);
+        const cachedData = cache.get(cacheKey)
+        const cacheTime = cacheTimestamps.get(cacheKey)
 
         if (cachedData && cacheTime && Date.now() - cacheTime < ttl) {
           logger.warn('Operation failed, returning cached data', {
             cacheKey,
             cacheAge: Date.now() - cacheTime,
-          });
+          })
 
-          return cachedData;
+          return cachedData
         }
 
-        throw error;
+        throw error
       }
-    };
+    }
   }
 }

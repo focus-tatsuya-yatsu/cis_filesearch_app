@@ -3,30 +3,30 @@
  * JWT検証、ユーザー認証、レート制限
  */
 
-import { NextRequest } from 'next/server';
-import { jwtVerify, SignJWT } from 'jose';
+import { jwtVerify, SignJWT } from 'jose'
+import { NextRequest } from 'next/server'
 
 /**
  * JWT ペイロード型定義
  */
 export interface JWTPayload {
-  sub: string; // ユーザーID
-  userId: string;
-  email: string;
-  role: string;
-  iat: number; // Issued At
-  exp: number; // Expiration Time
+  sub: string // ユーザーID
+  userId: string
+  email: string
+  role: string
+  iat: number // Issued At
+  exp: number // Expiration Time
 }
 
 /**
  * JWT Secret（環境変数から取得）
  */
 function getJWTSecret(): Uint8Array {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET
   if (!secret) {
-    throw new Error('JWT_SECRET environment variable is not set');
+    throw new Error('JWT_SECRET environment variable is not set')
   }
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(secret)
 }
 
 /**
@@ -34,25 +34,25 @@ function getJWTSecret(): Uint8Array {
  */
 export async function verifyJWT(token: string): Promise<JWTPayload> {
   try {
-    const secret = getJWTSecret();
+    const secret = getJWTSecret()
     const { payload } = await jwtVerify(token, secret, {
       algorithms: ['HS256'],
       // トークンの有効期限を検証
       clockTolerance: 0,
-    });
+    })
 
     // 必須フィールドの検証
     if (!payload.sub || !payload.userId || !payload.email) {
-      throw new Error('Invalid token payload: missing required fields');
+      throw new Error('Invalid token payload: missing required fields')
     }
 
-    return payload as JWTPayload;
+    return payload as JWTPayload
   } catch (error: any) {
     console.error('[Auth] JWT verification failed:', {
       error: error.message,
       code: error.code,
-    });
-    throw new Error('Invalid or expired token');
+    })
+    throw new Error('Invalid or expired token')
   }
 }
 
@@ -61,7 +61,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
  */
 export async function generateJWT(payload: Omit<JWTPayload, 'iat' | 'exp'>): Promise<string> {
   try {
-    const secret = getJWTSecret();
+    const secret = getJWTSecret()
 
     const token = await new SignJWT({
       sub: payload.sub,
@@ -72,12 +72,12 @@ export async function generateJWT(payload: Omit<JWTPayload, 'iat' | 'exp'>): Pro
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('1h') // 1時間で期限切れ
-      .sign(secret);
+      .sign(secret)
 
-    return token;
+    return token
   } catch (error) {
-    console.error('[Auth] JWT generation failed:', error);
-    throw new Error('Failed to generate JWT token');
+    console.error('[Auth] JWT generation failed:', error)
+    throw new Error('Failed to generate JWT token')
   }
 }
 
@@ -87,23 +87,23 @@ export async function generateJWT(payload: Omit<JWTPayload, 'iat' | 'exp'>): Pro
 export async function extractAuthFromRequest(
   request: NextRequest
 ): Promise<{ authenticated: boolean; userId?: string; payload?: JWTPayload }> {
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get('authorization')
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { authenticated: false };
+    return { authenticated: false }
   }
 
-  const token = authHeader.substring(7);
+  const token = authHeader.substring(7)
 
   try {
-    const payload = await verifyJWT(token);
+    const payload = await verifyJWT(token)
     return {
       authenticated: true,
       userId: payload.userId,
       payload,
-    };
+    }
   } catch (error) {
-    return { authenticated: false };
+    return { authenticated: false }
   }
 }
 
@@ -111,13 +111,13 @@ export async function extractAuthFromRequest(
  * リクエストからユーザーIDを取得（認証必須）
  */
 export async function requireAuth(request: NextRequest): Promise<string> {
-  const { authenticated, userId } = await extractAuthFromRequest(request);
+  const { authenticated, userId } = await extractAuthFromRequest(request)
 
   if (!authenticated || !userId) {
-    throw new Error('Unauthorized: Valid authentication required');
+    throw new Error('Unauthorized: Valid authentication required')
   }
 
-  return userId;
+  return userId
 }
 
 /**
@@ -129,14 +129,14 @@ export function getClientIP(request: NextRequest): string {
     request.headers.get('x-real-ip') ||
     request.headers.get('cf-connecting-ip') || // Cloudflare
     'unknown'
-  );
+  )
 }
 
 /**
  * User-Agentを取得
  */
 export function getUserAgent(request: NextRequest): string {
-  return request.headers.get('user-agent') || 'unknown';
+  return request.headers.get('user-agent') || 'unknown'
 }
 
 /**
@@ -144,22 +144,22 @@ export function getUserAgent(request: NextRequest): string {
  */
 export function maskIP(ip: string): string {
   if (!ip || ip === 'unknown') {
-    return 'unknown';
+    return 'unknown'
   }
 
   // IPv4: 最後のオクテットをマスク
-  const ipv4Match = ip.match(/^(\d+\.\d+\.\d+)\.\d+$/);
+  const ipv4Match = ip.match(/^(\d+\.\d+\.\d+)\.\d+$/)
   if (ipv4Match) {
-    return `${ipv4Match[1]}.xxx`;
+    return `${ipv4Match[1]}.xxx`
   }
 
   // IPv6: 最後の4つの16進数をマスク
-  const ipv6Match = ip.match(/^([0-9a-f:]+):[0-9a-f]{1,4}$/i);
+  const ipv6Match = ip.match(/^([0-9a-f:]+):[0-9a-f]{1,4}$/i)
   if (ipv6Match) {
-    return `${ipv6Match[1]}:xxxx`;
+    return `${ipv6Match[1]}:xxxx`
   }
 
-  return 'masked';
+  return 'masked'
 }
 
 /**
@@ -167,10 +167,10 @@ export function maskIP(ip: string): string {
  */
 export function hashFileName(fileName: string): string {
   if (!fileName) {
-    return '';
+    return ''
   }
 
   // SHA-256ハッシュ（最初の16文字のみ使用）
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(fileName).digest('hex').substring(0, 16);
+  const crypto = require('crypto')
+  return crypto.createHash('sha256').update(fileName).digest('hex').substring(0, 16)
 }

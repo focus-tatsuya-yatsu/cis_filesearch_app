@@ -8,8 +8,9 @@
 'use client'
 
 import { FC, useState, FormEvent, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -60,7 +61,7 @@ export const NewPasswordForm: FC<NewPasswordFormProps> = ({ onBack }) => {
    * 新しいパスワード変更ハンドラ
    */
   const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
+    const { value } = e.target
     setNewPassword(value)
     setNewPasswordError(null)
 
@@ -76,7 +77,7 @@ export const NewPasswordForm: FC<NewPasswordFormProps> = ({ onBack }) => {
    * 確認パスワード変更ハンドラ
    */
   const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
+    const { value } = e.target
     setConfirmPassword(value)
     setConfirmPasswordError(null)
 
@@ -156,11 +157,7 @@ export const NewPasswordForm: FC<NewPasswordFormProps> = ({ onBack }) => {
       </div>
 
       {/* Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4"
-        aria-label="新しいパスワード設定フォーム"
-      >
+      <form onSubmit={handleSubmit} className="space-y-4" aria-label="新しいパスワード設定フォーム">
         {/* Success Message */}
         <AnimatePresence>
           {successMessage && (
@@ -175,11 +172,7 @@ export const NewPasswordForm: FC<NewPasswordFormProps> = ({ onBack }) => {
             >
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#34C759] dark:bg-[#32D74B] flex items-center justify-center">
-                  <svg
-                    className="w-3 h-3 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

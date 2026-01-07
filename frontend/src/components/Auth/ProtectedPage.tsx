@@ -20,8 +20,9 @@ import { FC, ComponentType, ReactNode } from 'react'
 import { motion } from 'framer-motion'
 
 import { Spinner } from '@/components/ui'
-import { AuthFlowManager } from './AuthFlowManager'
 import { useAuth } from '@/contexts/AuthContext'
+
+import { AuthFlowManager } from './AuthFlowManager'
 
 // ========================================
 // Types
@@ -140,9 +141,8 @@ export const withAuth = <P extends object>(
  * export default withAuthRedirect(HomePage)
  * ```
  */
-export const withAuthRedirect = <P extends object>(Component: ComponentType<P>): FC<P> => {
-  return withAuth(Component, { autoRedirect: true })
-}
+export const withAuthRedirect = <P extends object>(Component: ComponentType<P>): FC<P> =>
+  withAuth(Component, { autoRedirect: true })
 
 /**
  * LoginFormモードの認証ガード
@@ -154,6 +154,5 @@ export const withAuthRedirect = <P extends object>(Component: ComponentType<P>):
  * export default withAuthLoginForm(HomePage)
  * ```
  */
-export const withAuthLoginForm = <P extends object>(Component: ComponentType<P>): FC<P> => {
-  return withAuth(Component, { autoRedirect: false })
-}
+export const withAuthLoginForm = <P extends object>(Component: ComponentType<P>): FC<P> =>
+  withAuth(Component, { autoRedirect: false })

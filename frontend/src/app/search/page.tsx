@@ -17,9 +17,7 @@ import { SearchInterface } from '@/components/search/SearchInterface'
  *
  * 認証済みユーザーに検索インターフェースを提供
  */
-const SearchPage: FC = () => {
-  return <SearchInterface />
-}
+const SearchPage: FC = () => <SearchInterface />
 
 // 認証ガードでラップしてエクスポート
 export default withAuth(SearchPage)

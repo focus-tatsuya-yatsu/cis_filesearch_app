@@ -55,28 +55,46 @@ interface FilterStore {
 }
 
 const TOP_FOLDERS = [
-  'H22_JOB', 'H23_JOB', 'H24_JOB', 'H25_JOB', 'H26_JOB',
-  'H27_JOB', 'H28_JOB', 'H29_JOB', 'H30_JOB', 'H31_JOB',
-  'R01_JOB', 'R02_JOB', 'R03_JOB', 'R04_JOB', 'R05_JOB', 'R06_JOB',
-  'その他'
+  'H22_JOB',
+  'H23_JOB',
+  'H24_JOB',
+  'H25_JOB',
+  'H26_JOB',
+  'H27_JOB',
+  'H28_JOB',
+  'H29_JOB',
+  'H30_JOB',
+  'H31_JOB',
+  'R01_JOB',
+  'R02_JOB',
+  'R03_JOB',
+  'R04_JOB',
+  'R05_JOB',
+  'R06_JOB',
+  'その他',
 ]
 
 // 初期カテゴリデータ
 const INITIAL_SERVERS: Server[] = [
   { id: 'road', name: '道路', description: 'ts-server3(R:), ts-server5(U:)', isSelected: false },
-  { id: 'structure', name: '構造', description: 'ts-server6(V:), ts-server7(S:)', isSelected: false }
+  {
+    id: 'structure',
+    name: '構造',
+    description: 'ts-server6(V:), ts-server7(S:)',
+    isSelected: false,
+  },
 ]
 
 // 初期フォルダデータを生成
 const generateInitialFolders = (): Folder[] => {
   const folders: Folder[] = []
-  INITIAL_SERVERS.forEach(server => {
-    TOP_FOLDERS.forEach(folderName => {
+  INITIAL_SERVERS.forEach((server) => {
+    TOP_FOLDERS.forEach((folderName) => {
       folders.push({
         id: `${server.id}_${folderName}`,
         name: folderName,
         serverId: server.id,
-        isSelected: false
+        isSelected: false,
       })
     })
   })
@@ -94,7 +112,7 @@ export const useFilterStore = create<FilterStore>()(
       dateRange: {
         startDate: null,
         endDate: null,
-        filterType: 'creation'
+        filterType: 'creation',
       },
       fileType: 'all',
       isInitialized: true,
@@ -112,49 +130,47 @@ export const useFilterStore = create<FilterStore>()(
         const isCurrentlySelected = state.selectedServerIds.includes(serverId)
 
         if (isCurrentlySelected) {
-          const serverFolders = state.folders.filter(f => f.serverId === serverId)
-          const folderIdsToRemove = serverFolders.map(f => f.id)
+          const serverFolders = state.folders.filter((f) => f.serverId === serverId)
+          const folderIdsToRemove = serverFolders.map((f) => f.id)
 
           set({
-            selectedServerIds: state.selectedServerIds.filter(id => id !== serverId),
-            selectedFolderIds: state.selectedFolderIds.filter(id => !folderIdsToRemove.includes(id)),
-            servers: state.servers.map(s =>
+            selectedServerIds: state.selectedServerIds.filter((id) => id !== serverId),
+            selectedFolderIds: state.selectedFolderIds.filter(
+              (id) => !folderIdsToRemove.includes(id)
+            ),
+            servers: state.servers.map((s) =>
               s.id === serverId ? { ...s, isSelected: false } : s
             ),
-            folders: state.folders.map(f =>
+            folders: state.folders.map((f) =>
               f.serverId === serverId ? { ...f, isSelected: false } : f
-            )
+            ),
           })
         } else {
           set({
             selectedServerIds: [...state.selectedServerIds, serverId],
-            servers: state.servers.map(s =>
-              s.id === serverId ? { ...s, isSelected: true } : s
-            )
+            servers: state.servers.map((s) => (s.id === serverId ? { ...s, isSelected: true } : s)),
           })
         }
       },
 
       toggleFolder: (folderId) => {
         const state = get()
-        const folder = state.folders.find(f => f.id === folderId)
+        const folder = state.folders.find((f) => f.id === folderId)
         if (!folder) return
 
         const isCurrentlySelected = state.selectedFolderIds.includes(folderId)
 
         if (isCurrentlySelected) {
           set({
-            selectedFolderIds: state.selectedFolderIds.filter(id => id !== folderId),
-            folders: state.folders.map(f =>
+            selectedFolderIds: state.selectedFolderIds.filter((id) => id !== folderId),
+            folders: state.folders.map((f) =>
               f.id === folderId ? { ...f, isSelected: false } : f
-            )
+            ),
           })
         } else {
           set({
             selectedFolderIds: [...state.selectedFolderIds, folderId],
-            folders: state.folders.map(f =>
-              f.id === folderId ? { ...f, isSelected: true } : f
-            )
+            folders: state.folders.map((f) => (f.id === folderId ? { ...f, isSelected: true } : f)),
           })
         }
       },
@@ -162,8 +178,8 @@ export const useFilterStore = create<FilterStore>()(
       selectAllServers: () => {
         const state = get()
         set({
-          selectedServerIds: state.servers.map(s => s.id),
-          servers: state.servers.map(s => ({ ...s, isSelected: true }))
+          selectedServerIds: state.servers.map((s) => s.id),
+          servers: state.servers.map((s) => ({ ...s, isSelected: true })),
         })
       },
 
@@ -172,38 +188,36 @@ export const useFilterStore = create<FilterStore>()(
         set({
           selectedServerIds: [],
           selectedFolderIds: [],
-          servers: state.servers.map(s => ({ ...s, isSelected: false })),
-          folders: state.folders.map(f => ({ ...f, isSelected: false }))
+          servers: state.servers.map((s) => ({ ...s, isSelected: false })),
+          folders: state.folders.map((f) => ({ ...f, isSelected: false })),
         })
       },
 
       selectAllFoldersInServer: (serverId) => {
         const state = get()
-        const serverFolders = state.folders.filter(f => f.serverId === serverId)
-        const folderIds = serverFolders.map(f => f.id)
+        const serverFolders = state.folders.filter((f) => f.serverId === serverId)
+        const folderIds = serverFolders.map((f) => f.id)
 
         set({
           selectedFolderIds: Array.from(new Set([...state.selectedFolderIds, ...folderIds])),
           selectedServerIds: Array.from(new Set([...state.selectedServerIds, serverId])),
-          folders: state.folders.map(f =>
+          folders: state.folders.map((f) =>
             f.serverId === serverId ? { ...f, isSelected: true } : f
           ),
-          servers: state.servers.map(s =>
-            s.id === serverId ? { ...s, isSelected: true } : s
-          )
+          servers: state.servers.map((s) => (s.id === serverId ? { ...s, isSelected: true } : s)),
         })
       },
 
       deselectAllFoldersInServer: (serverId) => {
         const state = get()
-        const serverFolders = state.folders.filter(f => f.serverId === serverId)
-        const folderIds = serverFolders.map(f => f.id)
+        const serverFolders = state.folders.filter((f) => f.serverId === serverId)
+        const folderIds = serverFolders.map((f) => f.id)
 
         set({
-          selectedFolderIds: state.selectedFolderIds.filter(id => !folderIds.includes(id)),
-          folders: state.folders.map(f =>
+          selectedFolderIds: state.selectedFolderIds.filter((id) => !folderIds.includes(id)),
+          folders: state.folders.map((f) =>
             f.serverId === serverId ? { ...f, isSelected: false } : f
-          )
+          ),
         })
       },
 
@@ -216,30 +230,28 @@ export const useFilterStore = create<FilterStore>()(
         set({
           selectedServerIds: [],
           selectedFolderIds: [],
-          servers: state.servers.map(s => ({ ...s, isSelected: false })),
-          folders: state.folders.map(f => ({ ...f, isSelected: false })),
+          servers: state.servers.map((s) => ({ ...s, isSelected: false })),
+          folders: state.folders.map((f) => ({ ...f, isSelected: false })),
           dateRange: {
             startDate: null,
             endDate: null,
-            filterType: 'creation'
+            filterType: 'creation',
           },
-          fileType: 'all'
+          fileType: 'all',
         })
       },
 
       getSelectedServers: () => {
         const state = get()
-        return state.servers.filter(s => state.selectedServerIds.includes(s.id))
+        return state.servers.filter((s) => state.selectedServerIds.includes(s.id))
       },
 
       getSelectedFolders: () => {
         const state = get()
-        return state.folders.filter(f => state.selectedFolderIds.includes(f.id))
+        return state.folders.filter((f) => state.selectedFolderIds.includes(f.id))
       },
 
-      getFoldersForServer: (serverId) => {
-        return get().folders.filter(f => f.serverId === serverId)
-      },
+      getFoldersForServer: (serverId) => get().folders.filter((f) => f.serverId === serverId),
 
       hasActiveFilters: () => {
         const state = get()
@@ -250,7 +262,7 @@ export const useFilterStore = create<FilterStore>()(
           state.dateRange.endDate !== null ||
           state.fileType !== 'all'
         )
-      }
+      },
     }),
     {
       name: 'filter-storage-v3', // 新しいキー名で古いキャッシュを無効化
@@ -258,8 +270,8 @@ export const useFilterStore = create<FilterStore>()(
         selectedServerIds: state.selectedServerIds,
         selectedFolderIds: state.selectedFolderIds,
         dateRange: state.dateRange,
-        fileType: state.fileType
-      })
+        fileType: state.fileType,
+      }),
     }
   )
 )
@@ -268,6 +280,6 @@ export const useFilterStore = create<FilterStore>()(
 export function generateSampleData() {
   return {
     servers: INITIAL_SERVERS,
-    folders: generateInitialFolders()
+    folders: generateInitialFolders(),
   }
 }

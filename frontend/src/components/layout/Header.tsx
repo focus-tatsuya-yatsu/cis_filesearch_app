@@ -10,12 +10,14 @@
 'use client'
 
 import { FC, useState, useCallback } from 'react'
+
 import { Search, Settings, Bell, User } from 'lucide-react'
 
 import { Button } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { UserMenu } from './UserMenu'
 import { useAuth } from '@/contexts/AuthContext'
+
+import { UserMenu } from './UserMenu'
 
 // ========================================
 // Component
@@ -70,7 +72,9 @@ export const Header: FC = () => {
               <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 CIS File Search
               </h1>
-              <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">企業内ファイル検索システム</p>
+              <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
+                企業内ファイル検索システム
+              </p>
             </div>
           </div>
 
@@ -123,7 +127,10 @@ export const Header: FC = () => {
             >
               <span className="sr-only">設定</span>
             </Button>
-            <div className="h-8 w-px bg-[#D1D1D6]/30 dark:bg-[#38383A]/30 mx-2" aria-hidden="true" />
+            <div
+              className="h-8 w-px bg-[#D1D1D6]/30 dark:bg-[#38383A]/30 mx-2"
+              aria-hidden="true"
+            />
 
             {/* 認証状態によって表示を切り替え */}
             {isLoading ? (
