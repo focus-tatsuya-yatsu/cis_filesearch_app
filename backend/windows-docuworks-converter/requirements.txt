@@ -1,0 +1,14 @@
+# DocuWorks Converter Requirements
+# For Windows EC2 with DocuWorks SDK
+
+# Windows COM support (REQUIRED)
+pywin32>=306
+
+# AWS SDK
+boto3>=1.34.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Logging
+python-json-logger>=2.0.0

@@ -1,11 +1,78 @@
 /**
  * S3 Preview Service
  * PDFプレビューとPresigned URLの生成を管理
+ *
+ * 対応フォーマット:
+ * - PDF: ネイティブ表示
+ * - 画像: jpg, jpeg, png, gif, webp, bmp, tiff, tif
+ * - Office: doc, docx, xls, xlsx, ppt, pptx (プレビュー画像経由)
+ * - DocuWorks: xdw, xbd (PDF変換経由)
  */
 
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { defaultProvider } from '@aws-sdk/credential-provider-node';
+
+/**
+ * プレビュー対応ファイル拡張子
+ */
+export const PREVIEWABLE_EXTENSIONS = {
+  // PDF
+  pdf: ['pdf'],
+  // 画像
+  image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif'],
+  // Office系（LibreOffice経由でプレビュー生成）
+  office: ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp'],
+  // DocuWorks
+  docuworks: ['xdw', 'xbd'],
+} as const;
+
+/**
+ * 全てのプレビュー対応拡張子をフラットな配列で取得
+ */
+export const ALL_PREVIEWABLE_EXTENSIONS = [
+  ...PREVIEWABLE_EXTENSIONS.pdf,
+  ...PREVIEWABLE_EXTENSIONS.image,
+  ...PREVIEWABLE_EXTENSIONS.office,
+  ...PREVIEWABLE_EXTENSIONS.docuworks,
+];
+
+/**
+ * ファイルがプレビュー可能かチェック
+ *
+ * @param fileName - ファイル名
+ * @returns プレビュー可能な場合true
+ */
+export function isPreviewable(fileName: string): boolean {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  return ext ? (ALL_PREVIEWABLE_EXTENSIONS as readonly string[]).includes(ext) : false;
+}
+
+/**
+ * ファイルタイプのカテゴリを取得
+ *
+ * @param fileType - ファイル拡張子（ドットなし）
+ * @returns カテゴリ名（pdf, image, office, docuworks, unknown）
+ */
+export function getFileTypeCategory(
+  fileType: string
+): 'pdf' | 'image' | 'office' | 'docuworks' | 'unknown' {
+  const lowerType = fileType.toLowerCase();
+
+  if ((PREVIEWABLE_EXTENSIONS.pdf as readonly string[]).includes(lowerType)) {
+    return 'pdf';
+  }
+  if ((PREVIEWABLE_EXTENSIONS.image as readonly string[]).includes(lowerType)) {
+    return 'image';
+  }
+  if ((PREVIEWABLE_EXTENSIONS.office as readonly string[]).includes(lowerType)) {
+    return 'office';
+  }
+  if ((PREVIEWABLE_EXTENSIONS.docuworks as readonly string[]).includes(lowerType)) {
+    return 'docuworks';
+  }
+  return 'unknown';
+}
 
 export interface PreviewUrlOptions {
   bucket: string;
@@ -298,6 +365,55 @@ async function streamToString(stream: any): Promise<string> {
 }
 
 /**
+ * Office文書のプレビューURLを生成
+ * Office文書はバックエンドでPDF変換後にプレビュー画像が生成されている
+ *
+ * @param bucket - S3バケット名
+ * @param key - S3オブジェクトキー（元のOfficeファイル）
+ * @param expiresIn - URL有効期限（秒）
+ * @returns プレビューURL（最初のページのプレビュー画像）
+ */
+export async function generateOfficePreviewUrl(
+  bucket: string,
+  key: string,
+  expiresIn: number = 300
+): Promise<string> {
+  // Office文書は処理時にプレビュー画像が生成されている想定
+  // プレビュー画像のパス: previews/{filename}/page_1.jpg
+  const fileName = key.split('/').pop() || key;
+  const previewKey = `previews/${fileName}/page_1.jpg`;
+
+  try {
+    // まずプレビュー画像の存在を確認
+    const client = getS3Client();
+    const checkCommand = new GetObjectCommand({
+      Bucket: bucket,
+      Key: previewKey,
+    });
+
+    await client.send(checkCommand);
+
+    // プレビュー画像が存在する場合
+    return generatePresignedUrl({
+      bucket,
+      key: previewKey,
+      expiresIn,
+      responseContentType: 'image/jpeg',
+      responseContentDisposition: 'inline',
+    });
+  } catch (error) {
+    // プレビュー画像がない場合はダウンロード用URLを返す
+    console.warn(`Office preview not found for ${key}, returning download URL`);
+    return generatePresignedUrl({
+      bucket,
+      key,
+      expiresIn,
+      responseContentDisposition: 'attachment',
+    });
+  }
+}
+
+/**
  * ファイルタイプに応じた適切なプレビューURLを生成
  *
  * @param bucket - S3バケット名
@@ -312,25 +428,32 @@ export async function generatePreviewUrlByType(
   fileType: string,
   expiresIn: number = 300
 ): Promise<string> {
-  const lowerFileType = fileType.toLowerCase();
+  const category = getFileTypeCategory(fileType);
 
-  if (lowerFileType === 'pdf') {
-    return generatePdfPreviewUrl({
-      bucket,
-      key,
-      expiresIn,
-    });
-  } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(lowerFileType)) {
-    return generateImagePreviewUrl(bucket, key, expiresIn);
-  } else if (['xdw', 'xbd'].includes(lowerFileType)) {
-    return generateDocuWorksPreviewUrl(bucket, key, expiresIn);
-  } else {
-    // その他のファイルはダウンロード用のURLを生成
-    return generatePresignedUrl({
-      bucket,
-      key,
-      expiresIn,
-      responseContentDisposition: 'attachment',
-    });
+  switch (category) {
+    case 'pdf':
+      return generatePdfPreviewUrl({
+        bucket,
+        key,
+        expiresIn,
+      });
+
+    case 'image':
+      return generateImagePreviewUrl(bucket, key, expiresIn);
+
+    case 'office':
+      return generateOfficePreviewUrl(bucket, key, expiresIn);
+
+    case 'docuworks':
+      return generateDocuWorksPreviewUrl(bucket, key, expiresIn);
+
+    default:
+      // その他のファイルはダウンロード用のURLを生成
+      return generatePresignedUrl({
+        bucket,
+        key,
+        expiresIn,
+        responseContentDisposition: 'attachment',
+      });
   }
 }

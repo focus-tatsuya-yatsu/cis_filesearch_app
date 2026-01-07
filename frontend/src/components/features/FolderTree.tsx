@@ -1,6 +1,6 @@
 'use client'
 
-import { FC, useState, memo, useCallback } from 'react'
+import { FC, useState, memo, useCallback, useEffect, useRef } from 'react'
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, ChevronDown, Folder, FolderOpen, File } from 'lucide-react'
@@ -17,6 +17,7 @@ interface FolderTreeProps {
   data: TreeNode[]
   onSelectFolder: (path: string) => void
   selectedPath?: string
+  highlightedFilePath?: string // 検索結果クリック時にハイライトするファイルパス
 }
 
 interface TreeItemProps {
@@ -24,6 +25,7 @@ interface TreeItemProps {
   level: number
   onSelectFolder: (path: string) => void
   selectedPath?: string
+  highlightedFilePath?: string
 }
 
 /**
@@ -33,9 +35,43 @@ interface TreeItemProps {
  * - handleToggle is memoized to prevent child re-renders
  * - Critical for recursive component where re-renders cascade down the tree
  */
-const TreeItemComponent: FC<TreeItemProps> = ({ node, level, onSelectFolder, selectedPath }) => {
+const TreeItemComponent: FC<TreeItemProps> = ({ node, level, onSelectFolder, selectedPath, highlightedFilePath }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const hasChildren = node.type === 'folder' && node.children && node.children.length > 0
+  const itemRef = useRef<HTMLButtonElement>(null)
+
+  // パスを正規化（比較のため）
+  const normalizePath = (path: string) => {
+    return path
+      .replace(/\\/g, '/') // バックスラッシュをスラッシュに
+      .replace(/\/+/g, '/') // 連続スラッシュを1つに
+      .replace(/\/+$/, '') // 末尾のスラッシュを除去
+      .trim()
+      .toLowerCase() // 大文字小文字を無視
+  }
+
+  const normalizedNodePath = normalizePath(node.path)
+  const normalizedHighlightPath = highlightedFilePath ? normalizePath(highlightedFilePath) : ''
+
+  // ハイライトされたファイルがこのノードの子孫かどうかをチェック
+  const isInHighlightPath = normalizedHighlightPath.startsWith(normalizedNodePath + '/') || normalizedHighlightPath === normalizedNodePath
+  // ハイライト判定：完全一致、またはファイル名での部分一致
+  const isHighlighted = normalizedHighlightPath === normalizedNodePath ||
+    (normalizedHighlightPath.endsWith('/' + node.name.toLowerCase()) && normalizedHighlightPath.includes(normalizedNodePath.slice(0, -node.name.length)))
+
+  // ハイライトパスが変更されたときに自動展開
+  useEffect(() => {
+    if (highlightedFilePath && isInHighlightPath && node.type === 'folder' && !isExpanded) {
+      setIsExpanded(true)
+    }
+  }, [highlightedFilePath, isInHighlightPath, node.type, isExpanded])
+
+  // ハイライトされたファイルにスクロール
+  useEffect(() => {
+    if (isHighlighted && itemRef.current) {
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [isHighlighted])
 
   /**
    * Performance Optimization: useCallback applied
@@ -63,14 +99,22 @@ const TreeItemComponent: FC<TreeItemProps> = ({ node, level, onSelectFolder, sel
   return (
     <div>
       <button
+        ref={itemRef}
         type="button"
         className={`
           w-full flex items-center gap-1 px-2 py-1.5 cursor-pointer rounded-lg
-          hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition-colors
+          hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition-all duration-300
           bg-transparent border-none text-left
-          ${isSelected ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/10' : ''}
+          ${isSelected && !isHighlighted ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/10' : ''}
         `}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        style={{
+          paddingLeft: `${level * 16 + 8}px`,
+          ...(isHighlighted ? {
+            backgroundColor: '#FBBF24',
+            borderLeft: '4px solid #F97316',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          } : {})
+        }}
         onClick={handleToggle}
         aria-expanded={node.type === 'folder' && hasChildren ? isExpanded : undefined}
         aria-label={`${node.type === 'folder' ? 'フォルダ' : 'ファイル'}: ${node.name}`}
@@ -89,15 +133,27 @@ const TreeItemComponent: FC<TreeItemProps> = ({ node, level, onSelectFolder, sel
 
         {node.type === 'folder' ? (
           isExpanded ? (
-            <FolderOpen className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
+            <FolderOpen
+              className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]"
+              style={isHighlighted ? { color: '#C2410C' } : undefined}
+            />
           ) : (
-            <Folder className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
+            <Folder
+              className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]"
+              style={isHighlighted ? { color: '#C2410C' } : undefined}
+            />
           )
         ) : (
-          <File className="w-4 h-4 text-[#6E6E73] dark:text-[#8E8E93]" />
+          <File
+            className="w-4 h-4 text-[#6E6E73] dark:text-[#8E8E93]"
+            style={isHighlighted ? { color: '#C2410C' } : undefined}
+          />
         )}
 
-        <span className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] select-none">{node.name}</span>
+        <span
+          className="text-sm select-none font-medium text-[#1D1D1F] dark:text-[#F5F5F7]"
+          style={isHighlighted ? { color: '#111827' } : undefined}
+        >{node.name}</span>
       </button>
 
       <AnimatePresence>
@@ -116,6 +172,7 @@ const TreeItemComponent: FC<TreeItemProps> = ({ node, level, onSelectFolder, sel
                 level={level + 1}
                 onSelectFolder={onSelectFolder}
                 selectedPath={selectedPath}
+                highlightedFilePath={highlightedFilePath}
               />
             ))}
           </motion.div>
@@ -152,6 +209,9 @@ const arePropsEqual = (prev: TreeItemProps, next: TreeItemProps): boolean => {
   // If selection state changed for this node, re-render
   if (prev.selectedPath !== next.selectedPath) return false
 
+  // If highlighted file path changed, re-render
+  if (prev.highlightedFilePath !== next.highlightedFilePath) return false
+
   // If level changed (shouldn't happen but check for safety), re-render
   if (prev.level !== next.level) return false
 
@@ -184,7 +244,7 @@ const TreeItem = memo(TreeItemComponent, arePropsEqual)
 // displayName for React DevTools debugging
 TreeItem.displayName = 'TreeItem'
 
-export const FolderTree: FC<FolderTreeProps> = ({ data, onSelectFolder, selectedPath }) => (
+export const FolderTree: FC<FolderTreeProps> = ({ data, onSelectFolder, selectedPath, highlightedFilePath }) => (
   <div className="w-full">
     {data.map((node) => (
       <TreeItem
@@ -193,6 +253,7 @@ export const FolderTree: FC<FolderTreeProps> = ({ data, onSelectFolder, selected
         level={0}
         onSelectFolder={onSelectFolder}
         selectedPath={selectedPath}
+        highlightedFilePath={highlightedFilePath}
       />
     ))}
   </div>

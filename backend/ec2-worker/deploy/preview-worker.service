@@ -1,0 +1,138 @@
+# =============================================================================
+# CIS Preview Worker - Production systemd Service Configuration
+# =============================================================================
+#
+# Purpose: Process SQS preview generation tasks for Office/DocuWorks files
+# Target: Amazon Linux 2023 EC2 instances with Auto Scaling
+#
+# Installation:
+#   sudo cp preview-worker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable preview-worker
+#   sudo systemctl start preview-worker
+#
+# =============================================================================
+
+[Unit]
+Description=CIS Preview Worker - SQS Preview Generation Service
+Documentation=https://github.com/your-org/cis-file-search
+After=network-online.target
+Wants=network-online.target
+
+# Dependency ordering for boot sequence
+After=cloud-final.service
+After=amazon-cloudwatch-agent.service
+
+[Service]
+Type=simple
+
+# -----------------------------------------------------------------------------
+# User Configuration
+# -----------------------------------------------------------------------------
+# SECURITY: Run as non-privileged user
+User=cis-worker
+Group=cis-worker
+
+# -----------------------------------------------------------------------------
+# Working Directory & Environment
+# -----------------------------------------------------------------------------
+WorkingDirectory=/opt/cis-worker
+
+# Method 1: EnvironmentFile (RECOMMENDED for systemd)
+# Note: systemd requires KEY=VALUE format without 'export' prefix
+# The .env file must be readable by the cis-worker user or root
+EnvironmentFile=/opt/cis-worker/.env
+
+# Method 2: Explicit PATH setting (always required)
+Environment="PATH=/opt/cis-worker/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Method 3: Additional environment variables (if needed)
+# These override values from EnvironmentFile
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONDONTWRITEBYTECODE=1"
+
+# -----------------------------------------------------------------------------
+# Execution
+# -----------------------------------------------------------------------------
+ExecStart=/opt/cis-worker/venv/bin/python /opt/cis-worker/src/preview_worker.py \
+    --threads 2 \
+    --idle-timeout 300
+
+# Pre-start validation (optional, uncomment if needed)
+# ExecStartPre=/opt/cis-worker/venv/bin/python -c "from config import config; print('Config OK')"
+
+# -----------------------------------------------------------------------------
+# Restart Policy
+# -----------------------------------------------------------------------------
+# Restart on failure with exponential backoff
+Restart=on-failure
+RestartSec=10s
+StartLimitBurst=5
+StartLimitIntervalSec=300s
+
+# -----------------------------------------------------------------------------
+# Graceful Shutdown
+# -----------------------------------------------------------------------------
+# Allow time for in-flight message processing
+TimeoutStopSec=65s
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Send SIGKILL after TimeoutStopSec if still running
+SendSIGKILL=yes
+
+# -----------------------------------------------------------------------------
+# Resource Limits
+# -----------------------------------------------------------------------------
+# File descriptors (for S3 connections)
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Memory limits (adjust based on instance type)
+# t3.medium: 4GB RAM - allow up to 2GB for worker
+MemoryMax=2G
+MemoryHigh=1536M
+
+# CPU quota (100% = 1 core)
+# t3.medium has 2 vCPUs - allow up to 150%
+CPUQuota=150%
+
+# -----------------------------------------------------------------------------
+# Security Hardening
+# -----------------------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# Allow write access to specific paths
+ReadWritePaths=/var/log/cis-worker
+ReadWritePaths=/tmp
+ReadWritePaths=/opt/cis-worker/temp
+
+# Restrict system calls (optional, may need adjustment)
+# SystemCallFilter=@system-service
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+StandardOutput=append:/var/log/cis-worker/preview-worker.log
+StandardError=append:/var/log/cis-worker/preview-worker-error.log
+SyslogIdentifier=cis-preview-worker
+
+# -----------------------------------------------------------------------------
+# Watchdog (optional)
+# -----------------------------------------------------------------------------
+# Enable if your worker supports sd_notify
+# WatchdogSec=120s
+
+[Install]
+WantedBy=multi-user.target

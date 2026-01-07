@@ -43,6 +43,19 @@ const corsHeaders = {
 };
 
 /**
+ * file_nameがない場合、file_pathからファイル名を抽出
+ */
+function extractFileName(source) {
+  if (source.file_name) {
+    return source.file_name;
+  }
+  // file_pathからファイル名を抽出
+  const filePath = source.file_path || '';
+  const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  return lastSlash >= 0 ? filePath.substring(lastSlash + 1) : filePath || 'Unknown';
+}
+
+/**
  * 画像のembeddingを生成
  */
 async function generateImageEmbedding(imageBase64) {
@@ -370,6 +383,28 @@ exports.handler = async (event) => {
     const sortBy = params.sortBy || 'relevance';
     const sortOrder = params.sortOrder || 'desc';
     const imageVector = params.imageVector;
+
+    // OpenSearch max_result_window制限チェック（デフォルト: 10,000）
+    const MAX_RESULT_WINDOW = 10000;
+    const from = (page - 1) * limit;
+    if (from + limit > MAX_RESULT_WINDOW) {
+      console.warn(`Pagination limit exceeded: from=${from}, limit=${limit}, max=${MAX_RESULT_WINDOW}`);
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'PAGINATION_LIMIT_EXCEEDED',
+          message: `検索結果の表示上限（${MAX_RESULT_WINDOW.toLocaleString()}件）を超えています。検索条件を絞り込んでください。`,
+          details: {
+            requestedFrom: from,
+            requestedLimit: limit,
+            maxResultWindow: MAX_RESULT_WINDOW,
+            maxAccessiblePage: Math.floor(MAX_RESULT_WINDOW / limit)
+          }
+        })
+      };
+    }
     
     let indexName, searchBody;
     
@@ -505,7 +540,7 @@ exports.handler = async (event) => {
           const textData = textResultsMap[filePath] || {};
           return {
             id: hit._id,
-            fileName: hit._source.file_name,
+            fileName: extractFileName(hit._source),
             filePath: filePath,
             fileType: hit._source.file_type,
             fileSize: hit._source.file_size,
@@ -614,9 +649,13 @@ exports.handler = async (event) => {
           }
         } : queryObj,
         highlight: {
+          // unifiedタイプは最も堅牢なハイライター
+          type: 'unified',
           fields: {
-            content: { fragment_size: 150, number_of_fragments: 1 },
-            file_name: {}
+            content: {
+              fragment_size: 150,
+              number_of_fragments: 1
+            }
           }
         },
         _source: ['file_name', 'file_path', 'file_type', 'file_size', 'created_at', 'modified_at', 'department', 'tags', 'content']
@@ -755,7 +794,7 @@ exports.handler = async (event) => {
     // 結果整形
     const results = response.body.hits.hits.map(hit => ({
       id: hit._id,
-      fileName: hit._source.file_name,
+      fileName: extractFileName(hit._source),
       filePath: hit._source.file_path,
       fileType: hit._source.file_type,
       fileSize: hit._source.file_size,

@@ -253,7 +253,8 @@ class FileProcessor:
 
             if thumbnail_data['thumbnail']:
                 # S3にアップロード
-                thumbnail_key = f"thumbnails/{Path(key).stem}_thumb.jpg"
+                # ✅ FIX: file_idを使用して一意性を保証
+                thumbnail_key = f"thumbnails/{document['file_id']}_thumb.jpg"
 
                 # BytesIOオブジェクトを作成
                 import io
@@ -294,7 +295,14 @@ class FileProcessor:
             logger.debug(f"Generating previews for {file_path}")
 
             # プレビュー生成
-            previews = self.preview_generator.generate_previews(file_path)
+            # DocuWorksファイルの場合、S3から変換済みPDFを取得するためにS3クライアントを渡す
+            # 注意: 変換済みPDFはlanding_bucketのdocuworks-converted/に格納されている
+            previews = self.preview_generator.generate_previews(
+                file_path,
+                s3_client=self.s3_client,
+                s3_bucket=config.s3.landing_bucket,
+                converted_pdf_prefix='converted-pdf/'
+            )
 
             if not previews:
                 logger.debug("No previews generated")
@@ -302,10 +310,11 @@ class FileProcessor:
 
             # S3にアップロード
             preview_keys = []
-            base_name = Path(key).stem
+            # ✅ FIX: file_idを使用して一意性を保証（同名ファイルの衝突を防止）
+            file_id = document['file_id']
 
             for preview in previews:
-                preview_key = f"previews/{base_name}/page_{preview['page']}.jpg"
+                preview_key = f"previews/{file_id}/page_{preview['page']}.jpg"
 
                 # S3にアップロード
                 preview_io = io.BytesIO(preview["data"])

@@ -1,14 +1,92 @@
 """
 Configuration Management for CIS File Processor Worker
+
+Supports multiple configuration sources:
+1. Environment variables (highest priority)
+2. .env file in application directory
+3. /etc/cis-worker.env (systemd environment file)
+4. Default values (lowest priority)
 """
 
 import os
+import sys
+import logging
 from dataclasses import dataclass
-from typing import Optional
-from dotenv import load_dotenv
+from typing import Optional, List
+from pathlib import Path
 
-# Load environment variables from .env file
-load_dotenv()
+# Setup basic logging before config is fully loaded
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def load_env_files():
+    """
+    Load environment variables from multiple sources.
+    Priority (highest to lowest):
+    1. Already set environment variables
+    2. .env file in current working directory
+    3. .env file in application directory
+    4. /etc/cis-worker.env (systemd)
+    """
+    env_files: List[Path] = [
+        Path('/etc/cis-worker.env'),
+        Path('/opt/cis-file-processor/.env'),
+        Path(__file__).parent.parent / '.env',
+        Path.cwd() / '.env',
+    ]
+
+    loaded_files = []
+
+    for env_file in env_files:
+        if env_file.exists():
+            try:
+                _load_env_file(env_file)
+                loaded_files.append(str(env_file))
+            except Exception as e:
+                logger.warning(f"Failed to load {env_file}: {e}")
+
+    if loaded_files:
+        logger.info(f"Loaded environment from: {', '.join(loaded_files)}")
+    else:
+        logger.warning("No .env files found. Using environment variables only.")
+
+def _load_env_file(filepath: Path):
+    """
+    Parse and load environment variables from a file.
+    Does NOT override existing environment variables.
+    """
+    with open(filepath, 'r') as f:
+        for line in f:
+            line = line.strip()
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+            # Handle export prefix (shell-style)
+            if line.startswith('export '):
+                line = line[7:]
+            # Parse KEY=VALUE
+            if '=' in line:
+                key, _, value = line.partition('=')
+                key = key.strip()
+                value = value.strip()
+                # Remove quotes if present
+                if (value.startswith('"') and value.endswith('"')) or \
+                   (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                # Only set if not already in environment
+                if key and key not in os.environ:
+                    os.environ[key] = value
+
+# Load environment files at module import
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    logger.info("python-dotenv not available, using custom loader")
+    load_env_files()
 
 
 @dataclass
@@ -192,26 +270,81 @@ class Config:
             enable_vector_search=os.getenv('ENABLE_VECTOR_SEARCH', 'true').lower() == 'true'
         )
 
-    def validate(self) -> bool:
-        """設定の妥当性確認"""
+    def validate(self, require_sqs: bool = True, require_preview_queue: bool = False) -> bool:
+        """
+        設定の妥当性確認
+
+        Args:
+            require_sqs: Main SQS queue URLが必須かどうか
+            require_preview_queue: Preview queue URLが必須かどうか
+
+        Returns:
+            True if validation passes, False otherwise
+        """
         errors = []
+        warnings = []
 
-        # 必須項目の確認
-        if not self.sqs.queue_url:
-            errors.append("SQS_QUEUE_URL is required")
-
+        # Check OpenSearch endpoint (always required)
         if not self.opensearch.endpoint:
-            errors.append("OPENSEARCH_ENDPOINT is required")
+            errors.append("OPENSEARCH_ENDPOINT is required (current value is empty)")
+        elif not self.opensearch.endpoint.startswith('http'):
+            warnings.append(f"OPENSEARCH_ENDPOINT should include protocol (current: {self.opensearch.endpoint})")
 
+        # Check S3 buckets
         if not self.s3.landing_bucket:
             errors.append("S3_LANDING_BUCKET is required")
 
+        if not self.s3.thumbnail_bucket:
+            warnings.append("S3_THUMBNAIL_BUCKET is not set, using default")
+
+        # Check SQS queue (conditional)
+        if require_sqs and not self.sqs.queue_url:
+            errors.append("SQS_QUEUE_URL is required for main worker")
+
+        # Check Preview queue URL from environment
+        preview_queue_url = os.getenv('PREVIEW_QUEUE_URL', '')
+        if require_preview_queue and not preview_queue_url:
+            errors.append("PREVIEW_QUEUE_URL is required for preview worker")
+
+        # Log all findings
+        for warning in warnings:
+            logger.warning(f"Configuration Warning: {warning}")
+
         if errors:
             for error in errors:
-                print(f"Configuration Error: {error}")
+                logger.error(f"Configuration Error: {error}")
+
+            # Print environment debug info
+            logger.error("=" * 60)
+            logger.error("Environment Debug Information:")
+            logger.error(f"  OPENSEARCH_ENDPOINT: '{self.opensearch.endpoint}'")
+            logger.error(f"  S3_LANDING_BUCKET: '{self.s3.landing_bucket}'")
+            logger.error(f"  S3_THUMBNAIL_BUCKET: '{self.s3.thumbnail_bucket}'")
+            logger.error(f"  SQS_QUEUE_URL: '{self.sqs.queue_url}'")
+            logger.error(f"  PREVIEW_QUEUE_URL: '{preview_queue_url}'")
+            logger.error(f"  AWS_REGION: '{self.aws.region}'")
+            logger.error("=" * 60)
             return False
 
+        logger.info("Configuration validation passed")
         return True
+
+    def print_config_summary(self):
+        """Print a summary of the current configuration (for debugging)"""
+        preview_queue_url = os.getenv('PREVIEW_QUEUE_URL', 'NOT SET')
+        logger.info("=" * 60)
+        logger.info("Configuration Summary:")
+        logger.info(f"  AWS Region: {self.aws.region}")
+        logger.info(f"  S3 Landing Bucket: {self.s3.landing_bucket}")
+        logger.info(f"  S3 Thumbnail Bucket: {self.s3.thumbnail_bucket}")
+        logger.info(f"  OpenSearch Endpoint: {self.opensearch.endpoint[:50]}..." if len(self.opensearch.endpoint) > 50 else f"  OpenSearch Endpoint: {self.opensearch.endpoint}")
+        logger.info(f"  OpenSearch Index: {self.opensearch.index_name}")
+        logger.info(f"  OpenSearch AWS Auth: {self.opensearch.use_aws_auth}")
+        logger.info(f"  SQS Queue URL: {self.sqs.queue_url[:50]}..." if len(self.sqs.queue_url) > 50 else f"  SQS Queue URL: {self.sqs.queue_url}")
+        logger.info(f"  Preview Queue URL: {preview_queue_url[:50]}..." if len(preview_queue_url) > 50 else f"  Preview Queue URL: {preview_queue_url}")
+        logger.info(f"  Worker Threads: {self.worker.threads}")
+        logger.info(f"  Preview Enabled: {self.preview.enabled}")
+        logger.info("=" * 60)
 
     def get_boto3_config(self) -> dict:
         """

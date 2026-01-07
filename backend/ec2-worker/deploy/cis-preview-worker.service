@@ -1,0 +1,65 @@
+[Unit]
+Description=CIS Preview Worker - Auto Scaling Edition
+After=network-online.target
+Wants=network-online.target
+Documentation=https://github.com/your-org/cis-file-search
+
+[Service]
+Type=simple
+User=cis-worker
+Group=cis-worker
+WorkingDirectory=/opt/cis-file-processor
+
+# CRITICAL: Load environment variables from systemd environment file
+# This file must be created by user-data or cloud-init on ASG instances
+EnvironmentFile=/etc/cis-worker.env
+
+# Set PATH to include virtual environment
+Environment="PATH=/opt/cis-file-processor/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Ensure Python output is unbuffered for proper logging
+Environment="PYTHONUNBUFFERED=1"
+
+# Start the preview worker with explicit queue URL from environment
+ExecStart=/opt/cis-file-processor/venv/bin/python \
+    /opt/cis-file-processor/src/preview_worker.py \
+    --threads 2 \
+    --idle-timeout 300
+
+# Restart policy - restart on failure but not on success (for ASG scaling down)
+Restart=on-failure
+RestartSec=10s
+StartLimitBurst=5
+StartLimitIntervalSec=300s
+
+# Graceful shutdown timeout (allow current message processing to complete)
+TimeoutStopSec=60s
+
+# Resource Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+MemoryHigh=1.5G
+
+# Security Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/cis-worker /tmp /opt/cis-file-processor/temp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# Logging - write to dedicated log files
+StandardOutput=append:/var/log/cis-worker/preview-worker.log
+StandardError=append:/var/log/cis-worker/preview-worker-error.log
+SyslogIdentifier=cis-preview-worker
+
+[Install]
+WantedBy=multi-user.target

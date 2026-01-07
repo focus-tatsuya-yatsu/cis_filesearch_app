@@ -27,6 +27,7 @@ interface ImageSearchDropdownProps {
   isOpen: boolean
   onClose: () => void
   onImageSelect: (file: File, previewUrl: string) => void
+  onImageRemove?: () => void  // 画像削除時のコールバック
   isUploading?: boolean
   error?: string | null
 }
@@ -40,6 +41,7 @@ export const ImageSearchDropdown: FC<ImageSearchDropdownProps> = ({
   isOpen,
   onClose,
   onImageSelect,
+  onImageRemove,
   isUploading = false,
   error = null,
 }) => {
@@ -138,6 +140,8 @@ export const ImageSearchDropdown: FC<ImageSearchDropdownProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    // 親コンポーネントに画像削除を通知（エンベディングをクリア）
+    onImageRemove?.()
   }
 
   /**

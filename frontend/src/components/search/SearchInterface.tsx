@@ -80,6 +80,7 @@ export const SearchInterface: FC = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [totalResults, setTotalResults] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const [searchError, setSearchError] = useState<ApiErrorResponse | null>(null)
   const [lastSearchParams, setLastSearchParams] = useState<{
     query: string
@@ -87,6 +88,9 @@ export const SearchInterface: FC = () => {
     searchType: 'text' | 'image'
     imageEmbedding?: number[]
   } | null>(null)
+
+  // ページネーション設定
+  const ITEMS_PER_PAGE = 50
 
   // Preview state
   const [previewFile, setPreviewFile] = useState<SearchResult | null>(null)
@@ -137,8 +141,20 @@ export const SearchInterface: FC = () => {
       setSearchQuery(query)
       setIsSearching(true)
       setHasSearched(true)
+      setCurrentPage(1) // 新規検索時はページをリセット
       setSearchError(null) // エラーをクリア
-      setLastSearchParams({ query, mode: searchMode, searchType: 'text' }) // リトライ用にパラメータを保存
+
+      // 画像エンベディングが存在する場合はハイブリッド検索
+      const hasActiveImage = imageSearchState.embedding && imageSearchState.embedding.length > 0
+      const effectiveSearchType = hasActiveImage ? 'image' : 'text'
+
+      // リトライ用にパラメータを保存（画像エンベディングも保持）
+      setLastSearchParams({
+        query,
+        mode: searchMode,
+        searchType: effectiveSearchType,
+        imageEmbedding: hasActiveImage ? imageSearchState.embedding : undefined
+      })
 
       // フィルタストアから現在の状態を取得
       const filterStore = useFilterStore.getState()
@@ -159,10 +175,16 @@ export const SearchInterface: FC = () => {
       const searchParams: any = {
         q: query,
         searchMode,
+        searchType: effectiveSearchType,
         page: 1,
-        limit: 20,
+        limit: ITEMS_PER_PAGE,
         sortBy: 'relevance',
         sortOrder: 'desc',
+      }
+
+      // 画像エンベディングがある場合はハイブリッド検索用に追加
+      if (hasActiveImage && imageSearchState.embedding) {
+        searchParams.imageEmbedding = imageSearchState.embedding
       }
 
       // カテゴリフィルタ
@@ -233,7 +255,7 @@ export const SearchInterface: FC = () => {
       const totalResults = response.data.total ?? response.data.results.length
       addToHistory(query, totalResults)
     },
-    [addToHistory, toast]
+    [addToHistory, toast, imageSearchState.embedding]
   )
 
   /**
@@ -245,6 +267,81 @@ export const SearchInterface: FC = () => {
       handleSearch(lastSearchParams.query, lastSearchParams.mode)
     }
   }, [lastSearchParams, handleSearch])
+
+  /**
+   * ページ変更処理
+   * 指定されたページの検索結果を取得
+   */
+  const handlePageChange = useCallback(
+    async (page: number) => {
+      if (!lastSearchParams) return
+
+      setIsSearching(true)
+      setCurrentPage(page)
+
+      // フィルタストアから現在の状態を取得
+      const filterStore = useFilterStore.getState()
+      const {
+        selectedServerIds,
+        selectedFolderIds,
+        dateRange,
+        fileType: currentFileType,
+      } = filterStore
+
+      // フォルダIDからフォルダ名を抽出
+      const folderNames = selectedFolderIds.map((id) => {
+        const parts = id.split('_')
+        return parts.slice(1).join('_')
+      })
+
+      // 検索パラメータを構築
+      const searchParams: any = {
+        q: lastSearchParams.query,
+        searchMode: lastSearchParams.mode,
+        searchType: lastSearchParams.searchType,
+        page,
+        limit: ITEMS_PER_PAGE,
+        sortBy: 'relevance',
+        sortOrder: 'desc',
+      }
+
+      // 画像検索の場合
+      if (lastSearchParams.searchType === 'image' && lastSearchParams.imageEmbedding) {
+        searchParams.imageEmbedding = lastSearchParams.imageEmbedding
+      }
+
+      // フィルタを適用
+      if (selectedServerIds.length > 0) {
+        searchParams.categories = selectedServerIds
+      }
+      if (folderNames.length > 0) {
+        searchParams.folders = folderNames
+      }
+      if (dateRange.startDate || dateRange.endDate) {
+        searchParams.dateFrom = dateRange.startDate
+        searchParams.dateTo = dateRange.endDate
+        searchParams.dateFilterType = dateRange.filterType
+      }
+      if (currentFileType !== 'all') {
+        searchParams.fileType = currentFileType
+      }
+
+      // API呼び出し
+      const response = await searchFiles(searchParams)
+
+      setIsSearching(false)
+
+      if (isApiError(response)) {
+        toast.error(response.userMessage)
+        return
+      }
+
+      setSearchResults(response.data.results)
+      const total = response.data.total ?? response.data.results.length
+      setTotalResults(total)
+    },
+    [lastSearchParams, toast]
+  )
 
   /**
    * 検索履歴アイテムクリック処理
@@ -264,6 +361,28 @@ export const SearchInterface: FC = () => {
   const handleImageSearchToggle = useCallback(() => {
     setIsImageSearchOpen((prev) => !prev)
   }, [])
+
+  /**
+   * 画像削除ハンドラ
+   * 画像のエンベディングをクリアしてテキスト検索モードに戻す
+   */
+  const handleImageRemove = useCallback(() => {
+    setImageSearchState({
+      imageFile: null,
+      imagePreviewUrl: null,
+      isUploading: false,
+      embedding: null,
+      error: null,
+    })
+    // lastSearchParamsからも画像情報をクリア
+    if (lastSearchParams?.imageEmbedding) {
+      setLastSearchParams({
+        ...lastSearchParams,
+        searchType: 'text',
+        imageEmbedding: undefined
+      })
+    }
+  }, [lastSearchParams])
 
   /**
    * 画像選択ハンドラ
@@ -372,7 +491,7 @@ export const SearchInterface: FC = () => {
         searchType: 'image',
         searchMode: lastSearchParams?.mode || 'or',
         page: 1,
-        limit: 20,
+        limit: ITEMS_PER_PAGE,
         sortBy: 'relevance',
         sortOrder: 'desc',
       })
@@ -515,7 +634,7 @@ export const SearchInterface: FC = () => {
         searchType: lastSearchParams?.searchType || 'text',
         searchMode: lastSearchParams?.mode || 'or',
         page: 1,
-        limit: 20,
+        limit: ITEMS_PER_PAGE,
         sortBy: 'relevance',
         sortOrder: 'desc',
       }
@@ -634,6 +753,7 @@ export const SearchInterface: FC = () => {
               isOpen={isImageSearchOpen}
               onClose={() => setIsImageSearchOpen(false)}
               onImageSelect={handleImageSelect}
+              onImageRemove={handleImageRemove}
               isUploading={imageSearchState.isUploading}
               error={imageSearchState.error}
             />
@@ -798,6 +918,9 @@ export const SearchInterface: FC = () => {
                 <ExplorerView
                   searchResults={searchResults}
                   totalResults={totalResults}
+                  currentPage={currentPage}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={handlePageChange}
                   onPreview={handlePreview}
                   onDownload={handleDownload}
                 />

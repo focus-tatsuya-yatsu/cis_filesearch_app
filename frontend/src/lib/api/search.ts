@@ -74,6 +74,11 @@ export interface ApiErrorResponse {
 }
 
 const getErrorMessage = (statusCode: number, errorData?: SearchError): string => {
+  // カスタムエラーコードのチェック
+  if (errorData?.code === 'PAGINATION_LIMIT_EXCEEDED' || errorData?.error === 'PAGINATION_LIMIT_EXCEEDED') {
+    return errorData?.message || '検索結果の表示上限を超えています。検索条件を絞り込んでください。';
+  }
+
   switch (statusCode) {
     case 400:
       return errorData?.message || '検索条件が正しくありません。入力内容を確認してください。';
@@ -86,6 +91,10 @@ const getErrorMessage = (statusCode: number, errorData?: SearchError): string =>
     case 429:
       return 'リクエストが多すぎます。しばらく待ってから再度お試しください。';
     case 500:
+      // OpenSearch max_result_window エラーの検出
+      if (errorData?.message?.includes('max_result_window') || errorData?.error?.includes('max_result_window')) {
+        return '検索結果の表示上限を超えています。検索条件を絞り込むか、前のページに戻ってください。';
+      }
       return 'サーバーエラーが発生しました。時間をおいて再度お試しください。';
     case 502:
       return 'ゲートウェイエラーが発生しました。時間をおいて再度お試しください。';
