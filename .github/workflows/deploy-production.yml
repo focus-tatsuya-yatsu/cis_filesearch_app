@@ -1,9 +1,14 @@
 name: Deploy to S3 + CloudFront (Production)
 
+# 自動デプロイは無効化（手動デプロイを使用中）
+# 有効化するにはGitHub Secretsに以下を設定:
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY
+# - SLACK_WEBHOOK_URL (オプション)
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  workflow_dispatch:  # 手動実行のみ許可
 
 env:
   AWS_REGION: ap-northeast-1
