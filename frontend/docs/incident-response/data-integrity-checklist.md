@@ -7,6 +7,7 @@
 ## Pre-Migration State Verification
 
 ### ✅ Backup Verification
+
 - [ ] **Backup Snapshot Exists**
   - Name: `file-search-dev-backup-20251218-101015`
   - Location: OpenSearch Snapshots Repository
@@ -17,16 +18,18 @@
 
 - [ ] **Backup Integrity Check**
   - Status: SUCCESS/PARTIAL/FAILED
-  - Document Count: _____________
-  - Shard Status: _____________
-  - Timestamp: _____________
+  - Document Count: ******\_******
+  - Shard Status: ******\_******
+  - Timestamp: ******\_******
 
 ### ✅ Current Index State
+
 - [ ] **Index Exists**: file-index
 - [ ] **Index Exists**: file-search-dev (if created)
 - [ ] **Index Exists**: cis-files (mentioned in description)
 
 - [ ] **Document Count Verification**
+
   ```bash
   # file-index
   curl -XGET "https://<ENDPOINT>/file-index/_count"
@@ -35,6 +38,7 @@
   ```
 
 - [ ] **Index Health Status**
+
   ```bash
   curl -XGET "https://<ENDPOINT>/_cluster/health/file-index?pretty"
   # Status: green/yellow/red
@@ -50,7 +54,9 @@
   ```
 
 ### ✅ Mapping Verification
+
 - [ ] **Current Mapping Has k-NN Field**
+
   ```bash
   curl -XGET "https://<ENDPOINT>/file-index/_mapping" | jq '.["file-index"].mappings.properties.image_embedding'
   # Expected: type=knn_vector, dimension=1024
@@ -67,7 +73,9 @@
 ## Data Loss Assessment
 
 ### ✅ Sample Data Verification
+
 - [ ] **Random Sample Check (N=100)**
+
   ```bash
   curl -XGET "https://<ENDPOINT>/file-index/_search" -H 'Content-Type: application/json' -d'
   {
@@ -83,11 +91,12 @@
   ```
 
 - [ ] **Specific Document Retrieval**
-  - Document ID 1: _______________ (EXISTS/MISSING)
-  - Document ID 2: _______________ (EXISTS/MISSING)
-  - Document ID 3: _______________ (EXISTS/MISSING)
+  - Document ID 1: ******\_\_\_****** (EXISTS/MISSING)
+  - Document ID 2: ******\_\_\_****** (EXISTS/MISSING)
+  - Document ID 3: ******\_\_\_****** (EXISTS/MISSING)
 
 ### ✅ Recent Data Verification
+
 - [ ] **Last 24h Indexed Documents**
   ```bash
   curl -XGET "https://<ENDPOINT>/file-index/_search" -H 'Content-Type: application/json' -d'
@@ -106,7 +115,9 @@
 ## Migration Impact Assessment
 
 ### ✅ Write Operations During Migration
+
 - [ ] **Check for Concurrent Writes**
+
   ```bash
   # Review CloudWatch Logs for indexing operations
   aws logs filter-log-events \
@@ -118,10 +129,12 @@
 - [ ] **Identify Potentially Lost Documents**
   - Start Time: 2025-12-18 10:10:15
   - End Time: 2025-12-18 10:30:00
-  - Estimated Write Count: _____________
+  - Estimated Write Count: ******\_******
 
 ### ✅ Search Functionality
+
 - [ ] **Test Basic Search**
+
   ```bash
   curl -XGET "https://<ENDPOINT>/file-index/_search?q=test"
   # Response Status: _____________
@@ -147,16 +160,17 @@
 
 ## Risk Assessment
 
-| Risk | Likelihood | Impact | Mitigation Priority |
-|------|------------|--------|---------------------|
-| Data Loss | Low/Medium/High | Critical | P0 |
-| Index Corruption | Low/Medium/High | High | P0 |
-| Service Downtime | Low/Medium/High | Medium | P1 |
-| Inconsistent Mappings | Low/Medium/High | Medium | P1 |
+| Risk                  | Likelihood      | Impact   | Mitigation Priority |
+| --------------------- | --------------- | -------- | ------------------- |
+| Data Loss             | Low/Medium/High | Critical | P0                  |
+| Index Corruption      | Low/Medium/High | High     | P0                  |
+| Service Downtime      | Low/Medium/High | Medium   | P1                  |
+| Inconsistent Mappings | Low/Medium/High | Medium   | P1                  |
 
 ## Decision Matrix
 
 ### If Backup is Valid AND Current Index Intact
+
 - **Action**: No rollback needed, proceed with monitoring
 - **Next Steps**:
   1. Document current state
@@ -164,10 +178,12 @@
   3. Schedule proper migration window
 
 ### If Backup is Valid BUT Current Index Corrupted
+
 - **Action**: Restore from backup immediately
 - **Next Steps**: See Section 2 (Rollback Procedures)
 
 ### If Backup is Invalid
+
 - **Action**: Critical escalation, do not proceed with any changes
 - **Next Steps**:
   1. Stop all write operations
@@ -176,7 +192,7 @@
 
 ## Sign-off
 
-- [ ] Data Integrity Verified By: _____________
-- [ ] Date/Time: _____________
+- [ ] Data Integrity Verified By: ******\_******
+- [ ] Date/Time: ******\_******
 - [ ] Approval to Proceed: YES/NO
-- [ ] Approved By: _____________
+- [ ] Approved By: ******\_******

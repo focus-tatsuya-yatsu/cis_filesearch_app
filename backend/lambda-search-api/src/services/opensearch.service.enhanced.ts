@@ -63,9 +63,14 @@ let opensearchClient: Client | null = null;
  * 環境変数からOpenSearch設定を取得
  */
 function getOpenSearchConfig(): OpenSearchConfig {
-  const endpoint = process.env.OPENSEARCH_ENDPOINT;
+  let endpoint = process.env.OPENSEARCH_ENDPOINT;
   if (!endpoint) {
     throw new Error('OPENSEARCH_ENDPOINT environment variable is not set');
+  }
+
+  // Ensure endpoint has https:// prefix
+  if (!endpoint.startsWith('https://') && !endpoint.startsWith('http://')) {
+    endpoint = `https://${endpoint}`;
   }
 
   return {
@@ -228,6 +233,9 @@ export async function getOpenSearchClient(): Promise<Client> {
  * ファイルタイプフィルター用のOpenSearchクエリを構築
  * @param fileType - 単一または複数のファイルタイプ（undefinedも許容）
  * @returns OpenSearchのクエリ句またはnull
+ *
+ * 修正: file_type と file_extension の両方のフィールドに対応
+ * また、ドット有り(.pdf)とドット無し(pdf)の両方のフォーマットに対応
  */
 function buildFileTypeFilter(fileType: string | string[] | undefined): any {
   // 'all' または空の場合はフィルターなし
@@ -236,29 +244,41 @@ function buildFileTypeFilter(fileType: string | string[] | undefined): any {
   }
 
   const extensions = getExtensionsForFileTypes(fileType);
-  
+
   if (extensions.length === 0) {
     // 'other' タイプの場合: 既知の拡張子以外をマッチ
     const allKnownExtensions = Object.values(FILE_TYPE_TO_EXTENSIONS).flat();
+    // ドット無しバージョンも追加
+    const allExtensionsWithBothFormats = [
+      ...allKnownExtensions,
+      ...allKnownExtensions.map(ext => ext.replace(/^\./, ''))
+    ];
     return {
       bool: {
-        must_not: {
-          terms: { 'file_extension': allKnownExtensions }
-        }
+        must_not: [
+          { terms: { 'file_extension': allExtensionsWithBothFormats } },
+          { terms: { 'file_type': allExtensionsWithBothFormats } }
+        ]
       }
     };
   }
 
-  if (extensions.length === 1) {
-    // 単一の拡張子
-    return {
-      term: { 'file_extension': extensions[0] }
-    };
-  }
+  // ドット有り(.pdf)とドット無し(pdf)の両方のフォーマットを作成
+  const extensionsWithBothFormats = [
+    ...extensions,
+    ...extensions.map(ext => ext.replace(/^\./, ''))  // ドットを除去したバージョン
+  ];
+  const uniqueExtensions = [...new Set(extensionsWithBothFormats)];
 
-  // 複数の拡張子
+  // file_type と file_extension の両方のフィールドで検索
   return {
-    terms: { 'file_extension': extensions }
+    bool: {
+      should: [
+        { terms: { 'file_extension': uniqueExtensions } },
+        { terms: { 'file_type': uniqueExtensions } }
+      ],
+      minimum_should_match: 1
+    }
   };
 }
 
@@ -322,6 +342,7 @@ export async function searchDocuments(
     folders,
     dateFrom,
     dateTo,
+    dateFilterType = 'modification', // デフォルトは更新日
     size = 20,
     from = 0,
     sortBy = 'relevance',
@@ -334,6 +355,7 @@ export async function searchDocuments(
     fileType,
     categories,
     folders,
+    dateFilterType,
     size,
     from,
     sortBy,
@@ -378,8 +400,15 @@ export async function searchDocuments(
       if (dateFrom) rangeQuery.gte = dateFrom;
       if (dateTo) rangeQuery.lte = dateTo;
 
+      // dateFilterTypeに基づいてフィールドを選択
+      // creation: ファイル作成日 (created_at)
+      // modification: ファイル更新日 (modified_at) または indexed_at
+      const dateField = dateFilterType === 'creation'
+        ? 'created_at'
+        : 'modified_at';
+
       filterClauses.push({
-        range: { indexed_at: rangeQuery },
+        range: { [dateField]: rangeQuery },
       });
     }
 
@@ -404,21 +433,15 @@ export async function searchDocuments(
       },
       size,
       from,
+      // k-NN インデックス (file-index-v2-knn) のフィールド構造に合わせる
       _source: [
         'file_name',
         'file_path',
-        'file_extension',
+        'file_type',      // k-NN インデックスは file_type を使用
         'file_size',
-        'indexed_at',
         'modified_at',
-        'extracted_text',
-        's3_key',
-        'category',
-        'category_display',
-        'root_folder',
-        'nas_server',
-        'nas_path',
-        'thumbnail_url',
+        'department',
+        'tags',
       ],
       // スコアによるソート（類似度順）
       sort: [
@@ -431,7 +454,7 @@ export async function searchDocuments(
       track_total_hits: true,
     };
 
-    return await executeSearch(client, config, searchBody);
+    return await executeSearch(client, config, searchBody, KNN_INDEX);
   }
 
   // テキスト検索の場合は従来のboolクエリを使用
@@ -478,8 +501,13 @@ export async function searchDocuments(
     if (dateFrom) rangeQuery.gte = dateFrom;
     if (dateTo) rangeQuery.lte = dateTo;
 
+    // dateFilterTypeに基づいてフィールドを選択
+    const dateField = dateFilterType === 'creation'
+      ? 'created_at'
+      : 'modified_at';
+
     filterClauses.push({
-      range: { indexed_at: rangeQuery },
+      range: { [dateField]: rangeQuery },
     });
   }
 
@@ -488,7 +516,11 @@ export async function searchDocuments(
   if (sortBy === 'relevance') {
     sort.push('_score');
   } else if (sortBy === 'date') {
-    sort.push({ indexed_at: { order: sortOrder } });
+    // dateFilterTypeに基づいてソートフィールドを選択
+    const sortDateField = dateFilterType === 'creation'
+      ? 'created_at'
+      : 'modified_at';
+    sort.push({ [sortDateField]: { order: sortOrder } });
   } else if (sortBy === 'name') {
     sort.push({ 'file_name.keyword': { order: sortOrder } });
   } else if (sortBy === 'size') {
@@ -525,39 +557,51 @@ export async function searchDocuments(
 }
 
 /**
+ * k-NN検索用インデックス名
+ * 画像ベクトル検索は専用インデックスを使用
+ */
+const KNN_INDEX = 'file-index-v2-knn';
+
+/**
  * 検索を実行する共通ヘルパー関数
+ * @param indexOverride - 指定された場合、config.indexの代わりにこのインデックスを使用
  */
 async function executeSearch(
   client: Client,
   config: OpenSearchConfig,
-  searchBody: any
+  searchBody: any,
+  indexOverride?: string
 ): Promise<SearchResponse> {
 
   const startTime = Date.now();
 
+  // k-NN検索の場合は専用インデックスを使用
+  const isKnnQuery = !!searchBody.query?.knn;
+  const targetIndex = indexOverride || (isKnnQuery ? KNN_INDEX : config.index);
+
   try {
     // インデックスの存在確認（初回のみ）
     try {
-      const indexExists = await client.indices.exists({ index: config.index });
+      const indexExists = await client.indices.exists({ index: targetIndex });
       if (!indexExists.body) {
-        throw new OpenSearchIndexNotFoundError(`Index '${config.index}' does not exist`);
+        throw new OpenSearchIndexNotFoundError(`Index '${targetIndex}' does not exist`);
       }
     } catch (error: any) {
       logger.error('Failed to check index existence', {
         error: error.message,
-        index: config.index,
+        index: targetIndex,
       });
       throw error;
     }
 
     logger.debug('Executing search', {
-      index: config.index,
-      queryType: searchBody.query.knn ? 'knn' : 'bool',
+      index: targetIndex,
+      queryType: isKnnQuery ? 'knn' : 'bool',
       body: JSON.stringify(searchBody, null, 2).substring(0, 1000),
     });
 
     const response = await client.search({
-      index: config.index,
+      index: targetIndex,
       body: searchBody,
     });
 
@@ -585,9 +629,13 @@ async function executeSearch(
         id: hit._id,
         fileName: source.file_name || '',
         filePath: source.file_path || '',
-        fileType: source.file_extension || '', // file_type → file_extension
+        // k-NN インデックスは file_type、テキストインデックスは file_extension を使用
+        fileType: source.file_type || source.file_extension || '',
         fileSize: source.file_size || 0,
-        modifiedDate: source.indexed_at || source.modified_at || '',
+        // 更新日: modified_at が優先、なければ indexed_at
+        modifiedDate: source.modified_at || source.indexed_at || '',
+        // 作成日: created_at
+        createdDate: source.created_at || '',
         snippet,
         relevanceScore: hit._score,
         highlights: {
@@ -595,13 +643,16 @@ async function executeSearch(
           filePath: highlights.file_path,
           extractedText: highlights.extracted_text,
         },
-        // 追加フィールド
+        // 追加フィールド（テキストインデックス用、k-NNでは空になる場合がある）
         category: source.category,
         categoryDisplay: source.category_display,
         rootFolder: source.root_folder,
         nasServer: source.nas_server,
         nasPath: source.nas_path,
         thumbnailUrl: source.thumbnail_url,
+        // k-NN インデックス追加フィールド
+        department: source.department,
+        tags: source.tags,
       };
     });
 

@@ -1,6 +1,7 @@
 # S3プレビューAPI実装サマリー
 
 ## 実装完了日
+
 2025-12-16
 
 ## 実装内容
@@ -8,10 +9,12 @@
 ### 1. OpenSearchエラーの修正
 
 **問題:**
+
 - `/api/search`エンドポイントで「OpenSearch service is not configured」エラーが発生
 - `.env.local`にOpenSearch関連の環境変数が設定されていなかった
 
 **解決策:**
+
 - `.env.local`と`.env.example`にOpenSearch設定を追加
 - 以下の環境変数を設定：
   - `OPENSEARCH_ENDPOINT`: OpenSearchドメインのエンドポイント
@@ -22,6 +25,7 @@
   - `S3_THUMBNAIL_PREFIX`: サムネイルのプレフィックス
 
 **ファイル:**
+
 - `/frontend/.env.local` - 更新
 - `/frontend/.env.example` - 更新
 
@@ -32,6 +36,7 @@
 #### 2.1 コアライブラリ (`/src/lib/s3-preview.ts`)
 
 **機能:**
+
 - Presigned URL生成（5分有効期限）
 - PDFページごとのプレビューURL生成
 - 画像ファイルのプレビューURL生成
@@ -40,6 +45,7 @@
 - 複数ページの一括URL生成
 
 **主要関数:**
+
 - `generatePresignedUrl()`: 汎用Presigned URL生成
 - `generatePdfPreviewUrl()`: PDFプレビューURL生成
 - `getPdfMetadata()`: PDFメタデータ取得
@@ -49,6 +55,7 @@
 - `generatePreviewUrlByType()`: ファイルタイプ別の適切なURL生成
 
 **技術:**
+
 - AWS SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`)
 - シングルトンS3クライアント
 - IAM認証（EC2ロールまたはローカル認証情報）
@@ -62,11 +69,13 @@
 **ファイル:** `/src/app/api/preview/route.ts`
 
 **機能:**
+
 - 任意のファイルタイプのプレビューURL生成
 - PDFのページ指定サポート
 - メタデータ情報の提供
 
 **パラメータ:**
+
 - `bucket`: S3バケット名（必須）
 - `key`: S3オブジェクトキー（必須）
 - `fileType`: ファイルタイプ（必須）
@@ -74,6 +83,7 @@
 - `expiresIn`: URL有効期限秒数（オプション、デフォルト300秒）
 
 **レスポンス:**
+
 ```json
 {
   "success": true,
@@ -95,12 +105,14 @@
 **ファイル:** `/src/app/api/preview/pages/route.ts`
 
 **機能:**
+
 - PDFの複数ページのプレビューURLを一括生成
 - ページ範囲指定サポート（最大50ページ）
 - キーワードを含むページの検出
 - メタデータ情報の提供
 
 **パラメータ:**
+
 - `bucket`: S3バケット名（必須）
 - `key`: S3オブジェクトキー（必須）
 - `startPage`: 開始ページ（オプション、デフォルト1）
@@ -109,6 +121,7 @@
 - `expiresIn`: URL有効期限秒数（オプション）
 
 **レスポンス:**
+
 ```json
 {
   "success": true,
@@ -136,17 +149,20 @@
 **ファイル:** `/src/app/api/preview/keywords/route.ts`
 
 **機能:**
+
 - PDFファイル内のキーワード検索
 - ページごとのマッチ情報
 - テキストスニペット生成
 - ページ内位置情報（座標）の提供
 
 **パラメータ:**
+
 - `bucket`: S3バケット名（必須）
 - `key`: S3オブジェクトキー（必須）
 - `keywords`: 検索キーワード（カンマ区切り、必須、最大10個）
 
 **レスポンス:**
+
 ```json
 {
   "success": true,
@@ -179,30 +195,34 @@
 #### 2.3 クライアントサービス (`/src/services/preview-service.ts`)
 
 **機能:**
+
 - フロントエンドからのAPI呼び出しを簡素化
 - プレビューURLのキャッシュ管理
 - 自動的な期限切れURL再生成
 
 **主要関数:**
+
 - `getPreviewUrl()`: 単一ファイルのプレビューURL取得
 - `getPdfPages()`: PDFページ一覧取得
 - `getKeywordHighlights()`: キーワードハイライト情報取得
 
 **クラス:**
+
 - `PreviewUrlCache`: URLキャッシュ管理
   - 有効期限管理
   - 自動再生成（有効期限の80%経過時）
   - 期限切れキャッシュのクリーンアップ
 
 **使用例:**
+
 ```typescript
-import { getPreviewUrl, previewUrlCache } from '@/services/preview-service';
+import { getPreviewUrl, previewUrlCache } from '@/services/preview-service'
 
 // 直接取得
-const response = await getPreviewUrl('bucket', 'key', 'pdf', 1);
+const response = await getPreviewUrl('bucket', 'key', 'pdf', 1)
 
 // キャッシュ経由（推奨）
-const url = await previewUrlCache.getUrl('bucket', 'key', 'pdf', 1);
+const url = await previewUrlCache.getUrl('bucket', 'key', 'pdf', 1)
 ```
 
 ---
@@ -210,6 +230,7 @@ const url = await previewUrlCache.getUrl('bucket', 'key', 'pdf', 1);
 #### 2.4 Reactコンポーネント (`/src/components/features/PdfPreview.tsx`)
 
 **機能:**
+
 - PDFファイルの完全なプレビューUI
 - ページナビゲーション（前へ/次へ/ページ指定）
 - キーワードハイライト表示
@@ -218,6 +239,7 @@ const url = await previewUrlCache.getUrl('bucket', 'key', 'pdf', 1);
 - スニペット表示パネル
 
 **Props:**
+
 - `bucket`: S3バケット名
 - `s3Key`: S3オブジェクトキー
 - `keywords`: ハイライトキーワード配列（オプション）
@@ -225,12 +247,14 @@ const url = await previewUrlCache.getUrl('bucket', 'key', 'pdf', 1);
 - `className`: 追加CSSクラス（オプション）
 
 **UI要素:**
+
 - ヘッダー: ファイル名、ページ情報、マッチ数
 - ツールバー: ページナビゲーション、キーワードナビゲーション
 - ビューアー: PDFプレビュー（iframe）
 - サイドパネル: キーワードハイライト情報
 
 **使用例:**
+
 ```tsx
 <PdfPreview
   bucket="cis-filesearch-storage"
@@ -246,10 +270,12 @@ const url = await previewUrlCache.getUrl('bucket', 'key', 'pdf', 1);
 ### 3. 依存関係の追加
 
 **package.json更新:**
+
 - `@aws-sdk/client-s3`: ^3.948.0
 - `@aws-sdk/s3-request-presigner`: ^3.948.0
 
 **インストール:**
+
 ```bash
 yarn install
 ```
@@ -287,6 +313,7 @@ yarn build
 **結果:** ✅ 成功
 
 **新しいAPIルート:**
+
 - ✓ `/api/preview`
 - ✓ `/api/preview/keywords`
 - ✓ `/api/preview/pages`
@@ -367,6 +394,7 @@ processed/
 ### メタデータファイル
 
 **`document.pdf.metadata.json`:**
+
 ```json
 {
   "file_name": "document.pdf",
@@ -382,6 +410,7 @@ processed/
 ### テキスト抽出ファイル
 
 **`document.pdf.text.json`:**
+
 ```json
 {
   "file_name": "document.pdf",
@@ -410,22 +439,26 @@ processed/
 ## 今後の拡張
 
 ### Phase 1: 基本機能（完了）
+
 - ✅ Presigned URL生成
 - ✅ PDFプレビュー
 - ✅ キーワードハイライト
 - ✅ Reactコンポーネント
 
 ### Phase 2: 認証統合
+
 - ⏳ Cognitoとの統合
 - ⏳ ミドルウェアでのAPI保護
 - ⏳ ユーザー別アクセス制御
 
 ### Phase 3: パフォーマンス最適化
+
 - ⏳ CloudFront統合
 - ⏳ レート制限実装
 - ⏳ ページキャッシュ最適化
 
 ### Phase 4: 機能拡張
+
 - ⏳ 画像ファイルの高度なプレビュー
 - ⏳ DocuWorksネイティブサポート
 - ⏳ PDFアノテーション機能

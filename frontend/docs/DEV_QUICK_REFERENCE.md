@@ -79,9 +79,7 @@ frontend/
 ```javascript
 // ✅ 最新仕様
 images: {
-  remotePatterns: [
-    { protocol: 'http', hostname: 'localhost', pathname: '/**' }
-  ]
+  remotePatterns: [{ protocol: 'http', hostname: 'localhost', pathname: '/**' }]
 }
 
 typescript: {

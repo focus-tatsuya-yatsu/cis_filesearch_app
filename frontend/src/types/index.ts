@@ -5,7 +5,8 @@ export interface SearchResult {
   filePath: string
   fileType?: string // Optional: may be undefined for some results
   fileSize: number
-  modifiedDate: string
+  modifiedDate: string   // ファイル更新日
+  createdDate?: string   // ファイル作成日
   snippet: string
   relevanceScore: number
 }

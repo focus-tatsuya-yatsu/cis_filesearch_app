@@ -19,8 +19,9 @@ import tempfile
 import argparse
 import signal
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import boto3
 from botocore.exceptions import ClientError
@@ -28,6 +29,7 @@ from botocore.exceptions import ClientError
 from config import get_config
 from file_router import FileRouter
 from opensearch_client import OpenSearchClient
+from processors import ImageEmbeddingGenerator
 
 
 # Configure logging
@@ -101,6 +103,14 @@ class FileProcessingWorker:
 
         # Initialize OpenSearch client
         self.opensearch = OpenSearchClient(config)
+
+        # Initialize image embedding generator
+        embedding_enabled = os.environ.get('ENABLE_IMAGE_EMBEDDING', 'true').lower() == 'true'
+        self.image_embedding = ImageEmbeddingGenerator(
+            lambda_function_name=os.environ.get('IMAGE_EMBEDDING_LAMBDA', 'cis-filesearch-image-search'),
+            aws_region=config.aws.region,
+            enabled=embedding_enabled
+        )
 
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self._handle_shutdown_signal)
@@ -237,6 +247,77 @@ class FileProcessingWorker:
             self.logger.error(f"Unexpected error during download: {e}")
             return False
 
+    def _extract_path_metadata(self, document: Dict[str, Any], s3_key: str) -> None:
+        """
+        Extract category, nas_server, and root_folder from S3 key path.
+
+        S3 key format examples:
+        - documents/road/ts-server3/R06_JOB/.../file.xdw
+        - documents/structure/ts-server6/H22_JOB/.../file.pdf
+        - processed/road/ts-server5/trashbox/.../file.doc
+
+        Mapping:
+        - road: ts-server3, ts-server5 (道路)
+        - structure: ts-server6, ts-server7 (構造)
+
+        Args:
+            document: Document dictionary to update
+            s3_key: S3 object key
+        """
+        import re
+
+        # Pattern to match: {prefix}/{category}/{server}/{root_folder}/...
+        # Prefixes: documents, processed, docuworks-converted
+        pattern = r'^(?:documents|processed|docuworks-converted)/(road|structure)/(ts-server\d+)/([^/]+)/'
+        match = re.match(pattern, s3_key)
+
+        if match:
+            category = match.group(1)
+            nas_server = match.group(2)
+            root_folder = match.group(3)
+
+            # Category display mapping
+            category_display_map = {
+                'road': '道路',
+                'structure': '構造'
+            }
+
+            document['category'] = category
+            document['category_display'] = category_display_map.get(category, category)
+            document['nas_server'] = nas_server
+            document['root_folder'] = root_folder
+
+            # Generate NAS path for display
+            # e.g., \\ts-server3\share\R06_JOB\...
+            remaining_path = s3_key.split(f'{nas_server}/', 1)[-1] if nas_server in s3_key else ''
+            # Python 3.11+ doesn't allow backslash in f-string expressions
+            windows_path = remaining_path.replace('/', '\\')
+            document['nas_path'] = f"\\\\{nas_server}\\share\\{windows_path}"
+
+            self.logger.debug(
+                f"Extracted metadata: category={category}, server={nas_server}, "
+                f"folder={root_folder}"
+            )
+        else:
+            # Fallback: try to extract server from path
+            server_match = re.search(r'(ts-server\d+)', s3_key)
+            if server_match:
+                nas_server = server_match.group(1)
+                document['nas_server'] = nas_server
+
+                # Infer category from server number
+                server_num = int(re.search(r'\d+', nas_server).group())
+                if server_num in [3, 5]:
+                    document['category'] = 'road'
+                    document['category_display'] = '道路'
+                elif server_num in [6, 7]:
+                    document['category'] = 'structure'
+                    document['category_display'] = '構造'
+
+            self.logger.warning(
+                f"Could not fully extract path metadata from key: {s3_key[:100]}..."
+            )
+
     def upload_thumbnail_to_s3(
         self,
         thumbnail_data: bytes,
@@ -345,6 +426,11 @@ class FileProcessingWorker:
             document['bucket'] = bucket
             document['s3_url'] = f"s3://{bucket}/{key}"
 
+            # Extract category, nas_server, root_folder from S3 key
+            # Key format: documents/{category}/{server}/{root_folder}/...
+            # or: processed/{category}/{server}/{root_folder}/...
+            self._extract_path_metadata(document, key)
+
             # Upload thumbnail if available
             if result.thumbnail_data:
                 thumbnail_url = self.upload_thumbnail_to_s3(
@@ -355,31 +441,37 @@ class FileProcessingWorker:
                 if thumbnail_url:
                     document['thumbnail_url'] = thumbnail_url
 
-            # Index to OpenSearch (non-blocking failure)
-            opensearch_indexed = False
+            # Generate image embedding for similarity search
+            file_ext = Path(key).suffix.lower()
+            if self.image_embedding.is_supported(file_ext):
+                self.logger.info("Generating image embedding...")
+                embedding, dimension = self.image_embedding.generate_embedding_safe(
+                    s3_url=document['s3_url'],
+                    file_extension=file_ext,
+                    use_cache=True
+                )
+                if embedding:
+                    document['image_embedding'] = embedding
+                    document['image_embedding_dimension'] = dimension
+                    self.logger.info(f"Image embedding generated ({dimension}D)")
+                else:
+                    self.logger.warning("Failed to generate image embedding - continuing without it")
+
+            # Index to OpenSearch
             if self.opensearch.is_connected():
                 self.logger.info("Indexing to OpenSearch...")
-                try:
-                    opensearch_indexed = self.opensearch.index_document(document, document_id=key)
-                    if opensearch_indexed:
-                        self.logger.info("Successfully indexed document to OpenSearch")
-                    else:
-                        self.logger.warning("OpenSearch indexing failed - storing for retry")
-                        # Store document in S3 for later retry
-                        self._store_for_retry(document, key)
-                except Exception as e:
-                    self.logger.error(f"OpenSearch indexing exception: {e}", exc_info=True)
-                    self._store_for_retry(document, key)
-            else:
-                self.logger.warning("OpenSearch not connected - storing document for later indexing")
-                self._store_for_retry(document, key)
+                if not self.opensearch.index_document(document, document_id=key):
+                    error_msg = "Failed to index document to OpenSearch"
+                    self.logger.error(error_msg)
+                    return (False, error_msg)
 
-            # IMPORTANT: Return success even if OpenSearch failed
-            # The file was processed successfully, indexing can be retried later
+                self.logger.info("Successfully indexed document")
+            else:
+                self.logger.warning("OpenSearch not connected - skipping indexing")
+
             self.logger.info(
-                f"Processing completed: {Path(key).name} "
-                f"({result.char_count:,} chars, {result.processing_time_seconds:.2f}s) "
-                f"[OpenSearch: {'✓' if opensearch_indexed else '✗ (stored for retry)'}]"
+                f"Successfully processed: {Path(key).name} "
+                f"({result.char_count:,} chars, {result.processing_time_seconds:.2f}s)"
             )
 
             return (True, None)
@@ -403,15 +495,83 @@ class FileProcessingWorker:
                 except Exception as e:
                     self.logger.warning(f"Failed to remove temporary file: {e}")
 
+    def _process_message_wrapper(self, message: Dict[str, Any]) -> Tuple[Dict[str, Any], bool, Optional[str]]:
+        """
+        Wrapper for processing a single message in a thread-safe manner
+
+        Args:
+            message: SQS message to process
+
+        Returns:
+            (message, success, error_message): Tuple containing the original message and result
+        """
+        try:
+            success, error_msg = self.process_sqs_message(message)
+            return (message, success, error_msg)
+        except Exception as e:
+            return (message, False, str(e))
+
+    def _delete_messages_batch(self, messages_to_delete: List[Dict[str, Any]]):
+        """
+        Delete multiple messages from SQS using batch delete
+
+        Args:
+            messages_to_delete: List of messages with ReceiptHandle to delete
+        """
+        if not messages_to_delete:
+            return
+
+        # SQS batch delete supports up to 10 messages at a time
+        for i in range(0, len(messages_to_delete), 10):
+            batch = messages_to_delete[i:i+10]
+            entries = [
+                {
+                    'Id': str(idx),
+                    'ReceiptHandle': msg['ReceiptHandle']
+                }
+                for idx, msg in enumerate(batch)
+            ]
+
+            try:
+                response = self.sqs_client.delete_message_batch(
+                    QueueUrl=self.config.aws.sqs_queue_url,
+                    Entries=entries
+                )
+
+                successful = len(response.get('Successful', []))
+                failed = response.get('Failed', [])
+
+                if failed:
+                    for failure in failed:
+                        self.logger.error(f"Failed to delete message: {failure}")
+                        self._send_metric('MessageDeleteFailed', 1)
+
+                self.logger.info(f"Batch deleted {successful} messages")
+
+            except Exception as e:
+                self.logger.error(f"Batch delete failed: {e}", exc_info=True)
+                # Fallback to individual deletes
+                for msg in batch:
+                    try:
+                        self.sqs_client.delete_message(
+                            QueueUrl=self.config.aws.sqs_queue_url,
+                            ReceiptHandle=msg['ReceiptHandle']
+                        )
+                    except Exception as de:
+                        self.logger.error(f"Individual delete also failed: {de}")
+                        self._send_metric('MessageDeleteFailed', 1)
+
     def poll_and_process(self):
         """
-        Main worker loop
-        Polls SQS and processes messages
+        Main worker loop with parallel processing
+        Polls SQS and processes messages using ThreadPoolExecutor
 
-        MODIFIED: Enhanced error handling with guaranteed message deletion
+        OPTIMIZED: Uses parallel processing for better throughput
         """
-        self.logger.info("Starting to poll SQS queue...")
+        self.logger.info("Starting to poll SQS queue with parallel processing...")
         self.logger.info(f"Queue URL: {self.config.aws.sqs_queue_url[:50]}...")
+        self.logger.info(f"Max workers: {self.config.processing.max_workers}")
+        self.logger.info(f"Batch size: {self.config.aws.sqs_max_messages}")
 
         # Create OpenSearch index if it doesn't exist
         if self.opensearch.is_connected():
@@ -433,63 +593,57 @@ class FileProcessingWorker:
                     self.logger.debug("No messages received")
                     continue
 
-                self.logger.info(f"Received {len(messages)} message(s)")
+                self.logger.info(f"Received {len(messages)} message(s) - processing in parallel")
+                batch_start = time.time()
 
-                # Process each message
-                for message in messages:
-                    if self.shutdown_requested:
-                        self.logger.info("Shutdown requested, stopping message processing")
-                        break
+                # Process messages in parallel using ThreadPoolExecutor
+                messages_to_delete = []
 
-                    receipt_handle = message['ReceiptHandle']
-                    message_id = message.get('MessageId', 'unknown')
-                    self.stats['processed'] += 1
+                with ThreadPoolExecutor(max_workers=self.config.processing.max_workers) as executor:
+                    # Submit all messages for processing
+                    future_to_message = {
+                        executor.submit(self._process_message_wrapper, msg): msg
+                        for msg in messages
+                    }
 
-                    # Message processing state
-                    processing_success = False
-                    error_message = None
+                    # Collect results as they complete
+                    for future in as_completed(future_to_message):
+                        if self.shutdown_requested:
+                            self.logger.info("Shutdown requested, stopping message processing")
+                            break
 
-                    try:
-                        # Process the message
-                        success, error_msg = self.process_sqs_message(message)
-
-                        if success:
-                            self.logger.info(f"Message {message_id} processed successfully")
-                            self.stats['succeeded'] += 1
-                            processing_success = True
-                        else:
-                            self.logger.error(f"Message {message_id} processing failed: {error_msg}")
-                            error_message = error_msg
-                            self.stats['failed'] += 1
-
-                    except Exception as e:
-                        self.logger.error(f"Unexpected error processing message {message_id}: {e}", exc_info=True)
-                        error_message = str(e)
-                        self.stats['failed'] += 1
-
-                    finally:
-                        # CRITICAL: Always delete message from queue (success or failure)
-                        # This prevents messages from being stuck "in flight"
                         try:
-                            self.sqs_client.delete_message(
-                                QueueUrl=self.config.aws.sqs_queue_url,
-                                ReceiptHandle=receipt_handle
-                            )
-                            self.logger.info(f"✓ Message {message_id} deleted from queue")
+                            message, success, error_msg = future.result()
+                            message_id = message.get('MessageId', 'unknown')
+                            self.stats['processed'] += 1
 
-                            # If processing failed, send to DLQ AFTER deletion
-                            if not processing_success and error_message:
-                                self._send_to_dlq(message, error_message)
+                            if success:
+                                self.logger.info(f"Message {message_id} processed successfully")
+                                self.stats['succeeded'] += 1
+                            else:
+                                self.logger.error(f"Message {message_id} processing failed: {error_msg}")
+                                self._send_to_dlq(message, error_msg)
+                                self.stats['failed'] += 1
 
-                        except Exception as delete_error:
-                            # This is CRITICAL - message will reappear after visibility timeout
-                            self.logger.critical(
-                                f"❌ FAILED to delete message {message_id}: {delete_error}",
-                                exc_info=True
-                            )
-                            self._send_metric('MessageDeleteFailed', 1)
-                            # Send alert to CloudWatch
-                            self._send_alert(f"Critical: Failed to delete SQS message {message_id}")
+                            # Always mark for deletion
+                            messages_to_delete.append(message)
+
+                        except Exception as e:
+                            message = future_to_message[future]
+                            message_id = message.get('MessageId', 'unknown')
+                            self.logger.error(f"Unexpected error processing {message_id}: {e}", exc_info=True)
+                            self._send_to_dlq(message, str(e))
+                            self.stats['failed'] += 1
+                            messages_to_delete.append(message)
+
+                # Batch delete all processed messages
+                self._delete_messages_batch(messages_to_delete)
+
+                batch_time = time.time() - batch_start
+                self.logger.info(
+                    f"Batch completed: {len(messages_to_delete)} messages in {batch_time:.2f}s "
+                    f"({len(messages_to_delete)/batch_time:.1f} msg/s)"
+                )
 
             except KeyboardInterrupt:
                 self.logger.info("Received keyboard interrupt")
@@ -528,58 +682,6 @@ class FileProcessingWorker:
             )
         except Exception as e:
             self.logger.warning(f"Failed to send metric {metric_name}: {e}")
-
-    def _send_alert(self, message: str):
-        """
-        Send critical alert to CloudWatch Logs
-
-        NEW METHOD: For critical failures that need immediate attention
-
-        Args:
-            message: Alert message
-        """
-        try:
-            # Log with CRITICAL level for CloudWatch alarms
-            self.logger.critical(f"ALERT: {message}")
-
-            # Also send to CloudWatch metric for alarm triggering
-            self._send_metric('CriticalError', 1)
-
-        except Exception as e:
-            self.logger.error(f"Failed to send alert: {e}")
-
-    def _store_for_retry(self, document: Dict[str, Any], key: str):
-        """
-        Store document in S3 for later retry
-
-        NEW METHOD: Handles OpenSearch indexing failures gracefully
-
-        Args:
-            document: Document that failed to index
-            key: Original file key
-        """
-        try:
-            # Create retry key with date partitioning
-            retry_key = f"retry-index/{datetime.utcnow().strftime('%Y-%m-%d')}/{key}.json"
-
-            # Store document as JSON in S3
-            self.s3_client.put_object(
-                Bucket=self.config.aws.s3_bucket,
-                Key=retry_key,
-                Body=json.dumps(document, ensure_ascii=False, indent=2),
-                ContentType='application/json',
-                Metadata={
-                    'original-key': key,
-                    'retry-reason': 'opensearch-indexing-failed',
-                    'failed-at': datetime.utcnow().isoformat(),
-                    'file-name': document.get('file_name', 'unknown')
-                }
-            )
-
-            self.logger.info(f"Stored document for retry: s3://{self.config.aws.s3_bucket}/{retry_key}")
-
-        except Exception as e:
-            self.logger.error(f"Failed to store document for retry: {e}", exc_info=True)
 
     def _print_statistics(self):
         """Print worker statistics"""

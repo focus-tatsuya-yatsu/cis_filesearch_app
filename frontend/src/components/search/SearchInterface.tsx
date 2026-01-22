@@ -924,6 +924,7 @@ export const SearchInterface: FC = () => {
                   onPageChange={handlePageChange}
                   onPreview={handlePreview}
                   onDownload={handleDownload}
+                  searchQuery={searchQuery}
                 />
               )}
             </section>
@@ -942,7 +943,25 @@ export const SearchInterface: FC = () => {
           fileId={previewFile.id}
           fileName={previewFile.fileName}
           filePath={previewFile.filePath}
-          s3Key={`processed/${previewFile.filePath.replace(/^\//, '')}`}
+          fileType={previewFile.fileType}
+          s3Key={(() => {
+            // filePathからサーバー情報を抽出してS3パスを構築
+            // 例: \\U:\R05_JOB\... → documents/road/ts-server5/...
+            const path = previewFile.filePath
+            // ドライブレターからサーバーを特定
+            const driveMapping: Record<string, { category: string; server: string }> = {
+              'R:': { category: 'road', server: 'ts-server3' },
+              'U:': { category: 'road', server: 'ts-server5' },
+              'V:': { category: 'structure', server: 'ts-server6' },
+              'S:': { category: 'structure', server: 'ts-server7' },
+            }
+            const driveMatch = path.match(/([A-Z]:)/i)
+            if (driveMatch && driveMapping[driveMatch[1].toUpperCase()]) {
+              const { category, server } = driveMapping[driveMatch[1].toUpperCase()]
+              return `documents/${category}/${server}/${path.replace(/^.*?[A-Z]:\\?/i, '')}`
+            }
+            return `processed/${path.replace(/^[\\\/]+/, '')}`
+          })()}
           keywords={searchQuery ? searchQuery.split(' ') : []}
         />
       )}

@@ -15,6 +15,7 @@ import { Search, Settings, Bell, User } from 'lucide-react'
 
 import { Button } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { SyncButton } from '@/components/sync'
 import { useAuth } from '@/contexts/AuthContext'
 
 import { UserMenu } from './UserMenu'
@@ -109,6 +110,7 @@ export const Header: FC = () => {
           {/* アクションボタン */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <SyncButton />
             <Button
               variant="ghost"
               size="sm"

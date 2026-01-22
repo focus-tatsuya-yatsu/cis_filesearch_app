@@ -51,6 +51,10 @@ class ProcessingResult:
     ocr_confidence: Optional[float] = None
     ocr_language: Optional[str] = None
 
+    # Image Embedding (for image similarity search - 1024D Titan vectors)
+    image_embedding: Optional[List[float]] = None
+    image_embedding_dimension: Optional[int] = None
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for OpenSearch indexing"""
         return {
@@ -72,6 +76,8 @@ class ProcessingResult:
             'processed_at': self.processed_at,
             'ocr_confidence': self.ocr_confidence,
             'ocr_language': self.ocr_language,
+            'image_embedding': self.image_embedding,
+            'image_embedding_dimension': self.image_embedding_dimension,
         }
 
 

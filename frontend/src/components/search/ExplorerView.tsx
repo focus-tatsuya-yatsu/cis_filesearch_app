@@ -27,8 +27,9 @@ const convertS3PathToNASPath = (s3Path: string): string => {
   // 先頭のスラッシュを除去
   path = path.replace(/^\/+/, '')
 
-  // NASサーバー名のパターン（ts-server1, ts-server2, ts-server3, ts-server5など）
-  const serverPattern = /(ts-server\d+)/
+  // NASサーバー名のパターン（フォルダとして存在する場合のみ）
+  // ts-server\d+/ の形式でフォルダパスの一部としてマッチさせる
+  const serverPattern = /(ts-server\d+)\//
   const match = path.match(serverPattern)
 
   if (match) {
@@ -124,21 +125,24 @@ const buildFolderTreeFromResults = (results: SearchResult[]): TreeNode[] => {
       }
     })
 
-  // Mapから配列に変換してソート（フォルダ優先、名前順）
-  const sortNodes = (nodes: TreeNode[]): TreeNode[] =>
+  // Mapから配列に変換してソート（フォルダのみ、名前順）
+  // フォルダ構造にはフォルダのみを表示し、ファイルは除外
+  const sortAndFilterNodes = (nodes: TreeNode[], isRoot: boolean = false): TreeNode[] =>
     nodes
+      .filter((node) => {
+        // ファイルを除外
+        if (node.type !== 'folder') return false
+        // ルートレベルでは ts-server で始まるフォルダのみ表示
+        if (isRoot && !node.name.match(/^ts-server\d+$/)) return false
+        return true
+      })
       .map((node) => ({
         ...node,
-        children: node.children ? sortNodes(node.children) : undefined,
+        children: node.children ? sortAndFilterNodes(node.children, false) : undefined,
       }))
-      .sort((a, b) => {
-        if (a.type !== b.type) {
-          return a.type === 'folder' ? -1 : 1
-        }
-        return a.name.localeCompare(b.name, 'ja')
-      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
 
-  return sortNodes(Array.from(root.values()))
+  return sortAndFilterNodes(Array.from(root.values()), true)
 }
 
 interface ExplorerViewProps {
@@ -149,6 +153,7 @@ interface ExplorerViewProps {
   onPageChange?: (page: number) => void
   onPreview?: (id: string) => void
   onDownload?: (id: string) => void
+  searchQuery?: string // 検索キーワード（ハイライト用）
 }
 
 /**
@@ -168,6 +173,7 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
   onPageChange,
   onPreview,
   onDownload,
+  searchQuery,
 }) => {
   const [selectedFolder, setSelectedFolder] = useState<string>('')
   const [highlightedFilePath, setHighlightedFilePath] = useState<string>('')
@@ -311,7 +317,7 @@ export const ExplorerView: FC<ExplorerViewProps> = ({
                 onPreview={onPreview || (() => {})}
                 onDownload={onDownload || (() => {})}
                 onResultClick={handleResultClick}
-                viewMode="list"
+                searchQuery={searchQuery}
                 className="h-full"
               />
             ) : (

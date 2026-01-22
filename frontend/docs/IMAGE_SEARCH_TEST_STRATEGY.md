@@ -33,7 +33,7 @@ export async function searchFiles(params: SearchParams) {
       body: JSON.stringify({
         imageEmbedding: params.imageEmbedding,
         // ...
-      })
+      }),
     })
   }
 }
@@ -45,7 +45,7 @@ if (searchQuery.imageEmbedding && searchQuery.imageEmbedding.length > 0) {
     body: JSON.stringify({
       imageEmbedding: searchQuery.imageEmbedding,
       // ...
-    })
+    }),
   })
 }
 ```
@@ -75,12 +75,12 @@ if (searchQuery.imageEmbedding && searchQuery.imageEmbedding.length > 0) {
 
 ### 2. テストカバレッジ目標
 
-| カテゴリ | ファイル | カバレッジ目標 |
-|---------|---------|--------------|
-| 単体テスト | `/lib/api/search.ts` | 85%+ |
-| 単体テスト | `/components/search/SearchInterface.tsx` | 80%+ |
-| 統合テスト | `/app/api/search/route.ts` | 80%+ |
-| E2E | 画像検索フロー全体 | 主要パス100% |
+| カテゴリ   | ファイル                                 | カバレッジ目標 |
+| ---------- | ---------------------------------------- | -------------- |
+| 単体テスト | `/lib/api/search.ts`                     | 85%+           |
+| 単体テスト | `/components/search/SearchInterface.tsx` | 80%+           |
+| 統合テスト | `/app/api/search/route.ts`               | 80%+           |
+| E2E        | 画像検索フロー全体                       | 主要パス100%   |
 
 ---
 
@@ -106,7 +106,7 @@ describe('searchFiles - Image Search', () => {
 
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, data: { results: [] } })
+      json: async () => ({ success: true, data: { results: [] } }),
     })
 
     await searchFiles({ imageEmbedding: embedding })
@@ -115,7 +115,7 @@ describe('searchFiles - Image Search', () => {
       '/api/search',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('imageEmbedding')
+        body: expect.stringContaining('imageEmbedding'),
       })
     )
   })
@@ -125,7 +125,7 @@ describe('searchFiles - Image Search', () => {
 
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, data: { results: [] } })
+      json: async () => ({ success: true, data: { results: [] } }),
     })
 
     await searchFiles({ imageEmbedding: embedding })
@@ -155,12 +155,12 @@ describe('SearchInterface - handleImageSearch', () => {
   it('should call searchFiles with imageEmbedding', async () => {
     const mockSearchFiles = jest.fn().mockResolvedValue({
       success: true,
-      data: { results: [] }
+      data: { results: [] },
     })
 
     // searchFilesをモック
     jest.mock('@/lib/api/search', () => ({
-      searchFiles: mockSearchFiles
+      searchFiles: mockSearchFiles,
     }))
 
     const embedding = Array.from({ length: 1024 }, () => Math.random())
@@ -174,7 +174,7 @@ describe('SearchInterface - handleImageSearch', () => {
     expect(mockSearchFiles).toHaveBeenCalledWith(
       expect.objectContaining({
         imageEmbedding: embedding,
-        searchType: 'image'
+        searchType: 'image',
       })
     )
   })
@@ -204,10 +204,12 @@ describe('Image Search Integration', () => {
 
     const embeddingResponse = await fetch('/api/image-embedding', {
       method: 'POST',
-      body: formData
+      body: formData,
     })
 
-    const { data: { embedding } } = await embeddingResponse.json()
+    const {
+      data: { embedding },
+    } = await embeddingResponse.json()
     expect(embedding).toHaveLength(1024)
 
     // Step 2: ベクトルを使って検索
@@ -216,8 +218,8 @@ describe('Image Search Integration', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         imageEmbedding: embedding,
-        searchType: 'image'
-      })
+        searchType: 'image',
+      }),
     })
 
     expect(searchResponse.ok).toBe(true)
@@ -249,11 +251,9 @@ describe('POST /api/search - Image Search', () => {
       json: async () => ({
         success: true,
         data: {
-          results: [
-            { id: '1', fileName: 'test.jpg', relevanceScore: 0.95 }
-          ]
-        }
-      })
+          results: [{ id: '1', fileName: 'test.jpg', relevanceScore: 0.95 }],
+        },
+      }),
     })
 
     const request = new Request('http://localhost:3000/api/search', {
@@ -261,8 +261,8 @@ describe('POST /api/search - Image Search', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         imageEmbedding: embedding,
-        searchType: 'image'
-      })
+        searchType: 'image',
+      }),
     })
 
     const response = await POST(request)
@@ -273,7 +273,7 @@ describe('POST /api/search - Image Search', () => {
       expect.any(String),
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('imageEmbedding')
+        body: expect.stringContaining('imageEmbedding'),
       })
     )
 
@@ -305,7 +305,7 @@ test('should send POST request with vector data to /api/search', async ({ page }
       requests.push({
         method: request.method(),
         url: request.url(),
-        postData: request.postData()
+        postData: request.postData(),
       })
     }
   })
@@ -318,7 +318,7 @@ test('should send POST request with vector data to /api/search', async ({ page }
   await expect(page.getByTestId('search-results')).toBeVisible({ timeout: 15000 })
 
   // POST リクエストが送信されたか確認
-  const searchRequest = requests.find(r => r.method === 'POST')
+  const searchRequest = requests.find((r) => r.method === 'POST')
   expect(searchRequest).toBeTruthy()
 
   // ベクトルデータが含まれているか確認
@@ -353,7 +353,7 @@ export class ImageSearchDebugLogger {
       ...data,
       imageEmbedding: data.imageEmbedding
         ? `[Vector: ${data.imageEmbedding.length} dimensions]`
-        : 'Not provided'
+        : 'Not provided',
     })
     console.groupEnd()
   }
@@ -530,6 +530,7 @@ print(f"[Lambda] Received vector: {len(event['body']['imageEmbedding'])} dimensi
 **原因**: `imageEmbedding` が正しく渡されていない
 
 **確認方法**:
+
 ```typescript
 // SearchInterface.tsx の handleImageSearch
 console.log('Embedding before searchFiles:', embedding.length) // 1024 が期待値
@@ -543,11 +544,12 @@ console.log('Params received:', params.imageEmbedding?.length) // 1024 が期待
 **原因**: 条件分岐が正しく動作していない
 
 **確認方法**:
+
 ```typescript
 // search.ts の条件チェック
 console.log('Should use POST?', {
   hasEmbedding: params.imageEmbedding && params.imageEmbedding.length > 0,
-  embeddingLength: params.imageEmbedding?.length
+  embeddingLength: params.imageEmbedding?.length,
 })
 ```
 
@@ -558,12 +560,14 @@ console.log('Should use POST?', {
 本テスト戦略により、画像検索機能のエラーを確実に検出・修正できます。
 
 **重要ポイント**:
+
 1. 単体テストで各関数の動作を保証
 2. 統合テストでデータフローを検証
 3. E2Eテストでユーザージャーニー全体を確認
 4. デバッグログで問題箇所を特定
 
 次のステップ:
+
 1. 単体テストを実装
 2. 統合テストを実装
 3. デバッグロガーを追加

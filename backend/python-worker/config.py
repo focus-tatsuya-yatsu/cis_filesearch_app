@@ -28,11 +28,11 @@ class AWSConfig:
     sqs_queue_url: str = os.environ.get('SQS_QUEUE_URL', '')
     sqs_wait_time_seconds: int = int(os.environ.get('SQS_WAIT_TIME', '20'))
     sqs_visibility_timeout: int = int(os.environ.get('SQS_VISIBILITY_TIMEOUT', '600'))  # Increased to 10 minutes
-    sqs_max_messages: int = int(os.environ.get('SQS_MAX_MESSAGES', '1'))
+    sqs_max_messages: int = int(os.environ.get('SQS_MAX_MESSAGES', '10'))  # Optimized: batch 10 messages
 
     # OpenSearch Configuration
     opensearch_endpoint: str = os.environ.get('OPENSEARCH_ENDPOINT', '')
-    opensearch_index: str = os.environ.get('OPENSEARCH_INDEX', 'file-index')
+    opensearch_index: str = os.environ.get('OPENSEARCH_INDEX', 'cis-files-v2')
     opensearch_username: str = os.environ.get('OPENSEARCH_USERNAME', '')
     opensearch_password: str = os.environ.get('OPENSEARCH_PASSWORD', '')
     opensearch_use_ssl: bool = os.environ.get('OPENSEARCH_USE_SSL', 'true').lower() == 'true'
@@ -76,8 +76,9 @@ class ProcessingConfig:
     temp_dir: str = os.environ.get('TEMP_DIR', '/tmp/file-processor')
     cleanup_temp_files: bool = os.environ.get('CLEANUP_TEMP_FILES', 'true').lower() == 'true'
 
-    # Concurrent Processing
-    max_workers: int = int(os.environ.get('MAX_WORKERS', '4'))
+    # Concurrent Processing (I/O bound work benefits from more workers than CPU cores)
+    # t3.xlarge has 4 vCPUs, but file processing is I/O bound so we use 8 workers
+    max_workers: int = int(os.environ.get('MAX_WORKERS', '8'))
 
     # Retry Configuration
     max_retries: int = int(os.environ.get('MAX_RETRIES', '3'))

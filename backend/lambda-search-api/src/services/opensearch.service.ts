@@ -27,9 +27,14 @@ let opensearchClient: Client | null = null;
  * 環境変数からOpenSearch設定を取得
  */
 function getOpenSearchConfig(): OpenSearchConfig {
-  const endpoint = process.env.OPENSEARCH_ENDPOINT;
+  let endpoint = process.env.OPENSEARCH_ENDPOINT;
   if (!endpoint) {
     throw new Error('OPENSEARCH_ENDPOINT environment variable is not set');
+  }
+
+  // Ensure endpoint has https:// prefix
+  if (!endpoint.startsWith('https://') && !endpoint.startsWith('http://')) {
+    endpoint = `https://${endpoint}`;
   }
 
   return {
@@ -137,6 +142,7 @@ export async function searchDocuments(
     fileType,
     dateFrom,
     dateTo,
+    dateFilterType = 'modification', // デフォルトは更新日
     size = 20,
     from = 0,
     sortBy = 'relevance',
@@ -202,11 +208,28 @@ export async function searchDocuments(
     });
   }
 
-  // ファイルタイプフィルター
+  // ファイルタイプフィルター - 両方のフォーマットに対応（.pdf と pdf）
   if (fileType && fileType !== 'all') {
-    filterClauses.push({
-      term: { file_type: fileType },
-    });
+    // 配列または単一値を正規化
+    const types = Array.isArray(fileType) ? fileType : [fileType];
+    const typeConditions: any[] = [];
+
+    for (const type of types) {
+      if (type && type !== 'all') {
+        const normalizedType = type.replace(/^\./, '').toLowerCase();
+        typeConditions.push({ term: { file_type: `.${normalizedType}` } });  // .pdf
+        typeConditions.push({ term: { file_type: normalizedType } });         // pdf
+      }
+    }
+
+    if (typeConditions.length > 0) {
+      filterClauses.push({
+        bool: {
+          should: typeConditions,
+          minimum_should_match: 1,
+        },
+      });
+    }
   }
 
   // 日付範囲フィルター
@@ -215,8 +238,15 @@ export async function searchDocuments(
     if (dateFrom) rangeQuery.gte = dateFrom;
     if (dateTo) rangeQuery.lte = dateTo;
 
+    // dateFilterTypeに基づいてフィールドを選択
+    // creation: ファイル作成日 (file_created_at)
+    // modification: ファイル更新日 (file_modified_at) または処理日 (processed_at)
+    const dateField = dateFilterType === 'creation'
+      ? 'file_created_at'
+      : 'file_modified_at';
+
     filterClauses.push({
-      range: { processed_at: rangeQuery },
+      range: { [dateField]: rangeQuery },
     });
   }
 
@@ -225,7 +255,11 @@ export async function searchDocuments(
   if (sortBy === 'relevance') {
     sort.push('_score');
   } else if (sortBy === 'date') {
-    sort.push({ processed_at: { order: sortOrder } });
+    // dateFilterTypeに基づいてソートフィールドを選択
+    const sortDateField = dateFilterType === 'creation'
+      ? 'file_created_at'
+      : 'file_modified_at';
+    sort.push({ [sortDateField]: { order: sortOrder } });
   } else if (sortBy === 'name') {
     sort.push({ 'file_name.keyword': { order: sortOrder } });
   } else if (sortBy === 'size') {
@@ -295,7 +329,10 @@ export async function searchDocuments(
         filePath: source.file_path || '',
         fileType: source.file_type || '',
         fileSize: source.file_size || 0,
-        modifiedDate: source.processed_at || '',
+        // 更新日: file_modified_at が優先、なければ processed_at
+        modifiedDate: source.file_modified_at || source.processed_at || '',
+        // 作成日: file_created_at
+        createdDate: source.file_created_at || '',
         snippet,
         relevanceScore: hit._score,
         highlights: {

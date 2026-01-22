@@ -129,7 +129,7 @@ resource "aws_lambda_function" "search_api_prod" {
   environment {
     variables = {
       OPENSEARCH_ENDPOINT = aws_opensearch_domain.main.endpoint
-      OPENSEARCH_INDEX    = "file-index"
+      OPENSEARCH_INDEX    = "cis-files-v2"
       AWS_REGION          = var.aws_region
       LOG_LEVEL           = "info"
       NODE_ENV            = var.environment
@@ -161,8 +161,10 @@ resource "aws_cloudwatch_log_group" "search_api" {
 
 # ----------------------------------------------------------------------------
 # Lambda Permission for API Gateway
+# NOTE: Renamed to avoid conflict with api_gateway_cognito.tf
+# This permission is for search_api_prod Lambda function
 # ----------------------------------------------------------------------------
-resource "aws_lambda_permission" "api_gateway_search" {
+resource "aws_lambda_permission" "api_gateway_search_prod" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.search_api_prod.function_name

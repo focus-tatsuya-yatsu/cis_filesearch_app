@@ -119,14 +119,30 @@ class PreviewGenerator:
             pages_to_process = min(total_pages, self.config.max_pages)
 
             # PDFを画像に変換（全ページ）
-            images = convert_from_path(
-                file_path,
-                dpi=self.config.dpi,
-                first_page=1,
-                last_page=pages_to_process,
-                fmt='jpeg',
-                thread_count=2
-            )
+            # grayscale=False: カラー画像を維持
+            # use_cropbox=True: CropBoxを使用してより正確なレンダリング
+            try:
+                images = convert_from_path(
+                    file_path,
+                    dpi=self.config.dpi,
+                    first_page=1,
+                    last_page=pages_to_process,
+                    fmt='jpeg',
+                    thread_count=2,
+                    grayscale=False,
+                    use_cropbox=True,
+                )
+            except Exception as convert_error:
+                # 最初の変換が失敗した場合、オプションを減らして再試行
+                logger.warning(f"PDF conversion with options failed: {convert_error}, retrying with basic options")
+                images = convert_from_path(
+                    file_path,
+                    dpi=self.config.dpi,
+                    first_page=1,
+                    last_page=pages_to_process,
+                    fmt='jpeg',
+                    thread_count=1,
+                )
 
             for page_num, image in enumerate(images, 1):
                 try:
@@ -361,12 +377,51 @@ class PreviewGenerator:
     def _process_image(self, image: Image.Image) -> Optional[Dict]:
         """
         画像を処理してプレビュー用に変換
-        
+
         ※サムネイルと異なり、大きく縮小しない
         """
         try:
+            # 画像モードをログ出力（デバッグ用）
+            logger.debug(f"Processing image: mode={image.mode}, size={image.size}")
+
+            # CMYK画像の適切な変換（DocuWorks PDFで発生しやすい）
+            if image.mode == 'CMYK':
+                logger.info(f"Converting CMYK image to RGB (size={image.size})")
+                try:
+                    # ICCプロファイルを使用した変換を試みる
+                    from PIL import ImageCms
+                    try:
+                        # sRGBプロファイルを作成
+                        srgb_profile = ImageCms.createProfile('sRGB')
+                        # CMYK→RGB変換（CMYKプロファイルがない場合は単純変換にフォールバック）
+                        image = ImageCms.profileToProfile(
+                            image,
+                            ImageCms.createProfile('sRGB'),  # フォールバック用
+                            srgb_profile,
+                            outputMode='RGB'
+                        )
+                    except (ImageCms.PyCMSError, OSError) as cms_error:
+                        logger.warning(f"ICC profile conversion failed, using fallback: {cms_error}")
+                        # フォールバック: チャンネル反転を考慮した変換
+                        # CMYKでは値が高いほど暗いので、反転して明るさを正しくする
+                        c, m, y, k = image.split()
+                        # RGB = (255 - C - K, 255 - M - K, 255 - Y - K) の近似
+                        from PIL import ImageChops, ImageMath
+                        # 簡易的なCMYK→RGB変換
+                        r = ImageChops.subtract(ImageChops.subtract(
+                            Image.new('L', image.size, 255), c), k)
+                        g = ImageChops.subtract(ImageChops.subtract(
+                            Image.new('L', image.size, 255), m), k)
+                        b = ImageChops.subtract(ImageChops.subtract(
+                            Image.new('L', image.size, 255), y), k)
+                        image = Image.merge('RGB', (r, g, b))
+                except ImportError:
+                    # ImageCmsが利用できない場合は単純変換
+                    logger.warning("ImageCms not available, using simple conversion")
+                    image = image.convert('RGB')
+                logger.info("CMYK to RGB conversion completed")
             # RGBAをRGBに変換（必要な場合）
-            if image.mode in ('RGBA', 'LA', 'P'):
+            elif image.mode in ('RGBA', 'LA', 'P'):
                 background = Image.new('RGB', image.size, (255, 255, 255))
                 if image.mode == 'P':
                     image = image.convert('RGBA')
@@ -375,7 +430,11 @@ class PreviewGenerator:
                 else:
                     background.paste(image)
                 image = background
+            elif image.mode == 'L':
+                # グレースケール画像をRGBに変換
+                image = image.convert('RGB')
             elif image.mode != 'RGB':
+                logger.debug(f"Converting {image.mode} to RGB")
                 image = image.convert('RGB')
 
             # サイズ調整（必要な場合のみ）

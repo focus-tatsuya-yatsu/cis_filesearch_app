@@ -141,8 +141,15 @@ async function loadFromParameterStore(region: string): Promise<Partial<OpenSearc
  * Load configuration from environment variables
  */
 function loadFromEnvironment(): Partial<OpenSearchConfig> {
+  let endpoint = process.env.OPENSEARCH_ENDPOINT;
+
+  // Ensure endpoint has https:// prefix
+  if (endpoint && !endpoint.startsWith('https://') && !endpoint.startsWith('http://')) {
+    endpoint = `https://${endpoint}`;
+  }
+
   return {
-    endpoint: process.env.OPENSEARCH_ENDPOINT,
+    endpoint,
     indexName: process.env.OPENSEARCH_INDEX,
     aliasName: process.env.OPENSEARCH_ALIAS,
     region: process.env.AWS_REGION || 'ap-northeast-1',

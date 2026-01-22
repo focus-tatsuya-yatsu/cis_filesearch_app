@@ -411,7 +411,7 @@ resource "aws_launch_template" "file_processor" {
     s3_bucket            = aws_s3_bucket.metadata.id
     sqs_queue_url        = "https://sqs.${var.aws_region}.amazonaws.com/${data.aws_caller_identity.current.account_id}/cis-filesearch-index-queue"
     opensearch_endpoint  = var.opensearch_endpoint
-    opensearch_index     = "file-index"
+    opensearch_index     = "cis-files-v2"
     log_group            = aws_cloudwatch_log_group.file_processor.name
     project_name         = var.project_name
   }))
@@ -538,9 +538,9 @@ resource "aws_autoscaling_policy" "scale_down" {
 
 # ============================================================================
 # Data Source
+# NOTE: aws_caller_identity is defined in main.tf - removed duplicate here
 # ============================================================================
-
-data "aws_caller_identity" "current" {}
+# data "aws_caller_identity" "current" {}  # REMOVED: Duplicate - defined in main.tf
 
 # ============================================================================
 # Variables (to be added to variables.tf)

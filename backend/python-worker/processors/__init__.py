@@ -8,6 +8,8 @@ from .image_processor import ImageProcessor
 from .pdf_processor import PDFProcessor
 from .office_processor import OfficeProcessor
 from .docuworks_processor import DocuWorksProcessor
+from .metadata_processor import MetadataOnlyProcessor
+from .image_embedding import ImageEmbeddingGenerator
 
 __all__ = [
     'BaseProcessor',
@@ -16,4 +18,6 @@ __all__ = [
     'PDFProcessor',
     'OfficeProcessor',
     'DocuWorksProcessor',
+    'MetadataOnlyProcessor',
+    'ImageEmbeddingGenerator',
 ]

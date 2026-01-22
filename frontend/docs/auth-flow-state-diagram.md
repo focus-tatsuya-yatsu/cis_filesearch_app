@@ -6,12 +6,12 @@ AWS Cognito認証フローにおける各状態とその遷移パターンを定
 
 ## 状態一覧
 
-| 状態 | 説明 | コンポーネント |
-|------|------|----------------|
-| `login` | 初期状態。メール・パスワード入力 | `LoginForm` |
-| `new-password` | 初回ログイン時のパスワード変更 | `NewPasswordForm` |
-| `forgot-password` | パスワード忘れ（検証コード送信） | `ForgotPasswordForm` |
-| `reset-password` | パスワードリセット（新パスワード設定） | `ResetPasswordForm` |
+| 状態              | 説明                                   | コンポーネント       |
+| ----------------- | -------------------------------------- | -------------------- |
+| `login`           | 初期状態。メール・パスワード入力       | `LoginForm`          |
+| `new-password`    | 初回ログイン時のパスワード変更         | `NewPasswordForm`    |
+| `forgot-password` | パスワード忘れ（検証コード送信）       | `ForgotPasswordForm` |
+| `reset-password`  | パスワードリセット（新パスワード設定） | `ResetPasswordForm`  |
 
 ## 状態遷移フロー
 
@@ -131,10 +131,10 @@ login
 
 ```typescript
 interface LoginResult {
-  success: boolean              // ログイン成功フラグ
-  requiresMFA: boolean          // MFA必要フラグ
-  mfaType?: 'SMS_MFA' | 'SOFTWARE_TOKEN_MFA'  // MFAタイプ
-  requiresNewPassword: boolean  // 新しいパスワード必要フラグ
+  success: boolean // ログイン成功フラグ
+  requiresMFA: boolean // MFA必要フラグ
+  mfaType?: 'SMS_MFA' | 'SOFTWARE_TOKEN_MFA' // MFAタイプ
+  requiresNewPassword: boolean // 新しいパスワード必要フラグ
 }
 ```
 
@@ -143,11 +143,13 @@ interface LoginResult {
 ### login状態（LoginForm）
 
 **責務:**
+
 - ユーザーのメールアドレスとパスワードを入力
 - `signIn` API呼び出し
 - レスポンスに応じて適切な状態に遷移
 
 **遷移先:**
+
 - `success: true` → `/search` へリダイレクト
 - `requiresNewPassword: true` → `new-password` 状態
 - `requiresMFA: true` → エラー表示（未実装）
@@ -156,36 +158,43 @@ interface LoginResult {
 ### new-password状態（NewPasswordForm）
 
 **責務:**
+
 - 新しいパスワード入力（強度チェック付き）
 - パスワード確認入力
 - `confirmSignIn({ challengeResponse: newPassword })` API呼び出し
 
 **遷移先:**
+
 - 成功 → `/search` へリダイレクト
 - 「ログイン画面に戻る」クリック → `login` 状態
 
 **特徴:**
+
 - `PasswordStrengthIndicator` でリアルタイム強度表示
 - Cognitoパスワードポリシー準拠チェック
 
 ### forgot-password状態（ForgotPasswordForm）
 
 **責務:**
+
 - メールアドレス入力
 - `resetPassword` API呼び出し（検証コード送信）
 
 **遷移先:**
+
 - 成功 → `reset-password` 状態
 - 「ログイン画面に戻る」クリック → `login` 状態
 
 ### reset-password状態（ResetPasswordForm）
 
 **責務:**
+
 - 検証コード入力（6桁）
 - 新しいパスワード入力
 - `confirmResetPassword` API呼び出し
 
 **遷移先:**
+
 - 成功 → `login` 状態
 - 「検証コード再送信」クリック → `forgot-password` 状態
 

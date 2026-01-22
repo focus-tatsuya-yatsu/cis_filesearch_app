@@ -207,8 +207,9 @@ resource "aws_cloudwatch_log_resource_policy" "opensearch" {
 
 # ----------------------------------------------------------------------------
 # Data Source for Current AWS Account
+# NOTE: aws_caller_identity is defined in main.tf - removed duplicate here
 # ----------------------------------------------------------------------------
-data "aws_caller_identity" "current" {}
+# data "aws_caller_identity" "current" {}  # REMOVED: Duplicate - defined in main.tf
 
 # ----------------------------------------------------------------------------
 # Outputs

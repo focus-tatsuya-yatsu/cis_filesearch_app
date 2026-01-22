@@ -14,6 +14,7 @@ from processors import (
     PDFProcessor,
     OfficeProcessor,
     DocuWorksProcessor,
+    MetadataOnlyProcessor,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,11 +36,13 @@ class FileRouter:
         self.config = config
 
         # Initialize all processors
+        # MetadataOnlyProcessor is last as fallback for CAD/archive files
         self.processors = [
             ImageProcessor(config),
             PDFProcessor(config),
             OfficeProcessor(config),
             DocuWorksProcessor(config),
+            MetadataOnlyProcessor(config),
         ]
 
         logger.info(f"Initialized {len(self.processors)} file processors")
@@ -121,6 +124,9 @@ class FileRouter:
         extensions.update(self.config.file_types.pdf_extensions)
         extensions.update(self.config.file_types.office_extensions)
         extensions.update(self.config.file_types.docuworks_extensions)
+        extensions.update(self.config.file_types.text_extensions)
+        # Add MetadataOnlyProcessor extensions (CAD, archives, etc.)
+        extensions.update(MetadataOnlyProcessor.SUPPORTED_EXTENSIONS)
 
         return extensions
 

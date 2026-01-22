@@ -39,6 +39,8 @@ interface PdfPreviewModalProps {
   fileId: string
   fileName: string
   filePath: string
+  fileType?: string
+  s3Key?: string
   keywords?: string[]
 }
 
@@ -51,6 +53,8 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
   fileId,
   fileName,
   filePath,
+  fileType,
+  s3Key,
   keywords = [],
 }) => {
   // 状態管理
@@ -59,7 +63,10 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
   const [allPages, setAllPages] = useState<PreviewPage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorType, setErrorType] = useState<'not_found' | 'conversion_pending' | 'unknown' | null>(null)
   const [zoomLevel, setZoomLevel] = useState(100)
+  const [previewType, setPreviewType] = useState<'images' | 'pdf'>('images')
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
 
   /**
    * プレビュー情報を取得
@@ -67,6 +74,9 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
   const fetchPreviewInfo = useCallback(async () => {
     setIsLoading(true)
     setError(null)
+    setErrorType(null)
+    setPdfUrl(null)
+    setPreviewType('images')
 
     try {
       const response = await fetch(API_URL, {
@@ -77,31 +87,61 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
         body: JSON.stringify({
           action: 'get_preview',
           fileName: fileName,
+          fileType: fileType,
+          s3Key: s3Key,
           pageNumber: 1,
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch preview')
+        // エラータイプを判別
+        if (response.status === 404) {
+          const isDocuWorks = /\.(xdw|xbd)$/i.test(fileName)
+          const isOffice = /\.(docx?|xlsx?|pptx?)$/i.test(fileName)
+          if (isDocuWorks) {
+            setErrorType('conversion_pending')
+            throw new Error('DocuWorks変換済みPDFが見つかりません')
+          } else if (isOffice) {
+            setErrorType('conversion_pending')
+            throw new Error('Officeファイルのプレビューは準備中です')
+          } else {
+            setErrorType('not_found')
+            throw new Error(errorData.message || 'プレビューが見つかりません')
+          }
+        }
+        setErrorType('unknown')
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch preview')
       }
 
       const data = await response.json()
 
       if (data.success && data.data) {
-        setTotalPages(data.data.totalPages || 0)
-        setAllPages(data.data.allPages || [])
+        // プレビュータイプに応じて処理
+        if (data.data.previewType === 'pdf' && data.data.pdfUrl) {
+          setPreviewType('pdf')
+          setPdfUrl(data.data.pdfUrl)
+          setTotalPages(1)
+        } else {
+          setPreviewType('images')
+          setTotalPages(data.data.totalPages || 0)
+          setAllPages(data.data.allPages || [])
+        }
       } else {
-        throw new Error(data.error || 'Preview not available')
+        setErrorType('not_found')
+        throw new Error(data.message || data.error || 'Preview not available')
       }
     } catch (err: unknown) {
       console.error('Failed to fetch preview:', err)
       const errorMessage = err instanceof Error ? err.message : 'プレビューの読み込みに失敗しました'
       setError(errorMessage)
+      if (!errorType) {
+        setErrorType('unknown')
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [fileName])
+  }, [fileName, fileType, s3Key])
 
   /**
    * 現在のページのURL取得
@@ -286,18 +326,71 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
                 </div>
               ) : error ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <p className="text-red-500 mb-2">{error}</p>
-                    <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93] mb-4">
-                      このファイルのプレビューは現在準備中です
+                  <div className="text-center max-w-md px-6">
+                    {/* エラーアイコン */}
+                    <div className="mb-4">
+                      <DocumentIcon className="w-16 h-16 mx-auto text-[#8E8E93] dark:text-[#6E6E73]" />
+                    </div>
+
+                    {/* エラーメッセージ */}
+                    <p className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                      {errorType === 'not_found'
+                        ? 'プレビューが見つかりません'
+                        : errorType === 'conversion_pending'
+                          ? 'プレビュー変換中'
+                          : 'プレビューの読み込みに失敗しました'}
                     </p>
-                    <button
-                      onClick={fetchPreviewInfo}
-                      className="px-4 py-2 bg-[#007AFF] text-white rounded-lg hover:bg-[#0056D3] transition-colors"
-                    >
-                      再試行
-                    </button>
+
+                    {/* 詳細説明 */}
+                    <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93] mb-6">
+                      {errorType === 'not_found'
+                        ? 'このファイルのプレビュー画像はまだ生成されていません。しばらく経ってから再度お試しください。'
+                        : errorType === 'conversion_pending'
+                          ? /\.(xdw|xbd)$/i.test(fileName)
+                            ? 'DocuWorksファイルのPDF変換がまだ完了していません。変換には時間がかかる場合があります。'
+                            : 'このファイル形式のプレビュー機能は現在準備中です。'
+                          : error}
+                    </p>
+
+                    {/* アクションボタン */}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <button
+                        onClick={fetchPreviewInfo}
+                        className="px-6 py-2.5 bg-[#007AFF] text-white rounded-lg hover:bg-[#0056D3] transition-colors font-medium"
+                      >
+                        再試行
+                      </button>
+                      {s3Key && (
+                        <button
+                          onClick={() => {
+                            // NASパスをコピー
+                            const nasPath = filePath || s3Key
+                            navigator.clipboard.writeText(nasPath)
+                            alert('ファイルパスをコピーしました')
+                          }}
+                          className="px-6 py-2.5 bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C] transition-colors font-medium"
+                        >
+                          パスをコピー
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 追加情報 */}
+                    {errorType === 'conversion_pending' && (
+                      <p className="text-xs text-[#8E8E93] dark:text-[#6E6E73] mt-4">
+                        ファイルを直接開くには、上のパスをコピーしてエクスプローラーで開いてください
+                      </p>
+                    )}
                   </div>
+                </div>
+              ) : previewType === 'pdf' && pdfUrl ? (
+                // PDFプレビュー（DocuWorks変換済みPDF等）
+                <div className="h-full w-full bg-[#F2F2F7] dark:bg-[#2C2C2E]">
+                  <iframe
+                    src={pdfUrl}
+                    className="w-full h-full border-0"
+                    title={`${fileName} - PDF Preview`}
+                  />
                 </div>
               ) : currentPageUrl ? (
                 <div className="h-full w-full p-4 bg-[#F2F2F7] dark:bg-[#2C2C2E]">

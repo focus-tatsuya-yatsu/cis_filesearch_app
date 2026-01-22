@@ -9,7 +9,7 @@
  * - DocuWorks: xdw, xbd (PDF変換経由)
  */
 
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
@@ -57,7 +57,8 @@ export function isPreviewable(fileName: string): boolean {
 export function getFileTypeCategory(
   fileType: string
 ): 'pdf' | 'image' | 'office' | 'docuworks' | 'unknown' {
-  const lowerType = fileType.toLowerCase()
+  // ドットを除去して正規化（.pdf → pdf）
+  const lowerType = fileType.toLowerCase().replace(/^\./, '')
 
   if ((PREVIEWABLE_EXTENSIONS.pdf as readonly string[]).includes(lowerType)) {
     return 'pdf'
@@ -286,16 +287,117 @@ export async function generateDocuWorksPreviewUrl(
   key: string,
   expiresIn: number = 300
 ): Promise<string> {
-  // DocuWorksファイルは処理時にPDFに変換されている想定
-  // 例: processed/document.xdw -> processed/document.xdw.pdf
+  const client = getS3Client()
+
+  // 方式1: 元のパスに.pdfを追加した場所を試す
+  // 例: documents/road/ts-server3/path/file.xdw -> documents/road/ts-server3/path/file.xdw.pdf
   const pdfKey = `${key}.pdf`
 
+  try {
+    const checkCommand = new GetObjectCommand({
+      Bucket: bucket,
+      Key: pdfKey,
+    })
+    await client.send(checkCommand)
+
+    // 見つかった場合はそのURLを返す
+    return generatePresignedUrl({
+      bucket,
+      key: pdfKey,
+      expiresIn,
+      responseContentType: 'application/pdf',
+      responseContentDisposition: 'inline',
+    })
+  } catch (error) {
+    // 方式1で見つからない場合は方式2を試す
+    console.log(`DocuWorks PDF not found at ${pdfKey}, trying docuworks-converted prefix`)
+  }
+
+  // 方式2: docuworks-converted/ フォルダで検索（直接パスマッチ）
+  // 元のパスから相対パス部分を抽出して検索
+  // 例: documents/road/ts-server3/path/file.xdw -> docuworks-converted/road/ts-server3/path/file.pdf
+  try {
+    // documents/ プレフィックスを削除し、docuworks-converted/ に変更
+    let convertedKey = key
+    if (key.startsWith('documents/')) {
+      convertedKey = key.replace('documents/', 'docuworks-converted/')
+    } else {
+      convertedKey = `docuworks-converted/${key}`
+    }
+
+    // 拡張子を.pdfに変更
+    const pathParts = convertedKey.split('/')
+    const fileName = pathParts.pop() || ''
+    const baseName = fileName.replace(/\.(xdw|xbd)$/i, '')
+    convertedKey = [...pathParts, `${baseName}.pdf`].join('/')
+
+    const checkCommand2 = new GetObjectCommand({
+      Bucket: bucket,
+      Key: convertedKey,
+    })
+    await client.send(checkCommand2)
+
+    return generatePresignedUrl({
+      bucket,
+      key: convertedKey,
+      expiresIn,
+      responseContentType: 'application/pdf',
+      responseContentDisposition: 'inline',
+    })
+  } catch (error) {
+    console.log(`DocuWorks converted PDF not found at direct path, trying S3 listing search`)
+  }
+
+  // 方式3: S3リストで検索（タイムスタンプ付きファイル名対応）
+  // 例: docuworks-converted/road/ts-server3/.../timestamp_servername_file.pdf
+  try {
+    // 元のファイル名（拡張子なし）を取得
+    const originalFileName = key.split('/').pop() || ''
+    const baseName = originalFileName.replace(/\.(xdw|xbd)$/i, '')
+
+    // サーバーカテゴリとサーバー名を抽出
+    // 例: documents/road/ts-server3/... -> road/ts-server3
+    const pathMatch = key.match(/(?:documents\/)?([^/]+)\/([^/]+)\//)
+    let searchPrefix = 'docuworks-converted/'
+    if (pathMatch) {
+      searchPrefix = `docuworks-converted/${pathMatch[1]}/${pathMatch[2]}/`
+    }
+
+    // S3でリスト検索
+    const listCommand = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: searchPrefix,
+      MaxKeys: 100,
+    })
+    const listResult = await client.send(listCommand)
+
+    // ファイル名を含むPDFを検索
+    const matchingPdf = listResult.Contents?.find((obj) => {
+      const objFileName = obj.Key?.split('/').pop() || ''
+      // ファイル名に元のベース名が含まれているか確認
+      return objFileName.includes(baseName) && objFileName.endsWith('.pdf')
+    })
+
+    if (matchingPdf?.Key) {
+      console.log(`Found DocuWorks PDF via S3 listing: ${matchingPdf.Key}`)
+      return generatePresignedUrl({
+        bucket,
+        key: matchingPdf.Key,
+        expiresIn,
+        responseContentType: 'application/pdf',
+        responseContentDisposition: 'inline',
+      })
+    }
+  } catch (error) {
+    console.warn(`DocuWorks converted PDF search failed for ${key}:`, error)
+  }
+
+  // どちらも見つからない場合は元のファイルのダウンロードURLを返す
   return generatePresignedUrl({
     bucket,
-    key: pdfKey,
+    key,
     expiresIn,
-    responseContentType: 'application/pdf',
-    responseContentDisposition: 'inline',
+    responseContentDisposition: 'attachment',
   })
 }
 

@@ -1,9 +1,11 @@
 # 画像アップロード機能デバッグガイド
 
 ## 概要
+
 画像アップロード機能で発生しているInternal Server Error (500)のデバッグ手順書
 
 ## 症状
+
 - 画像選択後にエラー発生
 - プレビューは正常に表示される
 - APIコール時に500エラーが返される
@@ -13,6 +15,7 @@
 ### 1. ブラウザのDeveloper Toolsでエラー確認
 
 #### 1.1 Consoleタブを開く
+
 ```
 1. ブラウザでF12キーを押す
 2. Consoleタブを選択
@@ -21,11 +24,13 @@
 ```
 
 **確認ポイント:**
+
 - エラーメッセージの内容
 - スタックトレース
 - 警告メッセージ
 
 #### 1.2 Networkタブでリクエスト詳細を確認
+
 ```
 1. Networkタブを選択
 2. 画像をアップロード
@@ -39,6 +44,7 @@
 ```
 
 **チェックリスト:**
+
 ```
 □ Status Code: 500
 □ Request Method: POST
@@ -49,18 +55,21 @@
 ### 2. サーバーログの確認
 
 #### 2.1 Next.js開発サーバーのターミナル出力を確認
+
 ```bash
 # ターミナルでNext.jsの開発サーバーログを確認
 # エラー発生時のスタックトレースを探す
 ```
 
 **確認すべきエラー:**
+
 - `AWS SDK` 関連のエラー
 - `Credentials` 関連のエラー
 - `Bedrock` 関連のエラー
 - `TypeError` や `ReferenceError`
 
 #### 2.2 詳細なログを出力
+
 ```bash
 # 開発サーバーを再起動してログレベルを上げる
 cd /Users/tatsuya/focus_project/cis_filesearch_app/frontend
@@ -70,6 +79,7 @@ NODE_OPTIONS='--trace-warnings' yarn dev
 ### 3. AWS認証情報の確認
 
 #### 3.1 環境変数の確認
+
 ```bash
 # .env.localファイルでAWS認証情報を確認
 cd /Users/tatsuya/focus_project/cis_filesearch_app/frontend
@@ -77,6 +87,7 @@ cat .env.local | grep AWS
 ```
 
 **必要な環境変数:**
+
 ```env
 AWS_REGION=ap-northeast-1
 # 以下のいずれかが必要:
@@ -89,6 +100,7 @@ AWS_PROFILE=default
 ```
 
 #### 3.2 AWS CLIでの認証確認
+
 ```bash
 # AWS CLIがインストールされているか確認
 aws --version
@@ -103,6 +115,7 @@ aws bedrock list-foundation-models --region ap-northeast-1
 ### 4. APIエンドポイントのテスト
 
 #### 4.1 curlコマンドでの直接テスト
+
 ```bash
 # テスト用の画像を準備
 # 任意のJPEG/PNG画像を使用
@@ -118,6 +131,7 @@ curl -X POST http://localhost:3000/api/image-embedding \
 ```
 
 #### 4.2 テストスクリプトの実行
+
 ```bash
 # テストスクリプトを実行
 cd /Users/tatsuya/focus_project/cis_filesearch_app/frontend
@@ -127,12 +141,14 @@ node scripts/test-image-upload.js
 ### 5. 最小限の再現コード作成
 
 #### 5.1 シンプルなテストページ作成
+
 ```bash
 # テストページを作成済み
 # /Users/tatsuya/focus_project/cis_filesearch_app/frontend/src/app/test-upload/page.tsx
 ```
 
 #### 5.2 ブラウザでテストページにアクセス
+
 ```
 http://localhost:3000/test-upload
 ```
@@ -140,12 +156,15 @@ http://localhost:3000/test-upload
 ### 6. エラーパターンと対処方法
 
 #### エラーパターン1: AWS認証エラー
+
 **エラーメッセージ:**
+
 ```
 Missing credentials in config
 ```
 
 **対処方法:**
+
 ```bash
 # .env.localにAWS認証情報を追加
 echo "AWS_ACCESS_KEY_ID=your-key" >> .env.local
@@ -156,12 +175,15 @@ aws configure
 ```
 
 #### エラーパターン2: Bedrockアクセス権限エラー
+
 **エラーメッセージ:**
+
 ```
 User is not authorized to perform: bedrock:InvokeModel
 ```
 
 **対処方法:**
+
 ```bash
 # IAMポリシーを確認・追加
 # AWS Console → IAM → Users → Policies
@@ -180,12 +202,15 @@ User is not authorized to perform: bedrock:InvokeModel
 ```
 
 #### エラーパターン3: Bedrockモデルがリージョンで利用不可
+
 **エラーメッセージ:**
+
 ```
 Model not found or not available in this region
 ```
 
 **対処方法:**
+
 ```bash
 # Bedrockでモデルアクセスを有効化
 # AWS Console → Bedrock → Model access → Manage model access
@@ -196,24 +221,30 @@ Model not found or not available in this region
 ```
 
 #### エラーパターン4: ファイルサイズ制限
+
 **エラーメッセージ:**
+
 ```
 Image file size must be less than 5MB
 ```
 
 **対処方法:**
+
 ```
 より小さいサイズの画像を使用
 または、route.tsのファイルサイズ制限を調整
 ```
 
 #### エラーパターン5: CORS エラー
+
 **エラーメッセージ:**
+
 ```
 CORS policy: No 'Access-Control-Allow-Origin' header
 ```
 
 **対処方法:**
+
 ```
 開発サーバーを再起動
 next.config.jsでCORS設定を確認
@@ -222,25 +253,27 @@ next.config.jsでCORS設定を確認
 ### 7. ログ収集用のデバッグモード
 
 #### 7.1 詳細ログを有効化
+
 ```typescript
 // /api/image-embedding/route.ts の先頭に追加
-console.log('=== Image Embedding API Debug ===');
-console.log('Environment:', process.env.NODE_ENV);
-console.log('AWS Region:', process.env.AWS_REGION);
-console.log('Has AWS Credentials:', !!process.env.AWS_ACCESS_KEY_ID);
+console.log('=== Image Embedding API Debug ===')
+console.log('Environment:', process.env.NODE_ENV)
+console.log('AWS Region:', process.env.AWS_REGION)
+console.log('Has AWS Credentials:', !!process.env.AWS_ACCESS_KEY_ID)
 ```
 
 #### 7.2 リクエスト/レスポンスのログ
+
 ```typescript
 // uploadFile関数内に追加
-console.log('Request URL:', '/api/image-embedding');
-console.log('File name:', file.name);
-console.log('File size:', file.size);
-console.log('File type:', file.type);
+console.log('Request URL:', '/api/image-embedding')
+console.log('File name:', file.name)
+console.log('File size:', file.size)
+console.log('File type:', file.type)
 
 // レスポンス受信後
-console.log('Response status:', response.status);
-console.log('Response data:', data);
+console.log('Response status:', response.status)
+console.log('Response data:', data)
 ```
 
 ### 8. 簡易診断スクリプト
@@ -254,6 +287,7 @@ chmod +x scripts/diagnose-image-upload.sh
 ```
 
 診断内容:
+
 - AWS CLI インストール確認
 - AWS認証情報確認
 - Bedrockアクセス権限確認
@@ -280,6 +314,7 @@ chmod +x scripts/diagnose-image-upload.sh
 ## トラブルシューティングチートシート
 
 ### クイック診断コマンド
+
 ```bash
 # 1. AWS認証確認
 aws sts get-caller-identity
@@ -300,6 +335,7 @@ curl -X POST http://localhost:3000/api/image-embedding \
 ```
 
 ### よくある原因トップ5
+
 1. AWS認証情報が未設定または無効
 2. Bedrockモデルアクセスが有効化されていない
 3. IAMポリシーでInvokeModel権限がない
@@ -307,6 +343,7 @@ curl -X POST http://localhost:3000/api/image-embedding \
 5. ファイルサイズが大きすぎる
 
 ### 問題解決の優先順位
+
 1. サーバーログのエラーメッセージを確認
 2. AWS認証情報を確認・設定
 3. Bedrockのモデルアクセスを確認

@@ -5,10 +5,12 @@
 ### 1. TypeScript型安全性の問題 ✅
 
 **問題**: コンソールに `Error Name: Unknown` と表示されていた
+
 - `error: any` 型の使用による型安全性の欠如
 - エラーオブジェクトの不適切な処理
 
 **解決策**:
+
 ```typescript
 // Before (問題のあるコード)
 static logError(context: string, error: any) {
@@ -31,11 +33,13 @@ static logError(context: string, error: unknown) {
 **問題**: Next.jsのAPIエンドポイントへのリクエストが308リダイレクトされていた
 
 **解決策**:
+
 - すべてのAPIエンドポイントURLに末尾スラッシュを追加
 - `/api/image-embedding` → `/api/image-embedding/`
 - `/api/search` → `/api/search/`
 
 **修正したファイル**:
+
 - `scripts/quick-test-image-search.sh`
 - `scripts/test-image-search.sh`
 - `scripts/load-test-config.yml`
@@ -45,6 +49,7 @@ static logError(context: string, error: unknown) {
 **問題**: Lambda関数がPOSTメソッドを許可していなかった
 
 **解決策**:
+
 ```typescript
 // Access-Control-Allow-Methods ヘッダーにPOSTを追加
 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
@@ -55,6 +60,7 @@ static logError(context: string, error: unknown) {
 ### OpenSearchインデックスマッピング問題
 
 **エラーメッセージ**:
+
 ```
 Field 'image_embedding' is not knn_vector type
 ```
@@ -66,12 +72,14 @@ Field 'image_embedding' is not knn_vector type
 ## 📝 次のステップ
 
 1. **OpenSearchインデックスの修正**
+
    ```bash
    # OpenSearchインデックスマッピングを修正
    ./scripts/fix-opensearch-mapping.sh
    ```
 
 2. **Lambda関数のデプロイ**
+
    ```bash
    # CORS修正を含むLambda関数をデプロイ
    cd backend/lambda-search-api
@@ -94,6 +102,7 @@ Field 'image_embedding' is not knn_vector type
 ## 📊 テスト結果
 
 **クイックテスト実行結果**:
+
 - ✅ サーバー起動確認
 - ✅ テスト画像確認
 - ✅ 画像ベクトル化 (1024次元)

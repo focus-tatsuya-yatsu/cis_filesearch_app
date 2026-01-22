@@ -3,40 +3,43 @@
 
 # ============================================================================
 # VPC Endpoints for AWS Services (Private Access)
+# NOTE: Some VPC endpoints are defined in vpc.tf to avoid duplicates
 # ============================================================================
 
 # S3 VPC Endpoint (Gateway Endpoint - No charge)
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id       = aws_vpc.main.id
-  service_name = "com.amazonaws.${var.aws_region}.s3"
-
-  route_table_ids = aws_route_table.private[*].id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowS3Access"
-        Effect = "Allow"
-        Principal = "*"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          aws_s3_bucket.metadata.arn,
-          "${aws_s3_bucket.metadata.arn}/*"
-        ]
-      }
-    ]
-  })
-
-  tags = {
-    Name = "${var.project_name}-s3-endpoint"
-  }
-}
+# REMOVED: Duplicate - defined in vpc.tf:193
+# If you need to add a policy to the S3 endpoint, modify it in vpc.tf
+# resource "aws_vpc_endpoint" "s3" {
+#   vpc_id       = aws_vpc.main.id
+#   service_name = "com.amazonaws.${var.aws_region}.s3"
+#
+#   route_table_ids = aws_route_table.private[*].id
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Sid    = "AllowS3Access"
+#         Effect = "Allow"
+#         Principal = "*"
+#         Action = [
+#           "s3:GetObject",
+#           "s3:PutObject",
+#           "s3:DeleteObject",
+#           "s3:ListBucket"
+#         ]
+#         Resource = [
+#           aws_s3_bucket.metadata.arn,
+#           "${aws_s3_bucket.metadata.arn}/*"
+#         ]
+#       }
+#     ]
+#   })
+#
+#   tags = {
+#     Name = "${var.project_name}-s3-endpoint"
+#   }
+# }
 
 # SQS VPC Endpoint (Interface Endpoint)
 resource "aws_vpc_endpoint" "sqs" {
@@ -83,18 +86,19 @@ resource "aws_vpc_endpoint" "bedrock_runtime" {
 }
 
 # CloudWatch Logs VPC Endpoint
-resource "aws_vpc_endpoint" "logs" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.logs"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-
-  tags = {
-    Name = "${var.project_name}-logs-endpoint"
-  }
-}
+# REMOVED: Duplicate - defined in vpc.tf:231
+# resource "aws_vpc_endpoint" "logs" {
+#   vpc_id              = aws_vpc.main.id
+#   service_name        = "com.amazonaws.${var.aws_region}.logs"
+#   vpc_endpoint_type   = "Interface"
+#   subnet_ids          = aws_subnet.private[*].id
+#   security_group_ids  = [aws_security_group.vpc_endpoints.id]
+#   private_dns_enabled = true
+#
+#   tags = {
+#     Name = "${var.project_name}-logs-endpoint"
+#   }
+# }
 
 # CloudWatch Monitoring VPC Endpoint
 resource "aws_vpc_endpoint" "monitoring" {
@@ -112,33 +116,37 @@ resource "aws_vpc_endpoint" "monitoring" {
 
 # ============================================================================
 # Security Group for VPC Endpoints
+# REMOVED: Duplicate - defined in vpc.tf:166
+# The vpc.tf version allows access from the entire VPC CIDR, which is more
+# general and appropriate for shared VPC endpoints.
+# If you need more restrictive access, add additional security group rules
+# to the one defined in vpc.tf.
 # ============================================================================
-
-resource "aws_security_group" "vpc_endpoints" {
-  name        = "${var.project_name}-vpc-endpoints-sg"
-  description = "Security group for VPC endpoints"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "HTTPS from EC2 file processors"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2_file_processor.id]
-  }
-
-  egress {
-    description = "Allow all outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-vpc-endpoints-sg"
-  }
-}
+# resource "aws_security_group" "vpc_endpoints" {
+#   name        = "${var.project_name}-vpc-endpoints-sg"
+#   description = "Security group for VPC endpoints"
+#   vpc_id      = aws_vpc.main.id
+#
+#   ingress {
+#     description     = "HTTPS from EC2 file processors"
+#     from_port       = 443
+#     to_port         = 443
+#     protocol        = "tcp"
+#     security_groups = [aws_security_group.ec2_file_processor.id]
+#   }
+#
+#   egress {
+#     description = "Allow all outbound"
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   tags = {
+#     Name = "${var.project_name}-vpc-endpoints-sg"
+#   }
+# }
 
 # ============================================================================
 # Enhanced Security Group for EC2 File Processor

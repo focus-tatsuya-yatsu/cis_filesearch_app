@@ -53,9 +53,14 @@ const CLIENT_TTL = 5 * 60 * 1000; // 5 minutes
  * Get OpenSearch configuration from environment
  */
 function getOpenSearchConfig(): OpenSearchConfig {
-  const endpoint = process.env.OPENSEARCH_ENDPOINT;
+  let endpoint = process.env.OPENSEARCH_ENDPOINT;
   if (!endpoint) {
     throw new Error('OPENSEARCH_ENDPOINT environment variable is not set');
+  }
+
+  // Ensure endpoint has https:// prefix
+  if (!endpoint.startsWith('https://') && !endpoint.startsWith('http://')) {
+    endpoint = `https://${endpoint}`;
   }
 
   return {

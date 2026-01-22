@@ -1,0 +1,14 @@
+{
+  "name": "lambda-category-fix",
+  "version": "1.0.0",
+  "description": "One-time Lambda to fix wrong category in OpenSearch",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm install && zip -r function.zip .",
+    "deploy": "aws lambda update-function-code --function-name cis-filesearch-category-fix --zip-file fileb://function.zip"
+  },
+  "dependencies": {
+    "@opensearch-project/opensearch": "^2.7.0",
+    "@aws-sdk/credential-provider-node": "^3.460.0"
+  }
+}

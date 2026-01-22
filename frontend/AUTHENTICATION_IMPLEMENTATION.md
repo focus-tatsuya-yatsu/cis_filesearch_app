@@ -24,6 +24,7 @@ export default withAuthLoginForm(HomePage)
 ```
 
 **特徴**:
+
 - ✅ 柔軟な設定オプション
 - ✅ カスタムローディング・未認証コンポーネント対応
 - ✅ 自動リダイレクトモードとLoginFormモードの切り替え
@@ -37,6 +38,7 @@ export default withAuthLoginForm(HomePage)
 `/app/page.tsx`にあった検索ロジックを独立したコンポーネントとして抽出:
 
 **理由**:
+
 - 📦 **単一責任原則**: ページコンポーネントは認証ガードのみ、検索機能は別コンポーネント
 - ♻️ **再利用性**: 将来的に他のページでも検索機能を使用可能
 - 🧪 **テスタビリティ**: 検索機能を独立してテスト可能
@@ -47,6 +49,7 @@ export default withAuthLoginForm(HomePage)
 **ファイル**: `/app/page.tsx` (Before: 235行 → After: 33行)
 
 **Before**:
+
 ```typescript
 const HomePage = () => {
   // 200+ lines of search logic...
@@ -56,6 +59,7 @@ export default HomePage
 ```
 
 **After**:
+
 ```typescript
 const HomePage: FC = () => {
   return <SearchInterface />
@@ -118,6 +122,7 @@ export default withAuth(HomePage)
 ```
 
 **特徴**:
+
 - 🎭 Framer Motionによるスムーズなアニメーション
 - 🎨 グラデーション背景で視覚的魅力
 - 📱 レスポンシブデザイン
@@ -210,6 +215,7 @@ export default withAuthLoginForm(MyPage)
 ### Option A（採用）: LoginForm表示
 
 **選択理由**:
+
 1. **ユーザーに選択肢を提供** - 自動リダイレクトは押し付けがましい
 2. **一貫性** - 既存の`/search/layout.tsx`パターンと一貫
 3. **柔軟性** - 将来的にログイン方法追加が容易
@@ -218,6 +224,7 @@ export default withAuthLoginForm(MyPage)
 ### Option B（不採用）: 自動リダイレクト
 
 **不採用理由**:
+
 - ユーザーに選択権がない
 - 突然のリダイレクトで混乱する可能性
 - ログインページの存在が不明確
@@ -227,6 +234,7 @@ export default withAuthLoginForm(MyPage)
 ### Option C（不採用）: 専用ログインページ
 
 **不採用理由**:
+
 - ルーティング変更が必要
 - 複雑性増加
 - 現状の要件には過剰
@@ -236,6 +244,7 @@ export default withAuthLoginForm(MyPage)
 ### `/search`ディレクトリの削除
 
 **現状**:
+
 - `/app/search/layout.tsx` - Protected Layout
 - `/app/search/page.tsx` - 存在しない
 
@@ -243,6 +252,7 @@ export default withAuthLoginForm(MyPage)
 `/search/layout.tsx`は現在使用されていないため、削除を検討。
 
 **理由**:
+
 - ホームページ (`/`) が認証保護されているため、`/search`は不要
 - コードの重複を避ける（DRY原則）
 - シンプルなルーティング構造
@@ -253,6 +263,7 @@ export default withAuthLoginForm(MyPage)
 Headerは認証状態に関わらず常に完全な機能を表示。
 
 **改善案**:
+
 ```typescript
 interface HeaderProps {
   simplified?: boolean // ログイン画面用の簡略版
@@ -278,14 +289,15 @@ Route (app)              Size  First Load JS
 ```
 
 **影響**:
+
 - ホームページサイズ: **55.2 kB** (許容範囲内)
 - First Load JS: **213 kB** (良好)
 
 ### コード削減
 
-| ファイル | Before | After | 削減率 |
-|---------|--------|-------|--------|
-| `/app/page.tsx` | 235行 | 33行 | **85.8%** |
+| ファイル        | Before | After | 削減率    |
+| --------------- | ------ | ----- | --------- |
+| `/app/page.tsx` | 235行  | 33行  | **85.8%** |
 
 ## 🔒 セキュリティ
 

@@ -173,6 +173,22 @@ class OpenSearchClient:
 
                         # S3 information
                         "bucket": {"type": "keyword"},
+                        "s3_url": {"type": "keyword"},
+
+                        # Category and server information (for filtering)
+                        "category": {"type": "keyword"},  # 'road' or 'structure'
+                        "category_display": {"type": "keyword"},  # '道路' or '構造'
+                        "nas_server": {"type": "keyword"},  # 'ts-server3', etc.
+                        "root_folder": {"type": "keyword"},  # 'H22_JOB', 'R01_JOB', etc.
+                        "nas_path": {
+                            "type": "text",
+                            "fields": {
+                                "keyword": {"type": "keyword"}
+                            }
+                        },
+
+                        # Thumbnail
+                        "thumbnail_url": {"type": "keyword"},
 
                         # Status
                         "success": {"type": "boolean"},
