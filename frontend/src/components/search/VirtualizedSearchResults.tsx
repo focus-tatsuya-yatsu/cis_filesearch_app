@@ -25,6 +25,12 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { motion, AnimatePresence } from 'framer-motion'
 
+import { ProtocolHandlerPrompt } from '@/components/features/ProtocolHandlerPrompt'
+import {
+  isHandlerMarkedAsInstalled,
+  isInstallPromptDismissed,
+  isWindowsOS,
+} from '@/lib/protocol-handler'
 import type { SearchResult } from '@/types'
 
 /**
@@ -216,6 +222,10 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
   const parentRef = useRef<HTMLDivElement>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
+  // プロトコルハンドラーインストール案内モーダルの状態
+  const [showProtocolPrompt, setShowProtocolPrompt] = useState(false)
+  const [pendingFilePath, setPendingFilePath] = useState<string | null>(null)
+
   // ファイルサイズのフォーマット
   const formatFileSize = useCallback((bytes: number): string => {
     if (bytes === 0) return '0 B'
@@ -364,6 +374,22 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
     if (!uncPath) {
       console.error('Cannot open file: invalid or disallowed path')
       alert('このファイルは直接開くことができません。パスをコピーしてエクスプローラーで開いてください。')
+      return
+    }
+
+    // Windows以外の場合、またはハンドラー未インストールで初回の場合はプロンプトを表示
+    if (!isWindowsOS()) {
+      // Windows以外の場合はプロンプトを表示（パスコピー案内）
+      setPendingFilePath(convertS3PathToNASPath(path))
+      setShowProtocolPrompt(true)
+      return
+    }
+
+    // ハンドラーがインストール済みとしてマークされていない、かつ
+    // 「後でインストール」も選択されていない場合はプロンプトを表示
+    if (!isHandlerMarkedAsInstalled() && !isInstallPromptDismissed()) {
+      setPendingFilePath(convertS3PathToNASPath(path))
+      setShowProtocolPrompt(true)
       return
     }
 
@@ -555,6 +581,23 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
     )
   }
 
+  // プロンプトを閉じるハンドラー
+  const handleCloseProtocolPrompt = useCallback(() => {
+    setShowProtocolPrompt(false)
+    setPendingFilePath(null)
+  }, [])
+
+  // パスコピー時のハンドラー
+  const handleCopyPathFromPrompt = useCallback(async () => {
+    if (pendingFilePath) {
+      try {
+        await navigator.clipboard.writeText(pendingFilePath)
+      } catch (error) {
+        console.error('Failed to copy path:', error)
+      }
+    }
+  }, [pendingFilePath])
+
   return (
     <div className={`flex flex-col ${className}`}>
       {/* 結果数表示 */}
@@ -580,6 +623,14 @@ export const VirtualizedSearchResults: FC<VirtualizedSearchResultsProps> = ({
           {virtualizer.getVirtualItems().map(renderVirtualItem)}
         </div>
       </div>
+
+      {/* プロトコルハンドラーインストール案内モーダル */}
+      <ProtocolHandlerPrompt
+        isOpen={showProtocolPrompt}
+        onClose={handleCloseProtocolPrompt}
+        onCopyPath={handleCopyPathFromPrompt}
+        filePath={pendingFilePath || undefined}
+      />
     </div>
   )
 }

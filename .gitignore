@@ -190,3 +190,10 @@ env/
 .env/
 # Lambda deployment zips
 backend/lambda-search-api/*.zip
+
+# ========================================
+# インストーラーパッケージ
+# ========================================
+
+# CIS File Handler インストーラー（ビルド時に生成）
+frontend/public/downloads/*.zip
