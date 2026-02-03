@@ -31,7 +31,8 @@ from botocore.exceptions import ClientError
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import config
+from config import get_config
+config = get_config()
 from s3_client import S3Client
 from opensearch_client import OpenSearchClient
 from preview_generator import PreviewGenerator, PreviewConfig
@@ -109,17 +110,17 @@ class PreviewWorker:
         self.idle_timeout = idle_timeout
 
         # AWS clients
-        self.sqs = boto3.client('sqs', **config.get_boto3_config())
+        self.sqs = boto3.client('sqs', **{'region_name': config.aws.region})
         self.s3_client = S3Client()
-        self.opensearch_client = OpenSearchClient()
+        self.opensearch_client = OpenSearchClient(config)
 
-        # Preview generator
+        # Preview generator (using defaults or environment variables)
         preview_config = PreviewConfig(
-            dpi=config.preview.dpi,
-            max_width=config.preview.max_width,
-            max_height=config.preview.max_height,
-            quality=config.preview.quality,
-            max_pages=config.preview.max_pages
+            dpi=int(os.getenv('PREVIEW_DPI', '150')),
+            max_width=int(os.getenv('PREVIEW_MAX_WIDTH', '1200')),
+            max_height=int(os.getenv('PREVIEW_MAX_HEIGHT', '1600')),
+            quality=int(os.getenv('PREVIEW_QUALITY', '85')),
+            max_pages=int(os.getenv('PREVIEW_MAX_PAGES', '20'))
         )
         self.preview_generator = PreviewGenerator(preview_config)
 
@@ -266,6 +267,8 @@ class PreviewWorker:
                 return self._process_office_file(body)
             elif file_type == 'docuworks':
                 return self._process_docuworks_file(body)
+            elif file_type == 'pdf':
+                return self._process_pdf_file(body)
             else:
                 logger.warning(f"Unsupported file type: {file_type}")
                 return True  # Delete unsupported
@@ -300,7 +303,7 @@ class PreviewWorker:
         try:
             # Download Office file
             temp_office_path = self.s3_client.download_file(
-                config.s3.landing_bucket,
+                config.aws.s3_bucket,
                 s3_key
             )
 
@@ -371,7 +374,7 @@ class PreviewWorker:
 
             # Download PDF
             temp_pdf_path = self.s3_client.download_file(
-                config.s3.landing_bucket,
+                config.aws.s3_bucket,
                 pdf_key
             )
 
@@ -409,6 +412,56 @@ class PreviewWorker:
             if temp_pdf_path:
                 self.s3_client.cleanup_temp_file(temp_pdf_path)
 
+    def _process_pdf_file(self, task: Dict) -> bool:
+        """Process PDF file preview generation."""
+        file_name = task.get('file_name')
+        file_id = task.get('file_id')
+        doc_id = task.get('doc_id')
+        s3_key = task.get('s3_key')
+
+        temp_pdf_path = None
+
+        try:
+            # Download PDF file
+            temp_pdf_path = self.s3_client.download_file(
+                config.aws.s3_bucket,
+                s3_key
+            )
+
+            if not temp_pdf_path or not os.path.exists(temp_pdf_path):
+                logger.error(f"Failed to download PDF: {s3_key}")
+                return False
+
+            # Generate previews directly from PDF
+            previews = self.preview_generator._generate_from_pdf(Path(temp_pdf_path))
+
+            if not previews:
+                logger.error(f"No previews generated for {file_name}")
+                return False
+
+            # Upload to S3
+            uploaded = self._upload_previews(previews, file_id)
+
+            if not uploaded:
+                logger.error(f"Failed to upload previews for {file_name}")
+                return False
+
+            # Update OpenSearch
+            if not self._update_opensearch(doc_id, uploaded):
+                logger.error(f"Failed to update OpenSearch for {file_name}")
+                return False
+
+            logger.info(f"Successfully processed PDF: {file_name} ({len(uploaded)} pages)")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error processing PDF file {file_name}: {e}")
+            return False
+
+        finally:
+            if temp_pdf_path:
+                self.s3_client.cleanup_temp_file(temp_pdf_path)
+
     def _find_converted_pdf(self, base_name: str) -> Optional[str]:
         """Find converted PDF in S3."""
         if self._pdf_cache is None:
@@ -426,11 +479,11 @@ class PreviewWorker:
         self._pdf_cache = {}
 
         try:
-            s3 = boto3.client('s3', **config.get_boto3_config())
+            s3 = boto3.client('s3', **{'region_name': config.aws.region})
             paginator = s3.get_paginator('list_objects_v2')
 
             page_iterator = paginator.paginate(
-                Bucket=config.s3.landing_bucket,
+                Bucket=config.aws.s3_bucket,
                 Prefix=self.CONVERTED_PDF_PREFIX
             )
 
@@ -459,7 +512,7 @@ class PreviewWorker:
 
                 preview_url = self.s3_client.upload_fileobj(
                     preview_io,
-                    config.s3.thumbnail_bucket,
+                    config.aws.s3_thumbnail_bucket,
                     preview_key,
                     content_type='image/jpeg'
                 )
@@ -486,7 +539,13 @@ class PreviewWorker:
                 "total_pages": len(preview_images),
                 "preview_generated_at": datetime.utcnow().isoformat()
             }
-            return self.opensearch_client.update_document(doc_id, updates)
+            # Use OpenSearch client's update API directly
+            self.opensearch_client.client.update(
+                index=config.aws.opensearch_index,
+                id=doc_id,
+                body={"doc": updates}
+            )
+            return True
         except Exception as e:
             logger.error(f"Failed to update OpenSearch: {e}")
             return False
@@ -526,18 +585,13 @@ def validate_startup() -> bool:
     logger.info("Preview Worker - Startup Validation")
     logger.info("=" * 60)
 
-    # Print configuration summary
-    config.print_config_summary()
-
-    # Validate configuration
-    if not config.validate(require_sqs=False, require_preview_queue=True):
-        logger.error("Configuration validation failed!")
-        return False
+    # Note: Skip config.validate() as it checks for SQS_QUEUE_URL
+    # Preview worker uses PREVIEW_QUEUE_URL instead (tested below)
 
     # Test AWS credentials
     logger.info("Testing AWS credentials...")
     try:
-        sts = boto3.client('sts', **config.get_boto3_config())
+        sts = boto3.client('sts', **{'region_name': config.aws.region})
         identity = sts.get_caller_identity()
         logger.info(f"AWS Identity: {identity.get('Arn', 'Unknown')}")
     except Exception as e:
@@ -549,7 +603,7 @@ def validate_startup() -> bool:
     preview_queue_url = os.getenv('PREVIEW_QUEUE_URL', DEFAULT_PREVIEW_QUEUE_URL)
     logger.info(f"Testing SQS connectivity to: {preview_queue_url}")
     try:
-        sqs = boto3.client('sqs', **config.get_boto3_config())
+        sqs = boto3.client('sqs', **{'region_name': config.aws.region})
         attrs = sqs.get_queue_attributes(
             QueueUrl=preview_queue_url,
             AttributeNames=['ApproximateNumberOfMessages']
@@ -561,11 +615,11 @@ def validate_startup() -> bool:
         return False
 
     # Test OpenSearch connectivity
-    logger.info(f"Testing OpenSearch connectivity to: {config.opensearch.endpoint}")
+    logger.info(f"Testing OpenSearch connectivity to: {config.aws.opensearch_endpoint}")
     try:
         from opensearch_client import OpenSearchClient
-        os_client = OpenSearchClient()
-        stats = os_client.get_stats()
+        os_client = OpenSearchClient(config)
+        stats = os_client.get_index_stats()
         logger.info(f"OpenSearch connectivity OK. Documents: {stats.get('document_count', 'unknown')}")
     except Exception as e:
         logger.error(f"OpenSearch connectivity test failed: {e}")
@@ -573,10 +627,10 @@ def validate_startup() -> bool:
         return False
 
     # Test S3 connectivity
-    logger.info(f"Testing S3 connectivity to: {config.s3.landing_bucket}")
+    logger.info(f"Testing S3 connectivity to: {config.aws.s3_bucket}")
     try:
-        s3 = boto3.client('s3', **config.get_boto3_config())
-        s3.head_bucket(Bucket=config.s3.landing_bucket)
+        s3 = boto3.client('s3', **{'region_name': config.aws.region})
+        s3.head_bucket(Bucket=config.aws.s3_bucket)
         logger.info("S3 landing bucket connectivity OK")
     except Exception as e:
         logger.error(f"S3 connectivity test failed: {e}")

@@ -176,3 +176,63 @@ export interface ProgressEvent {
  * Progress callback
  */
 export type ProgressCallback = (event: ProgressEvent) => void;
+
+// ============================================
+// Sync Types (SQS Consumer)
+// ============================================
+
+/**
+ * SQS sync message (from Lambda trigger)
+ */
+export interface SyncMessage {
+  syncId: string;
+  nasServers: string[];
+  fullSync: boolean;
+  triggeredBy: string;
+  timestamp: string;
+}
+
+/**
+ * Sync progress status
+ */
+export type SyncStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
+/**
+ * Sync progress stored in DynamoDB
+ */
+export interface SyncProgress {
+  syncId: string;
+  status: SyncStatus;
+  createdAt: string;
+  updatedAt: string;
+  nasServers: string[];
+  fullSync: boolean;
+  triggeredBy: string;
+  progress?: {
+    current: number;
+    total: number;
+    currentNas?: string;
+    processedFiles?: number;
+    errors?: number;
+  };
+  result?: {
+    newFiles: number;
+    changedFiles: number;
+    deletedFiles: number;
+    syncedFiles: number;
+    errors: number;
+  };
+  errorMessage?: string;
+  ttl: number;
+}
+
+/**
+ * Sync result from scan
+ */
+export interface SyncResult {
+  newFiles: number;
+  changedFiles: number;
+  deletedFiles: number;
+  syncedFiles: number;
+  errors: number;
+}

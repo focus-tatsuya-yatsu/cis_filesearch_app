@@ -33,7 +33,8 @@ $InstallDir = "$env:LOCALAPPDATA\CIS\FileHandler"
 
 # Get the directory where this script is located
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$HandlerSource = Join-Path $ScriptDir "cis-open-handler.bat"
+$HandlerBatSource = Join-Path $ScriptDir "cis-open-handler.bat"
+$HandlerPs1Source = Join-Path $ScriptDir "cis-open-handler.ps1"
 
 # Registry path
 $RegPath = "HKCU:\Software\Classes\$ProtocolName"
@@ -114,13 +115,24 @@ function Uninstall-Handler {
 function Install-Handler {
     Show-Banner
 
-    # Check if source handler exists
-    if (-not (Test-Path $HandlerSource)) {
-        Write-Log "Error: cis-open-handler.bat not found at: $HandlerSource" "Error"
+    # Check if source handler files exist
+    if (-not (Test-Path $HandlerBatSource)) {
+        Write-Log "Error: cis-open-handler.bat not found at: $HandlerBatSource" "Error"
         Write-Log ""
         Write-Log "Please ensure the following files are in the same directory:" "Warning"
         Write-Log "  - setup.ps1 (this script)"
         Write-Log "  - cis-open-handler.bat"
+        Write-Log "  - cis-open-handler.ps1"
+        return 1
+    }
+
+    if (-not (Test-Path $HandlerPs1Source)) {
+        Write-Log "Error: cis-open-handler.ps1 not found at: $HandlerPs1Source" "Error"
+        Write-Log ""
+        Write-Log "Please ensure the following files are in the same directory:" "Warning"
+        Write-Log "  - setup.ps1 (this script)"
+        Write-Log "  - cis-open-handler.bat"
+        Write-Log "  - cis-open-handler.ps1"
         return 1
     }
 
@@ -134,11 +146,14 @@ function Install-Handler {
     }
     Write-Log "      Directory: $InstallDir" "Success"
 
-    # Step 2: Copy handler file
-    Write-Log "[2/3] Copying handler file..."
-    $HandlerDest = Join-Path $InstallDir "cis-open-handler.bat"
-    Copy-Item -Path $HandlerSource -Destination $HandlerDest -Force
+    # Step 2: Copy handler files
+    Write-Log "[2/3] Copying handler files..."
+    $HandlerBatDest = Join-Path $InstallDir "cis-open-handler.bat"
+    $HandlerPs1Dest = Join-Path $InstallDir "cis-open-handler.ps1"
+    Copy-Item -Path $HandlerBatSource -Destination $HandlerBatDest -Force
+    Copy-Item -Path $HandlerPs1Source -Destination $HandlerPs1Dest -Force
     Write-Log "      Copied: cis-open-handler.bat" "Success"
+    Write-Log "      Copied: cis-open-handler.ps1" "Success"
 
     # Create a version info file
     $VersionFile = Join-Path $InstallDir "version.txt"
@@ -186,7 +201,7 @@ User: $env:USERNAME
         }
 
         # Set the command to execute (pointing to local copy)
-        $CommandValue = "`"$HandlerDest`" `"%1`""
+        $CommandValue = "`"$HandlerBatDest`" `"%1`""
         Set-ItemProperty -Path $CommandPath -Name "(Default)" -Value $CommandValue
 
         Write-Log "      Protocol: cis-open://" "Success"

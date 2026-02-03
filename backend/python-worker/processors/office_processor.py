@@ -3,6 +3,7 @@ Office Processor Module
 Handles Microsoft Office documents (Word, Excel, PowerPoint)
 """
 
+import io
 import time
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,7 @@ from typing import Optional
 import docx
 from pptx import Presentation
 from openpyxl import load_workbook
+from PIL import Image
 
 from .base_processor import BaseProcessor, ProcessingResult
 
@@ -68,6 +70,11 @@ class OfficeProcessor(BaseProcessor):
             # Add file metadata
             metadata.update(self._extract_metadata(file_path))
 
+            # Generate thumbnail if enabled
+            thumbnail_data = None
+            if self.config.thumbnail.generate_for_office:
+                thumbnail_data = self._generate_thumbnail(file_path, file_ext)
+
             # Calculate processing time
             processing_time = time.time() - start_time
 
@@ -83,6 +90,8 @@ class OfficeProcessor(BaseProcessor):
                 word_count=self._count_words(extracted_text),
                 char_count=len(extracted_text),
                 page_count=metadata.get('page_count', 0),
+                thumbnail_data=thumbnail_data,
+                thumbnail_format=self.config.thumbnail.thumbnail_format,
                 metadata=metadata,
                 processing_time_seconds=processing_time,
                 processor_name=self.__class__.__name__,
@@ -285,3 +294,194 @@ class OfficeProcessor(BaseProcessor):
         except Exception as e:
             self.logger.error(f"Failed to process PowerPoint file: {e}")
             raise
+
+    def _generate_thumbnail(self, file_path: str, file_ext: str) -> Optional[bytes]:
+        """
+        Generate thumbnail for Office document
+
+        For PPTX: Extract first slide image
+        For DOCX/XLSX: Convert first page to image using LibreOffice (if available)
+
+        Args:
+            file_path: Path to Office document
+            file_ext: File extension
+
+        Returns:
+            Thumbnail as bytes or None
+        """
+        try:
+            # PowerPoint: Extract thumbnail from presentation
+            if file_ext in {'.pptx', '.ppt'}:
+                return self._generate_pptx_thumbnail(file_path)
+
+            # Word/Excel: Try LibreOffice conversion
+            else:
+                return self._generate_office_thumbnail_via_libreoffice(file_path)
+
+        except Exception as e:
+            self.logger.warning(f"Thumbnail generation failed for {file_ext}: {e}")
+            return None
+
+    def _generate_pptx_thumbnail(self, file_path: str) -> Optional[bytes]:
+        """
+        Generate thumbnail from PowerPoint presentation
+        Extracts the first slide's thumbnail if embedded, otherwise creates a placeholder
+
+        Args:
+            file_path: Path to PPTX file
+
+        Returns:
+            Thumbnail as bytes or None
+        """
+        try:
+            import zipfile
+
+            # PPTX files are ZIP archives - try to extract thumbnail
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                # PPTX contains thumbnail at docProps/thumbnail.jpeg
+                thumbnail_paths = [
+                    'docProps/thumbnail.jpeg',
+                    'docProps/thumbnail.png',
+                    '_rels/.rels'  # fallback
+                ]
+
+                for thumb_path in thumbnail_paths:
+                    if thumb_path in zip_ref.namelist():
+                        if 'thumbnail' in thumb_path:
+                            with zip_ref.open(thumb_path) as thumb_file:
+                                image_data = thumb_file.read()
+
+                                # Resize to configured thumbnail size
+                                image = Image.open(io.BytesIO(image_data))
+                                image.thumbnail(
+                                    (
+                                        self.config.thumbnail.thumbnail_width,
+                                        self.config.thumbnail.thumbnail_height
+                                    ),
+                                    Image.Resampling.LANCZOS
+                                )
+
+                                # Convert to RGB if necessary
+                                if image.mode not in ('RGB', 'L'):
+                                    image = image.convert('RGB')
+
+                                # Save to bytes
+                                buffer = io.BytesIO()
+                                image.save(
+                                    buffer,
+                                    format=self.config.thumbnail.thumbnail_format,
+                                    quality=self.config.thumbnail.thumbnail_quality
+                                )
+
+                                self.logger.debug("Generated thumbnail from PPTX embedded thumbnail")
+                                return buffer.getvalue()
+
+            self.logger.debug("No embedded thumbnail found in PPTX")
+            return None
+
+        except Exception as e:
+            self.logger.warning(f"Failed to extract PPTX thumbnail: {e}")
+            return None
+
+    def _generate_office_thumbnail_via_libreoffice(self, file_path: str) -> Optional[bytes]:
+        """
+        Generate thumbnail using LibreOffice headless conversion
+        Converts first page to PDF, then to image
+
+        Args:
+            file_path: Path to Office document
+
+        Returns:
+            Thumbnail as bytes or None
+        """
+        import subprocess
+        import tempfile
+        import os
+
+        try:
+            # Check if LibreOffice is available
+            result = subprocess.run(
+                ['which', 'libreoffice'],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode != 0:
+                self.logger.debug("LibreOffice not available for thumbnail generation")
+                return None
+
+            # Create temp directory for conversion
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Convert to PDF using LibreOffice headless
+                cmd = [
+                    'libreoffice',
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', temp_dir,
+                    file_path
+                ]
+
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=60  # 60 second timeout
+                )
+
+                if result.returncode != 0:
+                    self.logger.warning(f"LibreOffice conversion failed: {result.stderr}")
+                    return None
+
+                # Find the generated PDF
+                base_name = Path(file_path).stem
+                pdf_path = os.path.join(temp_dir, f"{base_name}.pdf")
+
+                if not os.path.exists(pdf_path):
+                    self.logger.warning("PDF output not found after LibreOffice conversion")
+                    return None
+
+                # Convert first page of PDF to image
+                from pdf2image import convert_from_path
+
+                images = convert_from_path(
+                    pdf_path,
+                    dpi=150,
+                    first_page=1,
+                    last_page=1
+                )
+
+                if not images:
+                    return None
+
+                image = images[0]
+
+                # Resize to thumbnail
+                image.thumbnail(
+                    (
+                        self.config.thumbnail.thumbnail_width,
+                        self.config.thumbnail.thumbnail_height
+                    ),
+                    Image.Resampling.LANCZOS
+                )
+
+                # Convert to RGB if necessary
+                if image.mode not in ('RGB', 'L'):
+                    image = image.convert('RGB')
+
+                # Save to bytes
+                buffer = io.BytesIO()
+                image.save(
+                    buffer,
+                    format=self.config.thumbnail.thumbnail_format,
+                    quality=self.config.thumbnail.thumbnail_quality
+                )
+
+                self.logger.debug("Generated thumbnail via LibreOffice conversion")
+                return buffer.getvalue()
+
+        except subprocess.TimeoutExpired:
+            self.logger.warning("LibreOffice conversion timed out")
+            return None
+        except Exception as e:
+            self.logger.warning(f"LibreOffice thumbnail generation failed: {e}")
+            return None

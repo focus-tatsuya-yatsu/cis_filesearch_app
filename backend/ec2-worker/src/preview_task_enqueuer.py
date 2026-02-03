@@ -24,7 +24,8 @@ from botocore.exceptions import ClientError
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import config
+from config import get_config
+config = get_config()
 from opensearch_client import OpenSearchClient
 
 logging.basicConfig(
@@ -75,6 +76,7 @@ class PreviewTaskEnqueuer:
 
     OFFICE_EXTENSIONS = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']
     DOCUWORKS_EXTENSIONS = ['.xdw', '.xbd']
+    PDF_EXTENSIONS = ['.pdf']
 
     def __init__(
         self,
@@ -94,8 +96,8 @@ class PreviewTaskEnqueuer:
         self.batch_size = min(batch_size, 10)  # SQS max is 10
         self.queue_url = queue_url or PREVIEW_QUEUE_URL
 
-        self.sqs = boto3.client('sqs', **config.get_boto3_config())
-        self.opensearch_client = OpenSearchClient()
+        self.sqs = boto3.client('sqs', region_name=config.aws.region)
+        self.opensearch_client = OpenSearchClient(config)
         self.stats = EnqueueStats()
         self.batch_id = f"batch_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
@@ -124,7 +126,7 @@ class PreviewTaskEnqueuer:
 
         try:
             response = self.opensearch_client.client.search(
-                index=self.opensearch_client.index_name,
+                index=config.aws.opensearch_index,
                 body=query
             )
 
@@ -144,6 +146,8 @@ class PreviewTaskEnqueuer:
             extensions.extend(self.OFFICE_EXTENSIONS)
         if file_type in ('docuworks', 'all'):
             extensions.extend(self.DOCUWORKS_EXTENSIONS)
+        if file_type in ('pdf', 'all'):
+            extensions.extend(self.PDF_EXTENSIONS)
         return extensions
 
     def query_files_without_previews(
@@ -188,7 +192,7 @@ class PreviewTaskEnqueuer:
         try:
             # Initial search with scroll
             response = self.opensearch_client.client.search(
-                index=self.opensearch_client.index_name,
+                index=config.aws.opensearch_index,
                 body=query,
                 scroll='5m'
             )
@@ -235,11 +239,13 @@ class PreviewTaskEnqueuer:
             return 'office'
         elif extension.lower() in self.DOCUWORKS_EXTENSIONS:
             return 'docuworks'
+        elif extension.lower() in self.PDF_EXTENSIONS:
+            return 'pdf'
         return 'unknown'
 
     def _extract_s3_key(self, file_path: str) -> str:
         """Extract S3 key from file path."""
-        s3_prefix = f"s3://{config.s3.landing_bucket}/"
+        s3_prefix = f"s3://{config.aws.s3_bucket}/"
         if file_path.startswith(s3_prefix):
             return file_path[len(s3_prefix):]
         elif file_path.startswith("s3://"):
@@ -410,9 +416,9 @@ def main():
     )
     parser.add_argument(
         "--file-type",
-        choices=['office', 'docuworks', 'all'],
+        choices=['office', 'docuworks', 'pdf', 'all'],
         default='all',
-        help="Type of files to process"
+        help="Type of files to process (office, docuworks, pdf, or all)"
     )
     parser.add_argument(
         "--limit",

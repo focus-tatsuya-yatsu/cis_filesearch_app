@@ -19,6 +19,7 @@ import {
   MagnifyingGlassMinusIcon,
   DocumentIcon,
   ArrowDownTrayIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -67,6 +68,8 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
   const [zoomLevel, setZoomLevel] = useState(100)
   const [previewType, setPreviewType] = useState<'images' | 'pdf'>('images')
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [iframeLoading, setIframeLoading] = useState(true)
+  const [iframeError, setIframeError] = useState(false)
 
   /**
    * プレビュー情報を取得
@@ -77,6 +80,8 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
     setErrorType(null)
     setPdfUrl(null)
     setPreviewType('images')
+    setIframeLoading(true)
+    setIframeError(false)
 
     try {
       const response = await fetch(API_URL, {
@@ -385,12 +390,42 @@ export const PdfPreviewModal: FC<PdfPreviewModalProps> = ({
                 </div>
               ) : previewType === 'pdf' && pdfUrl ? (
                 // PDFプレビュー（DocuWorks変換済みPDF等）
-                <div className="h-full w-full bg-[#F2F2F7] dark:bg-[#2C2C2E]">
-                  <iframe
-                    src={pdfUrl}
-                    className="w-full h-full border-0"
-                    title={`${fileName} - PDF Preview`}
-                  />
+                <div className="h-full w-full bg-[#F2F2F7] dark:bg-[#2C2C2E] relative">
+                  {iframeLoading && !iframeError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#F2F2F7] dark:bg-[#2C2C2E]">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#007AFF]" />
+                    </div>
+                  )}
+                  {iframeError ? (
+                    <div className="flex flex-col items-center justify-center h-full px-6">
+                      <div className="w-16 h-16 mb-4 rounded-full bg-[#FF3B30]/10 dark:bg-[#FF453A]/10 flex items-center justify-center">
+                        <ExclamationCircleIcon className="w-8 h-8 text-[#FF3B30] dark:text-[#FF453A]" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                        PDFの読み込みに失敗しました
+                      </h3>
+                      <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93] text-center mb-4">
+                        変換済みPDFの読み込み中にエラーが発生しました。
+                      </p>
+                      <button
+                        onClick={fetchPreviewInfo}
+                        className="px-6 py-2.5 bg-[#007AFF] text-white rounded-lg hover:bg-[#0056D3] transition-colors font-medium"
+                      >
+                        再試行
+                      </button>
+                    </div>
+                  ) : (
+                    <iframe
+                      src={pdfUrl}
+                      className="w-full h-full border-0"
+                      title={`${fileName} - PDF Preview`}
+                      onLoad={() => setIframeLoading(false)}
+                      onError={() => {
+                        setIframeLoading(false)
+                        setIframeError(true)
+                      }}
+                    />
+                  )}
                 </div>
               ) : currentPageUrl ? (
                 <div className="h-full w-full p-4 bg-[#F2F2F7] dark:bg-[#2C2C2E]">

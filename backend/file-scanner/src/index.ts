@@ -8,9 +8,10 @@ import * as dotenv from 'dotenv';
 import { program } from 'commander';
 import * as cron from 'node-cron';
 import { FileSystemAdapterFactory } from '@/adapters';
-import { FileScanner, DatabaseManager, ProgressTracker, S3Uploader, SQSPublisher } from '@/services';
-import { AWSConfig, NASConfig, ScannerConfig } from '@/types';
+import { FileScanner, DatabaseManager, ProgressTracker, S3Uploader, SQSPublisher, SQSConsumer, PowerShellRunner } from '@/services';
+import { AWSConfig, NASConfig, ScannerConfig, SyncResult } from '@/types';
 import { createLogger } from '@/utils/logger';
+import * as path from 'path';
 
 // 環境変数を読み込み
 dotenv.config();
@@ -347,10 +348,11 @@ async function diagnoseSQS() {
     console.log(`  Messages Delayed: ${metrics.approximateNumberOfMessagesDelayed}`);
 
     // 処理速度の分析
-    const totalMessages = metrics.approximateNumberOfMessages +
+    const totalPendingMessages = metrics.approximateNumberOfMessages +
                          metrics.approximateNumberOfMessagesNotVisible;
 
     console.log('\n⚠️ Analysis:');
+    console.log(`  Total pending (queue + in-flight): ${totalPendingMessages}`);
 
     if (metrics.approximateNumberOfMessages > 1000) {
       console.log(`  ⚠️ High backlog detected: ${metrics.approximateNumberOfMessages} messages`);
@@ -432,6 +434,285 @@ async function diagnoseSQS() {
   }
 }
 
+/**
+ * SQS Consumerモードでスキャンを実行
+ * フロントエンドからのNAS同期リクエストを処理
+ *
+ * 処理フロー:
+ * 1. SQSからメッセージを受信
+ * 2. PowerShellスクリプト（nas-sync-improved.ps1）を実行
+ *    - NASから incoming/ フォルダにファイルをコピー
+ *    - DocuWorks Converter と DataSync Monitor が後続処理
+ * 3. DynamoDBに進捗を更新
+ */
+async function startSQSConsumer() {
+  logger.info('========================================');
+  logger.info('Starting SQS Consumer Mode');
+  logger.info('========================================');
+
+  const config = loadConfig();
+
+  // 必須環境変数の確認
+  const syncQueueUrl = process.env.SYNC_SQS_QUEUE_URL;
+  const dynamoTableName = process.env.SYNC_DYNAMODB_TABLE;
+  const nasSyncScriptPath = process.env.NAS_SYNC_SCRIPT_PATH || 'C:\\CIS-FileSearch\\scripts\\nas-sync-improved.ps1';
+  const syncMode = process.env.SYNC_MODE || 'auto'; // 'powershell' | 'nodejs' | 'auto'
+
+  if (!syncQueueUrl) {
+    logger.error('SYNC_SQS_QUEUE_URL environment variable is required');
+    process.exit(1);
+  }
+
+  if (!dynamoTableName) {
+    logger.error('SYNC_DYNAMODB_TABLE environment variable is required');
+    process.exit(1);
+  }
+
+  logger.info(`Queue URL: ${syncQueueUrl}`);
+  logger.info(`DynamoDB Table: ${dynamoTableName}`);
+  logger.info(`Sync Mode: ${syncMode}`);
+
+  // 実行モードの決定
+  const isWindows = PowerShellRunner.isWindowsEnvironment();
+  const usePowerShell = syncMode === 'powershell' || (syncMode === 'auto' && isWindows);
+
+  if (usePowerShell) {
+    logger.info(`PowerShell Script: ${nasSyncScriptPath}`);
+    logger.info('Mode: PowerShell (nas-sync-improved.ps1 + DocuWorks Converter + DataSync Monitor)');
+  } else {
+    logger.info('Mode: Node.js (built-in file scanner - DocuWorks processing not available)');
+    logger.warn('WARNING: DocuWorks OCR processing is not available in Node.js mode');
+  }
+
+  // ホワイトリスト: 許可されたNASサーバー名
+  const allowedNasServers = new Set([
+    'ts-server3', 'ts-server5', 'ts-server6', 'ts-server7'
+  ]);
+
+  // UUID形式のバリデーション
+  const isValidUuid = (str: string): boolean => {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  };
+
+  // スキャン実行関数を定義（PowerShell版）
+  const scanExecutorPowerShell = async (options: {
+    syncId: string;
+    nasServers: string[];
+    fullSync: boolean;
+    onProgress?: (current: number, total: number, currentNas: string, processedFiles: number) => void;
+  }): Promise<SyncResult> => {
+    const { syncId, nasServers, fullSync, onProgress } = options;
+
+    // 入力バリデーション
+    if (!isValidUuid(syncId)) {
+      throw new Error(`Invalid syncId format: ${syncId}`);
+    }
+
+    for (const server of nasServers) {
+      if (!allowedNasServers.has(server)) {
+        throw new Error(`Invalid NAS server: ${server}. Allowed: ${Array.from(allowedNasServers).join(', ')}`);
+      }
+    }
+
+    logger.info(`Executing PowerShell sync for ${syncId}`);
+    logger.info(`  NAS Servers: ${nasServers.join(', ')}`);
+    logger.info(`  Full Sync: ${fullSync}`);
+
+    // PowerShellRunnerを作成
+    const runner = new PowerShellRunner({
+      scriptPath: nasSyncScriptPath,
+      workingDirectory: path.dirname(nasSyncScriptPath),
+      timeout: 4 * 60 * 60 * 1000, // 4時間
+      environment: {
+        AWS_REGION: config.aws.region,
+        AWS_PROFILE: process.env.AWS_PROFILE || 'cis-scanner'
+      }
+    });
+
+    try {
+      // 進捗更新（開始）
+      if (onProgress) {
+        onProgress(0, nasServers.length, 'starting', 0);
+      }
+
+      // PowerShellスクリプトを実行
+      const result = await runner.executeNasSync({
+        fullSync,
+        dryRun: config.scanner.dryRun,
+        onProgress: (message) => {
+          logger.debug(`PowerShell: ${message}`);
+          // 進捗メッセージからNAS名と処理数を抽出
+          const nasMatch = message.match(/\[([^\]]+)\]/);
+          if (nasMatch?.[1] && onProgress) {
+            const currentNas = nasMatch[1];
+            const processedMatch = message.match(/(\d+)\s*\/\s*(\d+)/);
+            if (processedMatch?.[1] && processedMatch?.[2]) {
+              const current = parseInt(processedMatch[1], 10);
+              const total = parseInt(processedMatch[2], 10);
+              onProgress(current, total, currentNas, current);
+            }
+          }
+        }
+      });
+
+      logger.info('PowerShell sync completed:');
+      logger.info(`  New files: ${result.new_files}`);
+      logger.info(`  Changed files: ${result.changed_files}`);
+      logger.info(`  Deleted files: ${result.deleted_files}`);
+      logger.info(`  Synced: ${result.synced}`);
+      logger.info(`  Errors: ${result.errors}`);
+
+      return {
+        newFiles: result.new_files,
+        changedFiles: result.changed_files,
+        deletedFiles: result.deleted_files,
+        syncedFiles: result.synced,
+        errors: result.errors
+      };
+
+    } catch (error) {
+      logger.error('PowerShell sync failed:', error);
+      throw error;
+    }
+  };
+
+  // スキャン実行関数を定義（Node.js版 - 開発/テスト用フォールバック）
+  const scanExecutorNodeJs = async (options: {
+    syncId: string;
+    nasServers: string[];
+    fullSync: boolean;
+    onProgress?: (current: number, total: number, currentNas: string, processedFiles: number) => void;
+  }): Promise<SyncResult> => {
+    const { syncId, nasServers, fullSync, onProgress } = options;
+
+    logger.info(`Executing Node.js scan for sync ${syncId}`);
+    logger.info(`  NAS Servers: ${nasServers.join(', ')}`);
+    logger.info(`  Full Sync: ${fullSync}`);
+
+    let totalNewFiles = 0;
+    let totalChangedFiles = 0;
+    let totalDeletedFiles = 0;
+    let totalSyncedFiles = 0;
+    let totalErrors = 0;
+
+    // 各NASサーバーをスキャン
+    for (let i = 0; i < nasServers.length; i++) {
+      const nasServer = nasServers[i]!;
+      logger.info(`Scanning NAS: ${nasServer} (${i + 1}/${nasServers.length})`);
+
+      try {
+        // コンポーネントを初期化
+        const adapter = FileSystemAdapterFactory.createFromEnv();
+        const database = new DatabaseManager({
+          dbPath: process.env.DB_PATH
+        });
+
+        await adapter.connect();
+        await database.initialize();
+
+        // NASパスを構築
+        const nasPath = `${config.scanner.nasPath}/${nasServer}`;
+
+        const scanner = new FileScanner({
+          adapter,
+          database,
+          excludePatterns: config.scanner.excludePatterns,
+          maxFileSize: config.scanner.maxFileSize,
+          concurrency: config.scanner.parallelism,
+          batchSize: config.scanner.batchSize,
+          dryRun: config.scanner.dryRun
+        });
+
+        const uploader = new S3Uploader({
+          awsConfig: config.aws,
+          adapter,
+          database,
+          dryRun: config.scanner.dryRun
+        });
+
+        let scanResult;
+        if (fullSync) {
+          scanResult = await scanner.startScan(nasPath);
+        } else {
+          const stats = await database.getStatistics();
+          if (stats.lastScanTime) {
+            scanResult = await scanner.quickScan(nasPath, stats.lastScanTime);
+          } else {
+            scanResult = await scanner.startScan(nasPath);
+          }
+        }
+
+        totalNewFiles += scanResult.newFiles.length;
+        totalChangedFiles += scanResult.modifiedFiles.length;
+        totalDeletedFiles += scanResult.deletedFiles.length;
+        totalSyncedFiles += scanResult.newFiles.length + scanResult.modifiedFiles.length;
+        totalErrors += scanResult.errors.length;
+
+        // ファイルをアップロード
+        const filesToUpload = [...scanResult.newFiles, ...scanResult.modifiedFiles];
+        if (filesToUpload.length > 0) {
+          await uploader.uploadBatch(filesToUpload);
+        }
+
+        await uploader.cleanup();
+        await database.close();
+        await adapter.disconnect();
+
+        // 進捗を更新
+        if (onProgress) {
+          onProgress(i + 1, nasServers.length, nasServer, totalSyncedFiles);
+        }
+
+      } catch (error) {
+        totalErrors++;
+        logger.error(`Failed to scan NAS ${nasServer}:`, error);
+      }
+    }
+
+    return {
+      newFiles: totalNewFiles,
+      changedFiles: totalChangedFiles,
+      deletedFiles: totalDeletedFiles,
+      syncedFiles: totalSyncedFiles,
+      errors: totalErrors
+    };
+  };
+
+  // 使用するスキャン実行関数を選択
+  const scanExecutor = usePowerShell ? scanExecutorPowerShell : scanExecutorNodeJs;
+
+  // SQS Consumerを作成して開始
+  const consumer = new SQSConsumer({
+    region: config.aws.region,
+    queueUrl: syncQueueUrl,
+    dynamoTableName,
+    scanExecutor,
+    credentials: config.aws.accessKeyId && config.aws.secretAccessKey ? {
+      accessKeyId: config.aws.accessKeyId,
+      secretAccessKey: config.aws.secretAccessKey
+    } : undefined
+  });
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    logger.info('Received shutdown signal');
+    await consumer.cleanup();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
+  // 統計情報を定期的に表示
+  setInterval(() => {
+    const stats = consumer.getStatistics();
+    logger.info(`Consumer stats: processed=${stats.processedCount}, errors=${stats.errorCount}`);
+  }, 60000); // 1分ごと
+
+  // Consumer開始
+  await consumer.start();
+}
+
 // CLIコマンドを設定
 program
   .name('cis-file-scanner')
@@ -470,6 +751,12 @@ program
   .command('diagnose-sqs')
   .description('Diagnose SQS queue status and performance')
   .action(diagnoseSQS);
+
+// SQS Consumerコマンド（デーモンモード）
+program
+  .command('consumer')
+  .description('Start SQS consumer mode to process sync requests from web UI')
+  .action(startSQSConsumer);
 
 // CLIを実行
 program.parse();

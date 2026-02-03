@@ -21,6 +21,7 @@ class AWSConfig:
 
     # S3 Configuration
     s3_bucket: str = os.environ.get('S3_BUCKET', 'cis-filesearch-storage')
+    s3_thumbnail_bucket: str = os.environ.get('S3_THUMBNAIL_BUCKET', 'cis-filesearch-s3-thumbnail')
     s3_processed_prefix: str = os.environ.get('S3_PROCESSED_PREFIX', 'processed/')
     s3_failed_prefix: str = os.environ.get('S3_FAILED_PREFIX', 'failed/')
 

@@ -5,6 +5,7 @@ Handles Fuji Xerox DocuWorks files (.xdw, .xbd)
 IMPORTANT: Requires DocuWorks SDK and commercial license
 """
 
+import io
 import time
 import subprocess
 from pathlib import Path
@@ -75,6 +76,11 @@ class DocuWorksProcessor(BaseProcessor):
             # Add file metadata
             metadata.update(self._extract_metadata(file_path))
 
+            # Generate thumbnail if enabled
+            thumbnail_data = None
+            if self.config.thumbnail.generate_for_docuworks:
+                thumbnail_data = self._generate_thumbnail(file_path)
+
             # Calculate processing time
             processing_time = time.time() - start_time
 
@@ -90,6 +96,8 @@ class DocuWorksProcessor(BaseProcessor):
                 word_count=self._count_words(extracted_text),
                 char_count=len(extracted_text),
                 page_count=metadata.get('page_count', 0),
+                thumbnail_data=thumbnail_data,
+                thumbnail_format=self.config.thumbnail.thumbnail_format,
                 metadata=metadata,
                 processing_time_seconds=processing_time,
                 processor_name=self.__class__.__name__,
@@ -162,6 +170,110 @@ class DocuWorksProcessor(BaseProcessor):
             "DocuWorks SDK integration not implemented. "
             "Please install DocuWorks SDK and implement COM integration."
         )
+
+    def _generate_thumbnail(self, file_path: str) -> Optional[bytes]:
+        """
+        Generate thumbnail for DocuWorks file
+
+        Uses xdw2pdf conversion if available, otherwise returns None
+
+        Args:
+            file_path: Path to DocuWorks file
+
+        Returns:
+            Thumbnail as bytes or None
+        """
+        try:
+            # Try to use xdw2pdf tool if available (common on systems with DocuWorks)
+            import subprocess
+            import tempfile
+            import os
+
+            # Check if xdw2pdf or similar tool is available
+            xdw_converters = ['xdw2pdf', 'dwconv']
+
+            converter_found = None
+            for converter in xdw_converters:
+                result = subprocess.run(
+                    ['which', converter],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0:
+                    converter_found = converter
+                    break
+
+            if not converter_found:
+                self.logger.debug("No DocuWorks converter tool found for thumbnail generation")
+                return None
+
+            # Create temp directory for conversion
+            with tempfile.TemporaryDirectory() as temp_dir:
+                base_name = Path(file_path).stem
+                pdf_path = os.path.join(temp_dir, f"{base_name}.pdf")
+
+                # Convert XDW to PDF
+                if converter_found == 'xdw2pdf':
+                    cmd = [converter_found, file_path, pdf_path]
+                else:
+                    cmd = [converter_found, '-o', pdf_path, file_path]
+
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+
+                if result.returncode != 0 or not os.path.exists(pdf_path):
+                    self.logger.warning(f"DocuWorks to PDF conversion failed: {result.stderr}")
+                    return None
+
+                # Convert first page of PDF to image
+                from pdf2image import convert_from_path
+
+                images = convert_from_path(
+                    pdf_path,
+                    dpi=150,
+                    first_page=1,
+                    last_page=1
+                )
+
+                if not images:
+                    return None
+
+                image = images[0]
+
+                # Resize to thumbnail
+                image.thumbnail(
+                    (
+                        self.config.thumbnail.thumbnail_width,
+                        self.config.thumbnail.thumbnail_height
+                    ),
+                    Image.Resampling.LANCZOS
+                )
+
+                # Convert to RGB if necessary
+                if image.mode not in ('RGB', 'L'):
+                    image = image.convert('RGB')
+
+                # Save to bytes
+                buffer = io.BytesIO()
+                image.save(
+                    buffer,
+                    format=self.config.thumbnail.thumbnail_format,
+                    quality=self.config.thumbnail.thumbnail_quality
+                )
+
+                self.logger.debug("Generated thumbnail from DocuWorks via PDF conversion")
+                return buffer.getvalue()
+
+        except subprocess.TimeoutExpired:
+            self.logger.warning("DocuWorks conversion timed out")
+            return None
+        except Exception as e:
+            self.logger.warning(f"DocuWorks thumbnail generation failed: {e}")
+            return None
 
     def _process_with_ocr_fallback(
         self,
@@ -250,6 +362,11 @@ class DocuWorksProcessor(BaseProcessor):
                 }
                 metadata.update(self._extract_metadata(file_path))
 
+                # Generate thumbnail if enabled
+                thumbnail_data = None
+                if self.config.thumbnail.generate_for_docuworks:
+                    thumbnail_data = self._generate_thumbnail(file_path)
+
                 # Calculate processing time
                 processing_time = time.time() - start_time
 
@@ -265,6 +382,8 @@ class DocuWorksProcessor(BaseProcessor):
                     word_count=self._count_words(extracted_text),
                     char_count=len(extracted_text),
                     page_count=len(images),
+                    thumbnail_data=thumbnail_data,
+                    thumbnail_format=self.config.thumbnail.thumbnail_format,
                     metadata=metadata,
                     processing_time_seconds=processing_time,
                     processor_name=f"{self.__class__.__name__} (OCR Fallback)",

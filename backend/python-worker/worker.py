@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import unquote_plus  # CRITICAL: For URL decoding S3 keys
 
 import boto3
 from botocore.exceptions import ClientError
@@ -128,7 +129,25 @@ class FileProcessingWorker:
         # DLQ URL (取得)
         self.dlq_url = self._get_dlq_url()
 
-        self.logger.info("Worker initialized successfully")
+        # Log critical configuration for debugging
+        self.logger.info("=" * 60)
+        self.logger.info("Worker initialized with configuration:")
+        self.logger.info(f"  OpenSearch connected: {self.opensearch.is_connected()}")
+        self.logger.info(f"  OpenSearch endpoint: {config.aws.opensearch_endpoint[:50] if config.aws.opensearch_endpoint else 'NOT SET'}")
+        self.logger.info(f"  S3 bucket: {config.aws.s3_bucket}")
+        self.logger.info(f"  S3 thumbnail bucket: {config.aws.s3_thumbnail_bucket}")
+        self.logger.info(f"  SQS queue: {config.aws.sqs_queue_url[:50] if config.aws.sqs_queue_url else 'NOT SET'}")
+        self.logger.info(f"  DLQ URL: {self.dlq_url[:50] if self.dlq_url else 'NOT SET'}")
+        self.logger.info(f"  Image embedding enabled: {embedding_enabled}")
+        self.logger.info(f"  Thumbnail for images: {config.thumbnail.generate_for_images}")
+        self.logger.info(f"  Thumbnail for PDFs: {config.thumbnail.generate_for_pdfs}")
+        self.logger.info("=" * 60)
+
+        # CRITICAL CHECK: Fail fast if OpenSearch is not connected
+        if not self.opensearch.is_connected():
+            self.logger.error("CRITICAL: OpenSearch is NOT connected!")
+            self.logger.error("Files cannot be indexed. Check OPENSEARCH_ENDPOINT environment variable.")
+            self.logger.error("Worker will send all messages to DLQ until OpenSearch is connected.")
 
     def _get_dlq_url(self) -> Optional[str]:
         """
@@ -231,6 +250,18 @@ class FileProcessingWorker:
             True if successful
         """
         try:
+            # Security: Validate S3 key to prevent path traversal
+            if '..' in key or key.startswith('/'):
+                self.logger.error(f"Security: Invalid S3 key pattern detected")
+                return False
+
+            # Security: Ensure local_path is within temp directory
+            temp_dir = Path(self.config.processing.temp_dir).resolve()
+            local_path_resolved = Path(local_path).resolve()
+            if not str(local_path_resolved).startswith(str(temp_dir)):
+                self.logger.error("Security: Path traversal attempt detected in local_path")
+                return False
+
             self.logger.info(f"Downloading s3://{bucket}/{key}")
 
             self.s3_client.download_file(bucket, key, local_path)
@@ -247,14 +278,24 @@ class FileProcessingWorker:
             self.logger.error(f"Unexpected error during download: {e}")
             return False
 
-    def _extract_path_metadata(self, document: Dict[str, Any], s3_key: str) -> None:
+    def _extract_path_metadata(
+        self,
+        document: Dict[str, Any],
+        s3_key: str,
+        original_path: Optional[str] = None
+    ) -> None:
         """
         Extract category, nas_server, and root_folder from S3 key path.
+        Also generates nas_path for display using original_path if available.
 
         S3 key format examples:
         - documents/road/ts-server3/R06_JOB/.../file.xdw
         - documents/structure/ts-server6/H22_JOB/.../file.pdf
         - processed/road/ts-server5/trashbox/.../file.doc
+
+        Original path format (from file-scanner):
+        - /mnt/nas/ts-server3/R06_JOB/.../file.xdw
+        - \\ts-server3\share\R06_JOB\...\file.xdw
 
         Mapping:
         - road: ts-server3, ts-server5 (道路)
@@ -263,8 +304,58 @@ class FileProcessingWorker:
         Args:
             document: Document dictionary to update
             s3_key: S3 object key
+            original_path: Original NAS path from file-scanner (optional)
         """
         import re
+
+        # Helper function to convert original_path to UNC path
+        def convert_original_to_nas_path(orig_path: str) -> Optional[str]:
+            """
+            Convert original path to Windows UNC path.
+
+            Examples:
+            - /mnt/nas/ts-server3/R06_JOB/file.pdf → \\ts-server3\share\R06_JOB\file.pdf
+            - /mnt/ts-server3/share/R06_JOB/file.pdf → \\ts-server3\share\R06_JOB\file.pdf
+            - \\ts-server3\share\R06_JOB\file.pdf → \\ts-server3\share\R06_JOB\file.pdf (already UNC)
+            """
+            if not orig_path:
+                return None
+
+            # Already UNC path
+            if orig_path.startswith('\\\\'):
+                return orig_path
+
+            # Normalize path separators
+            normalized = orig_path.replace('\\', '/')
+
+            # Extract server name
+            server_match = re.search(r'(ts-server\d+)', normalized)
+            if not server_match:
+                return None
+
+            nas_server = server_match.group(1)
+
+            # Get the path after server name
+            parts = normalized.split(f'{nas_server}/')
+            if len(parts) < 2:
+                return None
+
+            remaining = parts[1]
+
+            # Remove 'share/' prefix if present (some paths have it, some don't)
+            if remaining.startswith('share/'):
+                remaining = remaining[6:]
+
+            # Convert to Windows path
+            windows_path = remaining.replace('/', '\\')
+
+            return f"\\\\{nas_server}\\share\\{windows_path}"
+
+        # Category display mapping
+        category_display_map = {
+            'road': '道路',
+            'structure': '構造'
+        }
 
         # Pattern to match: {prefix}/{category}/{server}/{root_folder}/...
         # Prefixes: documents, processed, docuworks-converted
@@ -276,31 +367,37 @@ class FileProcessingWorker:
             nas_server = match.group(2)
             root_folder = match.group(3)
 
-            # Category display mapping
-            category_display_map = {
-                'road': '道路',
-                'structure': '構造'
-            }
-
             document['category'] = category
             document['category_display'] = category_display_map.get(category, category)
             document['nas_server'] = nas_server
             document['root_folder'] = root_folder
 
-            # Generate NAS path for display
-            # e.g., \\ts-server3\share\R06_JOB\...
-            remaining_path = s3_key.split(f'{nas_server}/', 1)[-1] if nas_server in s3_key else ''
-            # Python 3.11+ doesn't allow backslash in f-string expressions
-            windows_path = remaining_path.replace('/', '\\')
-            document['nas_path'] = f"\\\\{nas_server}\\share\\{windows_path}"
+            # Generate NAS path: prefer original_path if available
+            if original_path:
+                nas_path = convert_original_to_nas_path(original_path)
+                if nas_path:
+                    document['nas_path'] = nas_path
+                    self.logger.debug(f"NAS path from original_path: {nas_path}")
+                else:
+                    # Fallback to s3_key based generation
+                    remaining_path = s3_key.split(f'{nas_server}/', 1)[-1] if nas_server in s3_key else ''
+                    windows_path = remaining_path.replace('/', '\\')
+                    document['nas_path'] = f"\\\\{nas_server}\\share\\{windows_path}"
+            else:
+                # Generate from s3_key
+                remaining_path = s3_key.split(f'{nas_server}/', 1)[-1] if nas_server in s3_key else ''
+                windows_path = remaining_path.replace('/', '\\')
+                document['nas_path'] = f"\\\\{nas_server}\\share\\{windows_path}"
 
             self.logger.debug(
                 f"Extracted metadata: category={category}, server={nas_server}, "
-                f"folder={root_folder}"
+                f"folder={root_folder}, nas_path={document.get('nas_path', 'N/A')}"
             )
         else:
             # Fallback: try to extract server from path
             server_match = re.search(r'(ts-server\d+)', s3_key)
+            nas_server = None
+
             if server_match:
                 nas_server = server_match.group(1)
                 document['nas_server'] = nas_server
@@ -314,9 +411,28 @@ class FileProcessingWorker:
                     document['category'] = 'structure'
                     document['category_display'] = '構造'
 
-            self.logger.warning(
-                f"Could not fully extract path metadata from key: {s3_key[:100]}..."
-            )
+            # Generate nas_path even in fallback case
+            if original_path:
+                nas_path = convert_original_to_nas_path(original_path)
+                if nas_path:
+                    document['nas_path'] = nas_path
+                    self.logger.info(f"NAS path generated from original_path (fallback): {nas_path}")
+            elif nas_server:
+                # Generate from s3_key as last resort
+                remaining_path = s3_key.split(f'{nas_server}/', 1)[-1] if nas_server in s3_key else ''
+                if remaining_path:
+                    windows_path = remaining_path.replace('/', '\\')
+                    document['nas_path'] = f"\\\\{nas_server}\\share\\{windows_path}"
+                    self.logger.info(f"NAS path generated from s3_key (fallback): {document['nas_path']}")
+
+            if 'nas_path' not in document:
+                self.logger.warning(
+                    f"Could not generate nas_path from key: {s3_key[:100]}..."
+                )
+            else:
+                self.logger.debug(
+                    f"Fallback metadata extracted: server={nas_server}, nas_path={document.get('nas_path', 'N/A')}"
+                )
 
     def upload_thumbnail_to_s3(
         self,
@@ -325,32 +441,41 @@ class FileProcessingWorker:
         key: str
     ) -> Optional[str]:
         """
-        Upload thumbnail to S3
+        Upload thumbnail to S3 (dedicated thumbnail bucket)
 
         Args:
             thumbnail_data: Thumbnail image data
-            bucket: S3 bucket name
+            bucket: S3 bucket name (ignored, uses dedicated thumbnail bucket)
             key: S3 object key (original file key)
 
         Returns:
             S3 URL of uploaded thumbnail or None
         """
         try:
-            # Create thumbnail key
-            thumbnail_key = f"thumbnails/{key}.jpg"
+            # Use dedicated thumbnail bucket to avoid S3 event notification loop
+            thumbnail_bucket = self.config.aws.s3_thumbnail_bucket
 
-            # Upload thumbnail
+            # Create thumbnail key - include hash for uniqueness
+            # This ensures files with the same name in different folders get unique thumbnails
+            import hashlib
+            from pathlib import Path
+            file_name = Path(key).stem  # Get filename without extension
+            path_hash = hashlib.md5(key.encode()).hexdigest()[:8]  # Short hash for uniqueness
+            thumbnail_key = f"thumbnails/{file_name}_{path_hash}_thumb.jpg"
+
+            # Upload thumbnail to dedicated bucket
             self.s3_client.put_object(
-                Bucket=bucket,
+                Bucket=thumbnail_bucket,
                 Key=thumbnail_key,
                 Body=thumbnail_data,
                 ContentType='image/jpeg',
                 Metadata={
-                    'original-key': key
+                    'original-key': key,
+                    'original-bucket': bucket
                 }
             )
 
-            thumbnail_url = f"s3://{bucket}/{thumbnail_key}"
+            thumbnail_url = f"s3://{thumbnail_bucket}/{thumbnail_key}"
             self.logger.debug(f"Uploaded thumbnail: {thumbnail_url}")
 
             return thumbnail_url
@@ -378,17 +503,34 @@ class FileProcessingWorker:
             body = json.loads(message['Body'])
 
             # Extract file information
+            original_path = None  # Original NAS path from file-scanner
             if 'Records' in body:
                 # S3 event notification format
                 record = body['Records'][0]
                 bucket = record['s3']['bucket']['name']
-                key = record['s3']['object']['key']
+                # CRITICAL FIX: S3 event notifications URL-encode the object key
+                # Must decode to handle Japanese characters, spaces, and special chars
+                raw_key = record['s3']['object']['key']
+                key = unquote_plus(raw_key)  # unquote_plus handles + as space too
+                self.logger.debug(f"Decoded S3 key: {raw_key[:50]}... -> {key[:50]}...")
             else:
-                # Custom message format
+                # Custom message format (from file-scanner)
                 bucket = body.get('bucket', self.config.aws.s3_bucket)
-                key = body['key']
+                key = body.get('key') or body.get('s3Key')  # Support both formats
+                # Also decode in case custom messages are URL-encoded
+                if key:
+                    key = unquote_plus(key)
+                # Extract original NAS path if available
+                original_path = body.get('originalPath') or body.get('original_path')
 
             self.logger.info(f"Processing: s3://{bucket}/{key}")
+            if original_path:
+                self.logger.debug(f"Original NAS path: {original_path}")
+
+            # Skip files from thumbnails directory (prevent recursive processing)
+            if key.startswith('thumbnails/') or '/thumbnails/' in key:
+                self.logger.info(f"Skipping thumbnail file: {key}")
+                return (True, "Skipped - thumbnail file")
 
             # Check if file type is supported
             if not self.file_router.is_supported(key):
@@ -429,10 +571,18 @@ class FileProcessingWorker:
             # Extract category, nas_server, root_folder from S3 key
             # Key format: documents/{category}/{server}/{root_folder}/...
             # or: processed/{category}/{server}/{root_folder}/...
-            self._extract_path_metadata(document, key)
+            # Also generates nas_path using original_path if available
+            self._extract_path_metadata(document, key, original_path)
+
+            # IMPORTANT: Override file_name and file_extension with correct values from S3 key
+            # The file_router extracts these from the temp file path, which is incorrect
+            document['file_name'] = Path(key).name
+            document['file_extension'] = Path(key).suffix.lower()
+            document['file_path'] = f"s3://{bucket}/{key}"
 
             # Upload thumbnail if available
             if result.thumbnail_data:
+                self.logger.info(f"Thumbnail generated ({len(result.thumbnail_data)} bytes), uploading to S3...")
                 thumbnail_url = self.upload_thumbnail_to_s3(
                     result.thumbnail_data,
                     bucket,
@@ -440,6 +590,12 @@ class FileProcessingWorker:
                 )
                 if thumbnail_url:
                     document['thumbnail_url'] = thumbnail_url
+                    self.logger.info(f"Thumbnail uploaded: {thumbnail_url}")
+                else:
+                    self.logger.warning("Thumbnail upload failed")
+            else:
+                file_ext = Path(key).suffix.lower()
+                self.logger.info(f"No thumbnail generated for {file_ext} file (processor: {result.processor_name})")
 
             # Generate image embedding for similarity search
             file_ext = Path(key).suffix.lower()
@@ -458,16 +614,20 @@ class FileProcessingWorker:
                     self.logger.warning("Failed to generate image embedding - continuing without it")
 
             # Index to OpenSearch
-            if self.opensearch.is_connected():
-                self.logger.info("Indexing to OpenSearch...")
-                if not self.opensearch.index_document(document, document_id=key):
-                    error_msg = "Failed to index document to OpenSearch"
-                    self.logger.error(error_msg)
-                    return (False, error_msg)
+            # CRITICAL FIX: OpenSearch indexing is REQUIRED, not optional
+            # If OpenSearch is not connected, this is a FAILURE that must go to DLQ
+            if not self.opensearch.is_connected():
+                error_msg = "OpenSearch not connected - CANNOT index document (check OPENSEARCH_ENDPOINT env var and connectivity)"
+                self.logger.error(error_msg)
+                return (False, error_msg)
 
-                self.logger.info("Successfully indexed document")
-            else:
-                self.logger.warning("OpenSearch not connected - skipping indexing")
+            self.logger.info("Indexing to OpenSearch...")
+            if not self.opensearch.index_document(document, document_id=key):
+                error_msg = "Failed to index document to OpenSearch"
+                self.logger.error(error_msg)
+                return (False, error_msg)
+
+            self.logger.info("Successfully indexed document")
 
             self.logger.info(
                 f"Successfully processed: {Path(key).name} "

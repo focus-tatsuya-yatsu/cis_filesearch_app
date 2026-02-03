@@ -133,7 +133,13 @@ const isAllowedNASServer = (s3Path: string): boolean => {
 /**
  * S3パスをUNCパス形式に変換（カスタムプロトコル用）
  * 例: cis-filesearch-s3-landing/documents/road/ts-server3/H25_JOB/file.pdf
- *   → \\ts-server3\H25_JOB\file.pdf
+ *   → \\ts-server3\share\H25_JOB\file.pdf
+ *
+ * NAS構造:
+ *   ts-server3 (192.168.1.212) → \\ts-server3\share\ → R:
+ *   ts-server5 (192.168.1.214) → \\ts-server5\share\ → U:
+ *   ts-server6 (192.168.1.217) → \\ts-server6\share\ → V:
+ *   ts-server7 (192.168.1.218) → \\ts-server7\share\ → S:
  */
 const convertS3PathToUNCPath = (s3Path: string): string | null => {
   // セキュリティチェック: 許可されたサーバーのみ
@@ -161,8 +167,8 @@ const convertS3PathToUNCPath = (s3Path: string): string | null => {
     const serverIndex = path.indexOf(serverName)
     const afterServer = path.substring(serverIndex + serverName.length)
 
-    // UNCパス形式（\\server\path）で返す
-    return '\\\\' + serverName + afterServer.replace(/\//g, '\\')
+    // UNCパス形式（\\server\share\path）で返す - "share" フォルダを追加
+    return '\\\\' + serverName + '\\share' + afterServer.replace(/\//g, '\\')
   }
 
   return null

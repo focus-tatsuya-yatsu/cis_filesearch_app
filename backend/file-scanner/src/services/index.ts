@@ -17,3 +17,12 @@ export type { S3UploaderConfig } from './S3Uploader';
 
 export { SQSPublisher } from './SQSPublisher';
 export type { SQSPublisherConfig } from './SQSPublisher';
+
+export { SQSConsumer } from './SQSConsumer';
+export type { SQSConsumerConfig, ScanExecutor } from './SQSConsumer';
+
+export { DynamoProgressUpdater } from './DynamoProgressUpdater';
+export type { DynamoProgressUpdaterConfig } from './DynamoProgressUpdater';
+
+export { PowerShellRunner } from './PowerShellRunner';
+export type { PowerShellRunnerConfig, PowerShellResult, NasSyncResult } from './PowerShellRunner';

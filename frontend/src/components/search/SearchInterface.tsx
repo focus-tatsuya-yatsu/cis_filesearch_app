@@ -945,22 +945,44 @@ export const SearchInterface: FC = () => {
           filePath={previewFile.filePath}
           fileType={previewFile.fileType}
           s3Key={(() => {
-            // filePathからサーバー情報を抽出してS3パスを構築
-            // 例: \\U:\R05_JOB\... → documents/road/ts-server5/...
+            // filePathからS3キーを抽出
+            // 例: s3://cis-filesearch-s3-landing/documents/road/ts-server5/... → documents/road/ts-server5/...
             const path = previewFile.filePath
-            // ドライブレターからサーバーを特定
+
+            // S3 URL形式の場合
+            if (path.startsWith('s3://')) {
+              // s3://bucket-name/key → key を抽出
+              const match = path.match(/^s3:\/\/[^\/]+\/(.+)$/)
+              if (match) {
+                return match[1]
+              }
+            }
+
+            // 既にS3キー形式の場合（documents/またはprocessed/で始まる）
+            if (path.startsWith('documents/') || path.startsWith('processed/')) {
+              return path
+            }
+
+            // Windowsパス形式（バックスラッシュ含む、またはドライブレター）
             const driveMapping: Record<string, { category: string; server: string }> = {
               'R:': { category: 'road', server: 'ts-server3' },
               'U:': { category: 'road', server: 'ts-server5' },
               'V:': { category: 'structure', server: 'ts-server6' },
               'S:': { category: 'structure', server: 'ts-server7' },
             }
-            const driveMatch = path.match(/([A-Z]:)/i)
+            const driveMatch = path.match(/^([A-Z]:)/i)
             if (driveMatch && driveMapping[driveMatch[1].toUpperCase()]) {
               const { category, server } = driveMapping[driveMatch[1].toUpperCase()]
-              return `documents/${category}/${server}/${path.replace(/^.*?[A-Z]:\\?/i, '')}`
+              // Windowsパスのバックスラッシュをスラッシュに変換
+              const relativePath = path
+                .replace(/^[A-Z]:\\?/i, '')
+                .replace(/\\/g, '/')
+              return `documents/${category}/${server}/${relativePath}`
             }
-            return `processed/${path.replace(/^[\\\/]+/, '')}`
+
+            // その他の形式（相対パス等）
+            const normalizedPath = path.replace(/\\/g, '/').replace(/^[\\\/]+/, '')
+            return `documents/${normalizedPath}`
           })()}
           keywords={searchQuery ? searchQuery.split(' ') : []}
         />

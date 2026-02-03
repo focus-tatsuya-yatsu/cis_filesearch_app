@@ -31,10 +31,11 @@ fi
 
 # 必要なファイルの確認
 REQUIRED_FILES=(
-    "インストール.bat"
-    "アンインストール.bat"
+    "install.bat"
+    "uninstall.bat"
     "setup.ps1"
     "cis-open-handler.bat"
+    "cis-open-handler.ps1"
     "README.md"
 )
 
