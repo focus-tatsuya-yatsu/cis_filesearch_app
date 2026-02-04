@@ -13,7 +13,7 @@ import { FC, useState, useCallback } from 'react'
 
 import { Search, Settings, Bell, User } from 'lucide-react'
 
-import { Button } from '@/components/ui'
+import { Button, DownloadButton } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { SyncButton } from '@/components/sync'
 import { useAuth } from '@/contexts/AuthContext'
@@ -109,6 +109,11 @@ export const Header: FC = () => {
 
           {/* アクションボタン */}
           <div className="flex items-center gap-2">
+            <DownloadButton
+              href="/downloads/CIS-FileHandler-Setup.zip"
+              fileName="CIS-FileHandler-Setup"
+              label="ダウンロード"
+            />
             <ThemeToggle />
             <SyncButton />
             <Button

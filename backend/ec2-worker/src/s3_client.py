@@ -9,8 +9,7 @@ from pathlib import Path
 import tempfile
 import boto3
 from botocore.exceptions import ClientError
-from config import get_config
-config = get_config()
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +20,8 @@ class S3Client:
     def __init__(self):
         """初期化"""
         self.s3 = boto3.client('s3', region_name=config.aws.region)
-        self.landing_bucket = config.aws.s3_bucket
-        self.thumbnail_bucket = config.aws.s3_thumbnail_bucket
+        self.landing_bucket = config.s3.landing_bucket
+        self.thumbnail_bucket = config.s3.thumbnail_bucket
 
     def download_file(self, bucket: str, key: str, local_path: Optional[str] = None) -> str:
         """

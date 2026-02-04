@@ -555,6 +555,113 @@ async function getDocuWorksConvertedPdfUrl(fileName: string, s3Key?: string): Pr
 }
 
 /**
+ * Office変換済みPDFのPresigned URLを取得
+ *
+ * 変換済みPDFは以下の形式で保存される:
+ * office-converted/structure/{server}/{relative_path}/{filename}.pdf
+ * または
+ * office-converted/{category}/{server}/{relative_path}/{filename}.pdf
+ *
+ * @param fileName - オリジナルのファイル名
+ * @param s3Key - S3キー（オプション、パス推定に使用）
+ */
+async function getOfficeConvertedPdfUrl(fileName: string, s3Key?: string): Promise<{ url: string; found: boolean }> {
+  // 元のファイル名から拡張子を除去
+  const baseFileName = fileName.replace(/\.(docx?|xlsx?|pptx?)$/i, '');
+  const pdfFileName = `${baseFileName}.pdf`;
+
+  console.log(`[Office Preview] Searching: fileName=${fileName}, baseFileName=${baseFileName}`);
+
+  // s3Keyからサーバー名とパスを抽出
+  let serverName: string | null = null;
+  let relativePath: string | null = null;
+
+  if (s3Key) {
+    const serverMatch = s3Key.match(/(ts-server\d+)/i);
+    if (serverMatch) {
+      serverName = serverMatch[1];
+    }
+
+    // 相対パスを抽出（サーバー名以降のパス）
+    if (serverName) {
+      const pathMatch = s3Key.match(new RegExp(`${serverName}/(.+)/[^/]+$`, 'i'));
+      if (pathMatch) {
+        relativePath = pathMatch[1];
+      }
+    }
+  }
+
+  console.log(`[Office Preview] Extracted: server=${serverName}, relativePath=${relativePath}`);
+
+  // 検索するプレフィックスのリスト
+  const searchPrefixes: string[] = [];
+
+  // 1. 相対パスが分かる場合は直接検索
+  if (serverName && relativePath) {
+    searchPrefixes.push(`office-converted/structure/${serverName}/${relativePath}/`);
+    searchPrefixes.push(`office-converted/road/${serverName}/${relativePath}/`);
+    searchPrefixes.push(`office-converted/structure/${serverName}/`);
+  }
+
+  // 2. サーバー名のみ分かる場合
+  if (serverName) {
+    searchPrefixes.push(`office-converted/structure/${serverName}/`);
+    searchPrefixes.push(`office-converted/road/${serverName}/`);
+  }
+
+  // 3. 全体検索（最後の手段）
+  searchPrefixes.push('office-converted/');
+
+  for (const searchPrefix of searchPrefixes) {
+    try {
+      console.log(`[Office Preview] Searching in: ${searchPrefix}`);
+
+      const listCommand = new ListObjectsV2Command({
+        Bucket: LANDING_BUCKET,
+        Prefix: searchPrefix,
+        MaxKeys: 500,
+      });
+
+      const response = await s3Client.send(listCommand);
+
+      if (response.Contents) {
+        for (const obj of response.Contents) {
+          if (!obj.Key?.endsWith('.pdf')) continue;
+
+          const s3FileName = obj.Key.split('/').pop() || '';
+          const s3BaseName = s3FileName.replace(/\.pdf$/i, '');
+
+          // ファイル名が一致するか確認
+          if (s3BaseName === baseFileName ||
+              s3FileName === pdfFileName ||
+              s3BaseName.includes(baseFileName) ||
+              baseFileName.includes(s3BaseName)) {
+            console.log(`[Office Preview] Found: ${obj.Key}`);
+
+            const command = new GetObjectCommand({
+              Bucket: LANDING_BUCKET,
+              Key: obj.Key,
+              ResponseContentType: 'application/pdf',
+              ResponseContentDisposition: 'inline',
+            });
+
+            return {
+              url: await getSignedUrl(s3Client, command, { expiresIn: 3600 }),
+              found: true,
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`[Office Preview] Error searching in ${searchPrefix}:`, err);
+    }
+  }
+
+  console.log(`[Office Preview] PDF not found for: ${baseFileName}`);
+  return { url: '', found: false };
+}
+
+/**
  * プレビューリクエストを処理
  */
 async function handlePreviewRequest(params: {
@@ -611,6 +718,36 @@ async function handlePreviewRequest(params: {
           }),
         };
       }
+    }
+
+    // Officeファイルの場合は変換済みPDFを優先的に検索
+    const isOffice = /\.(docx?|xlsx?|pptx?)$/i.test(fileName);
+
+    if (isOffice) {
+      console.log(`Processing Office preview request: ${fileName}`);
+
+      // まずPDF変換済みファイルを検索
+      const pdfResult = await getOfficeConvertedPdfUrl(fileName, s3Key);
+
+      if (pdfResult.found) {
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: true,
+            data: {
+              fileName,
+              previewType: 'pdf',
+              pdfUrl: pdfResult.url,
+              totalPages: 1, // PDFの場合、フロントエンドでページ数を取得
+              message: 'Office file converted to PDF',
+            },
+          }),
+        };
+      }
+
+      // PDF変換済みファイルがない場合は従来のJPEGプレビューにフォールバック
+      console.log(`[Office Preview] PDF not found, falling back to JPEG preview`);
     }
 
     // 通常のファイル（JPEG プレビュー）

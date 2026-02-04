@@ -34,7 +34,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import config
 from s3_client import S3Client
 from opensearch_client import OpenSearchClient
-from preview_generator import PreviewGenerator, PreviewConfig
 from office_converter import OfficeConverter
 
 # Configure logging
@@ -79,15 +78,17 @@ class BatchStats:
 
 class OfficePreviewBatchProcessor:
     """
-    Batch processor for generating Office file previews.
+    Batch processor for generating Office file PDF previews.
 
     This processor:
-    1. Queries OpenSearch for Office files without preview_images
+    1. Queries OpenSearch for Office files without converted_pdf_url
     2. Downloads the original file from S3
     3. Converts to PDF using LibreOffice (via OfficeConverter)
-    4. Generates preview images using PreviewGenerator
-    5. Uploads previews to S3 thumbnail bucket
-    6. Updates the OpenSearch document with preview_images array
+    4. Uploads the PDF to S3 office-converted folder
+    5. Updates the OpenSearch document with converted_pdf_url
+
+    Note: This replaces the old JPEG preview approach with direct PDF serving,
+    which is more efficient and provides better quality.
     """
 
     OFFICE_EXTENSIONS = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']
@@ -131,16 +132,6 @@ class OfficePreviewBatchProcessor:
         if libreoffice_version:
             logger.info(f"  LibreOffice: {libreoffice_version}")
 
-        # Initialize preview generator with default config
-        preview_config = PreviewConfig(
-            dpi=config.preview.dpi,
-            max_width=config.preview.max_width,
-            max_height=config.preview.max_height,
-            quality=config.preview.quality,
-            max_pages=config.preview.max_pages
-        )
-        self.preview_generator = PreviewGenerator(preview_config)
-
         # Statistics
         self.stats = BatchStats(start_time=time.time())
 
@@ -152,7 +143,7 @@ class OfficePreviewBatchProcessor:
         offset: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        Query OpenSearch for Office files without preview images.
+        Query OpenSearch for Office files without converted PDF.
 
         Args:
             limit: Maximum number of results to return
@@ -162,7 +153,8 @@ class OfficePreviewBatchProcessor:
             List of documents from OpenSearch
         """
         try:
-            # Build the query for Office files without preview_images
+            # Build the query for Office files without converted_pdf_url
+            # Also include files without preview_images for backward compatibility
             query = {
                 "query": {
                     "bool": {
@@ -176,7 +168,7 @@ class OfficePreviewBatchProcessor:
                         "must_not": [
                             {
                                 "exists": {
-                                    "field": "preview_images"
+                                    "field": "converted_pdf_url"
                                 }
                             }
                         ]
@@ -189,7 +181,8 @@ class OfficePreviewBatchProcessor:
                 ],
                 "_source": [
                     "file_id", "file_name", "file_path", "file_extension",
-                    "preview_images", "thumbnail_url", "_id"
+                    "converted_pdf_url", "preview_images", "nas_server",
+                    "category", "root_folder", "_id"
                 ]
             }
 
@@ -346,113 +339,122 @@ class OfficePreviewBatchProcessor:
             if temp_office_path:
                 self.s3_client.cleanup_temp_file(temp_office_path)
 
-    def generate_previews_from_pdf(self, pdf_path: str) -> List[Dict[str, Any]]:
+    def get_pdf_page_count(self, pdf_path: str) -> int:
         """
-        Generate preview images from PDF.
+        Get page count from PDF file.
 
         Args:
             pdf_path: Path to the PDF file
 
         Returns:
-            List of preview data dictionaries
+            Number of pages in the PDF
         """
         try:
-            logger.debug(f"Generating previews from PDF: {pdf_path}")
-            previews = self.preview_generator._generate_from_pdf(Path(pdf_path))
-            logger.info(f"Generated {len(previews)} preview pages from PDF")
-            return previews
-
+            from PyPDF2 import PdfReader
+            reader = PdfReader(pdf_path)
+            return len(reader.pages)
         except Exception as e:
-            logger.error(f"Failed to generate previews from PDF {pdf_path}: {e}")
-            return []
+            logger.warning(f"Failed to get PDF page count: {e}")
+            return 0
 
-    def upload_previews_to_s3(
+    def upload_pdf_to_s3(
         self,
-        previews: List[Dict[str, Any]],
-        file_id: str
-    ) -> List[Dict[str, Any]]:
+        pdf_path: str,
+        document: Dict[str, Any]
+    ) -> Optional[str]:
         """
-        Upload preview images to S3 thumbnail bucket.
+        Upload converted PDF to S3 office-converted folder.
+
+        S3 path structure:
+        office-converted/structure/{server}/{relative_path}/{filename}.pdf
 
         Args:
-            previews: List of preview data from generate_previews_from_pdf
-            file_id: Unique file identifier for S3 path
+            pdf_path: Path to the PDF file
+            document: OpenSearch document containing metadata
 
         Returns:
-            List of uploaded preview info with S3 keys
+            S3 key of uploaded PDF, or None on failure
         """
-        if self.dry_run:
-            logger.info(f"[DRY RUN] Would upload {len(previews)} previews for file_id: {file_id}")
-            return [
-                {
-                    "page": p['page'],
-                    "s3_key": f"previews/{file_id}/page_{p['page']}.jpg",
-                    "width": p['width'],
-                    "height": p['height'],
-                    "size": p['size']
-                }
-                for p in previews
-            ]
+        try:
+            # Extract metadata from document
+            file_name = document.get('file_name', 'unknown')
+            nas_server = document.get('nas_server', 'unknown')
+            category = document.get('category', 'structure')
+            file_path = document.get('file_path', '')
 
-        uploaded = []
+            # Generate PDF filename (replace original extension with .pdf)
+            base_name = Path(file_name).stem
+            pdf_name = f"{base_name}.pdf"
 
-        for preview in previews:
-            try:
-                preview_key = f"previews/{file_id}/page_{preview['page']}.jpg"
+            # Extract relative path from original file_path
+            relative_path = ''
+            if file_path:
+                # Try to extract path after server name
+                import re
+                match = re.search(rf'{nas_server}/(.+)/[^/]+$', file_path)
+                if match:
+                    relative_path = match.group(1)
 
-                # Create BytesIO from preview data
-                preview_io = io.BytesIO(preview['data'])
+            # Build S3 key
+            if relative_path:
+                s3_key = f"office-converted/{category}/{nas_server}/{relative_path}/{pdf_name}"
+            else:
+                # Fallback: use date-based path
+                date_path = datetime.utcnow().strftime('%Y/%m/%d')
+                s3_key = f"office-converted/{category}/{nas_server}/{date_path}/{pdf_name}"
 
-                # Upload to S3
-                preview_url = self.s3_client.upload_fileobj(
-                    preview_io,
-                    config.s3.thumbnail_bucket,
-                    preview_key,
-                    content_type='image/jpeg'
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would upload PDF to: {s3_key}")
+                return s3_key
+
+            # Upload PDF to S3
+            logger.info(f"Uploading PDF to: {s3_key}")
+            with open(pdf_path, 'rb') as pdf_file:
+                pdf_url = self.s3_client.upload_fileobj(
+                    pdf_file,
+                    config.s3.landing_bucket,  # Use landing bucket, not thumbnail bucket
+                    s3_key,
+                    content_type='application/pdf'
                 )
 
-                if preview_url:
-                    uploaded.append({
-                        "page": preview['page'],
-                        "s3_key": preview_key,
-                        "width": preview['width'],
-                        "height": preview['height'],
-                        "size": preview['size']
-                    })
-                    logger.debug(f"Uploaded preview page {preview['page']} to {preview_key}")
-                else:
-                    logger.warning(f"Failed to upload preview page {preview['page']}")
+            if pdf_url:
+                logger.info(f"Successfully uploaded PDF: {s3_key}")
+                return s3_key
+            else:
+                logger.error(f"Failed to upload PDF: {s3_key}")
+                return None
 
-            except Exception as e:
-                logger.error(f"Failed to upload preview page {preview['page']}: {e}")
-
-        logger.info(f"Uploaded {len(uploaded)}/{len(previews)} preview images")
-        return uploaded
+        except Exception as e:
+            logger.error(f"Error uploading PDF: {e}")
+            return None
 
     def update_opensearch_document(
         self,
         doc_id: str,
-        preview_images: List[Dict[str, Any]]
+        pdf_s3_key: str,
+        page_count: int
     ) -> bool:
         """
-        Update the OpenSearch document with preview_images array.
+        Update the OpenSearch document with converted_pdf_url.
 
         Args:
             doc_id: OpenSearch document ID
-            preview_images: List of preview image info
+            pdf_s3_key: S3 key of the converted PDF
+            page_count: Number of pages in the PDF
 
         Returns:
             True if update was successful
         """
         if self.dry_run:
-            logger.info(f"[DRY RUN] Would update document {doc_id} with {len(preview_images)} preview images")
+            logger.info(f"[DRY RUN] Would update document {doc_id} with converted_pdf_url: {pdf_s3_key}")
             return True
 
         try:
             updates = {
-                "preview_images": preview_images,
-                "total_pages": len(preview_images),
-                "preview_generated_at": datetime.utcnow().isoformat()
+                "converted_pdf_url": f"s3://{config.s3.landing_bucket}/{pdf_s3_key}",
+                "converted_pdf_key": pdf_s3_key,
+                "total_pages": page_count,
+                "pdf_converted_at": datetime.utcnow().isoformat()
             }
 
             success = self.opensearch_client.update_document(doc_id, updates)
@@ -488,7 +490,7 @@ class OfficePreviewBatchProcessor:
 
     def process_single_file(self, document: Dict[str, Any]) -> bool:
         """
-        Process a single Office file.
+        Process a single Office file - convert to PDF and upload.
 
         Args:
             document: OpenSearch document
@@ -498,7 +500,6 @@ class OfficePreviewBatchProcessor:
         """
         file_name = document.get('file_name', 'unknown')
         file_path = document.get('file_path', '')
-        file_id = document.get('file_id')
         doc_id = document.get('_id')
         file_extension = document.get('file_extension', '')
 
@@ -529,25 +530,22 @@ class OfficePreviewBatchProcessor:
             # Get the temp directory containing the PDF
             temp_dir = os.path.dirname(pdf_path)
 
-            # Step 3: Generate previews from PDF
-            previews = self.generate_previews_from_pdf(pdf_path)
+            # Step 3: Get PDF page count
+            page_count = self.get_pdf_page_count(pdf_path)
+            logger.info(f"PDF generated with {page_count} pages")
 
-            if not previews:
-                logger.warning(f"No previews generated for: {file_name}")
+            # Step 4: Upload PDF to S3 (office-converted folder)
+            pdf_s3_key = self.upload_pdf_to_s3(pdf_path, document)
+
+            if not pdf_s3_key:
+                logger.error(f"Failed to upload PDF for: {file_name}")
                 return False
 
-            # Step 4: Upload previews to S3
-            uploaded = self.upload_previews_to_s3(previews, file_id)
-
-            if not uploaded:
-                logger.error(f"Failed to upload previews for: {file_name}")
-                return False
-
-            # Step 5: Update OpenSearch document
-            success = self.update_opensearch_document(doc_id, uploaded)
+            # Step 5: Update OpenSearch document with converted_pdf_url
+            success = self.update_opensearch_document(doc_id, pdf_s3_key, page_count)
 
             if success:
-                logger.info(f"Successfully processed: {file_name} ({len(uploaded)} pages)")
+                logger.info(f"Successfully processed: {file_name} ({page_count} pages) -> {pdf_s3_key}")
                 return True
             else:
                 logger.error(f"Failed to update document for: {file_name}")
@@ -572,10 +570,11 @@ class OfficePreviewBatchProcessor:
             BatchStats with processing results
         """
         logger.info("=" * 60)
-        logger.info("Office Preview Batch Processing Started")
+        logger.info("Office PDF Conversion Batch Processing Started")
         logger.info(f"  Mode: {'DRY RUN' if self.dry_run else 'LIVE'}")
         logger.info(f"  Limit: {limit or 'None (all files)'}")
         logger.info(f"  Extensions: {', '.join(self.OFFICE_EXTENSIONS)}")
+        logger.info(f"  Output: office-converted/ (PDF format)")
         logger.info("=" * 60)
 
         # Query for files to process
@@ -651,7 +650,8 @@ def main():
 
     try:
         # Validate configuration
-        if not config.validate():
+        # Batch processing doesn't require SQS queues
+        if not config.validate(require_sqs=False, require_preview_queue=False):
             logger.error("Configuration validation failed")
             sys.exit(1)
 
